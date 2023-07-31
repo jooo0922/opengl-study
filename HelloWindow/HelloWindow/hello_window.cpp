@@ -13,6 +13,7 @@
 	함수 선언부를 헤더파일로 분리해서 include 하는 게 더 적절함.
 */
 void framebuffer_size_callback(GLFWwindow* window, int width, int height); // GLFW 윈도우 크기 변경 감지 시, 호출할 콜백함수 (변경된 GLFW 윈도우 사이즈에 맞게 glViewport() 사이즈 변경) 
+void processInput(GLFWwindow* window); // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
@@ -107,6 +108,33 @@ int main()
 	*/
 	while (!glfwWindowShouldClose(window))
 	{
+		processInput(window); // 윈도우 창 및 키 입력 감지 밎 이벤트 처리
+
+		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
+		// ...
+
+		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. -> 이게 OpenGL 컨텍스트의 상태('색상 버퍼를 초기화할 색상'이라는 상태값)를 설정하는 함수!! (state-setting)
+		glClear(GL_COLOR_BUFFER_BIT); // glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. -> 이게 OpenGL 컨텍스트의 상태('색상 버퍼를 초기화할 색상')를 검색 및 가져와서 사용하는 함수!! (state-using)
+
+		/*
+			참고로, glClear() 는
+			C++ 의 '비트 플래그' 기법을 사용하는
+			대표적인 사례!
+
+			glClear() 는
+			현재 프레임 버퍼의 정보들 중에서
+			색상 버퍼, 깊이 버퍼, 스텐실 버퍼 등
+			여러 개의 버퍼를 각각 초기화해줄 수 있는 함수!
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			
+			위와 같이, bitwise operator(비트단위 연산자) 를 사용해서
+			각 버퍼를 초기화할 지 정의하는 플래그를 
+			비트 단위로 저장 및 관리할 수 있도록 함.
+		*/
+
+
 		/*
 			glfwSwapBuffers(GLFWwindow* window)
 
@@ -183,4 +211,36 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 		가급적 뷰포트 영역과 맞추는 게 정상적이고 일반적인 방식이겠지?
 	*/
 	glViewport(0, 0, width, height);
+}
+
+// GLFWwindow 윈도우 입력 및 키 입력 감지 후 이벤트 처리 함수 (렌더링 루프에서 반복 감지)
+void processInput(GLFWwindow* window)
+{
+	/*
+		glfwGetKey(GLFWwindow, 키 enum)
+
+		얘는, 특정 GLFWwindow 에 대하여(활성화 시,)
+		특정 키가 입력되었는지 여부를 감지함.
+
+		입력 상태에서는 GLFW_PRESS 이넘을 반환하고,
+		미입력 상태에서는 GLFW_RELEASE 이넘을 반환함.
+
+		렌더링 루프에서 매 프레임마다 각각의 키 입력을 반복적으로 감지함.
+
+		따라서, 감지하고자 하는 키 입력을 
+		이 함수 안에서 쭉 나열해서 추가해주면 되겠지!
+	*/
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+	{
+		/*
+			현재 렌더링 루프에서 ESC 키 입력 상태 시,
+			인자로 넘겨준 GLFWwindow 의 WindowShouldClose 플래그(상태값)을
+			true 또는 false 로 생성할 수 있음.
+
+			여기서 WindowShouldClose 플래그가 재설정되면,
+			main() 함수의 while 조건문에서 해당 플래그를 검사하면서
+			렌더링 루프를 종료할 지를 결정함.
+		*/
+		glfwSetWindowShouldClose(window, true);
+	}
 }
