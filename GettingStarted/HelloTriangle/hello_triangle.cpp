@@ -12,6 +12,22 @@ void processInput(GLFWwindow* window); // GLFW 윈도우 및 키 입력 감지 �
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
+// 버텍스 쉐이더 소스코드를 문자열로 저장한 포인터 변수 (나중에 Shader 클래스를 만들어서 .vs, .fs 파일로 사용할 수 있도록 할 것임.)
+const char* vertexShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
+"layout (location = 0) in vec3 aPos;\n" // 입력할 vertex attribute (위치값 데이터)의 location 을 0으로 받음.
+"void main()\n"
+"{\n"
+"	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n" // 다음 파이프라인으로 넘길 버텍스 쉐이더의 출력값은 gl_Position 에 할당
+"}\n\0"; // 참고로, '\0' 는 NULL 종료 문자를 나타내며, char 타입 문자열 배열 끝부분에 ASCII 코드 상에서 'NULL' 을 의미하는 '\0' 을 저장함으로써, 문자열의 끝부분임을 알림.
+
+// 프래그먼트 쉐이더 소스코드를 문자열로 저장한 포인터 변수
+const char* fragmentShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
+"out vec4 FragColor;\n" // out 키워드로 vec4 타입의 프래그먼트 쉐이더 출력 변수 선언
+"void main()\n"
+"{\n"
+"	FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n" // 프래그먼트 쉐이더의 최종 출력값을 vec4 타입의 주황색 값으로 할당
+"}\n\0"; // NULL 종료 문자 '\0' 로 문자열의 끝부분임을 표시
+
 int main()
 {
 	// GLFW 초기화
