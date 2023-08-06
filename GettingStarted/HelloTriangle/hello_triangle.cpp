@@ -66,22 +66,145 @@ int main()
 		return -1;
 	}
 
+	// 버텍스 쉐이더 객체 생성 및 컴파일
+	unsigned int vertexShader; // OpenGL 쉐이더 객체(object)의 참조 id를 저장할 변수
+	vertexShader = glCreateShader(GL_VERTEX_SHADER); // OpenGL 쉐이더 객체(object) 생성 > 버텍스 쉐이더 생성 시, GL_VERTEX_SHADER 파라미터 입력
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL); // 생성된 버텍스 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임 (두 번째 파라미터 1은 소스코드가 1개의 문자열(char) 변수로 구성됨을 의미.
+	glCompileShader(vertexShader); // 쉐이더 소스코드 문자열 변수의 주소값(&vertexShaderSource)이 연결된 버텍스 쉐이더 객체(object)를 런타임에 동적으로 컴파일
+
+	int success; // 컴파일 성공여부 저장하는 정수형 변수 선언
+	char infoLog[512]; // 최대 512개의 char 타입 문자를 저장할 수 있는 문자열 배열 변수 선언 > 일반적으로는 std::string 클래스로 문자열을 다루는 경우가 더 많음. > 암튼 여기에 컴파일 에러 메시지 저장
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success); // 생성된 쉐이더 객체에 대한 정보를 질의할 수 있는 쿼리 함수 > 컴파일 상태(	GL_COMPILE_STATUS)를 물어보고 결과를 success 변수에 저장
+
+	if (!success)
+	{
+		// 컴파일 실패 시, 에러 메시지 출력
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog); // 문자열 배열 변수 infoLog 에 버텍스 쉐이더 객체(object)에 대한 InfoLog 를 최대 512자까지 저장
+		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+
+	// 프래그먼트 쉐이더 객체 생성 및 컴파일
+	unsigned int fragmentShader; // OpenGL 쉐이더 객체(object)의 참조 id를 저장할 변수
+	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER); // OpenGL 쉐이더 객체(object) 생성
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL); // 생성된 프래그먼트 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임
+	glCompileShader(fragmentShader); // 프래그먼트 쉐이더 객체(object)를 런타임에 동적으로 컴파일
+
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success); // 생성된 쉐이더 객체에 대한 정보를 질의할 수 있는 쿼리 함수
+	if (!success)
+	{
+		// 컴파일 실패 시, 에러 메시지 출력
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog); // 문자열 배열 변수 infoLog 에 프래그먼트 쉐이더 객체(object)에 대한 InfoLog 를 최대 512자까지 저장
+		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+
+	// 생성된 여러 쉐이더 객체 연결 > 쉐이더 프로그램 객체 생성
+	unsigned int shaderProgram = glCreateProgram(); // OpenGL 쉐이더 프로그램 객체(object)의 참조 id를 저장할 변수
+	glAttachShader(shaderProgram, vertexShader); // 그래픽 파이프라인의 입출력 순서에 따라 쉐이더를 프로그램 객체에 붙여줘야 함. (즉, 버텍스 쉐이더 -> 프래그먼트 쉐이더 순!)
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram); // 쉐이더 프로그램에 붙여진 쉐이더 객체를 연결
+
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success); // 생성된 프로그램 객체에 대한 정보를 질의하는 쿼리 함수
+	if (!success)
+	{
+		// 쉐이더 프로그램 linking 실패 시, 에러 메시지 출력
+		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog); // 문자열 배열 변수 infoLog 에 쉐이더 프로그램 객체(object)에 대한 InfoLog 를 최대 512자까지 저장
+		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
+
+	// 이미 쉐이더 프로그램 객체에 연결한 쉐이더 객체들은 더 이상 불필요하므로 제거!
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	// 정점 위치 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
+	float vertices[] = {
+		-0.5f, -0.5f, 0.0f, // left  
+		 0.5f, -0.5f, 0.0f, // right 
+		 0.0f,  0.5f, 0.0f  // top   
+	};
+
+	// VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 + VBO 에 쓰여진 버텍스 데이터 해석 방식 정의
+	/*
+		VAO 는 왜 만드는걸까?
+
+		VBO 객체를 생성 및 바인딩 후, 
+		해당 버퍼에 정점 데이터를 쓰고,
+		버퍼에 쓰여진 데이터를 버텍스 쉐이더의 몇번 location 의 변수에서 사용할 지, 
+		해당 데이터를 몇 묶음으로 해석할 지 등의 해석 방식을 정의하고,
+		해당 버퍼에 쓰여진 데이터를 사용하는 location 의 변수를 활성화하는 등의 작업은 이해가 가지?
+
+		모두 GPU 메모리 상에 저장된 정점 버퍼의 데이터를
+		버텍스 쉐이더가 어떻게 가져다 쓸 지 정의하기 위한 과정이지.
+
+		그런데, 만약 서로 다른 오브젝트가 100개 존재하고,
+		각 오브젝트에 5개의 vertex attribute 를 사용한다면?
+		이런 식으로 VBO 를 구성하고 데이터 해석 방식을 설정하는 작업을 
+		그리기 명령이 발생할 때마다 500번씩 매번 해야된다는 소리...
+		
+		그런데, VAO 객체를 사용하면, 거기에다가
+		VAO 안에 VBO 객체와 데이터 해석 방식, 해당 location 변수 활성화 여부 등의
+		설정 상태를 모두 저장해두고 그리기 명령을 호출할 때마다
+		필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
+
+		즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
+	*/
+	unsigned int VBO, VAO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
+	glGenVertexArrays(1, &VAO); // VAO(Vertex Array Object) 객체 생성
+	glGenBuffers(1, &VBO); // VBO(Vertex Buffer Object) 객체 생성 > VBO 객체를 만들어서 정점 데이터를 GPU 로 전송해야 한 번에 많은 양의 정점 데이터를 전송할 수 있음!
+
+	glBindVertexArray(VAO); // VAO 객체 먼저 컨텍스트에 바인딩(연결)함. > 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 VAO 에 바인딩된 VAO 에 저장할 수 있음.
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO); // OpenGL 컨텍스트 중에서, VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+	// 참고로, 각 인자는 (데이터를 복사해 집어넣을 버퍼 유형, 덮어쓸 데이터의 크기, 덮어쓸 실제 데이터, 그래픽 카드가 해당 데이터 관리 방식) 을 의미함
+	// 데이터 관리 방식은, 삼각형 정점 위치 데이터는 변경되지 않을 데이터이므로, GL_STATIC_DRAW 로 지정함. 
+	// 만약 변경이 잦은 데이터일 경우, GL_DYNAMIC_DRAW | GL_STREAM_DRAW 로 설정하면 그래픽 카드가 빠르게 데이터를 write 할 수 있는 메모리에 저장한다고 함.
+
+	// VBO 객체 설정
+	// VBO 에 쓰여진 정점 데이터 해석 방식 설정
+	// 각 파라미터는 1. 이 데이터를 가져다 쓸 버텍스 쉐이더의 attribute 변수의 location (0이 aPos 였으니 0으로 지정)
+	// 2. 정점 당 필요한 데이터 개수
+	// 3. 데이터 타입
+	// 4. 데이터를 -1 ~ 1 사이로 정규화할 지 여부. 이미 vertices 배열은 NDC 좌표 기준으로 구성해놨으니 필요없겠군!
+	// 5. stride. 정점 데이터 세트 사이의 메모리 간격. 각 정점은 현재 3개의 위치 데이터만 가져다 쓰므로, <실수형 리터럴의 메모리 크기 * 3> 이 정점 데이터 세트 간 메모리 간격
+	// 6. 정점 버퍼에서 데이터 시작 위치 offset > vertices 의 시작 지점부터 위치 데이터이므로, 그냥 0으로 하면 될건데, 마지막 파라미터 타입이 void* 타입으로만 받아서 형변환을 해준 것.
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0); // 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. > 그 중에서 0번 location 변수만 사용하도록 활성화한 것!
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0); // VBO 객체 설정을 끝마쳤다면, OpenGL 컨텍스트로부터 바인딩(연결)을 해제함.
+
+	glBindVertexArray(0); // 마찬가지로, VAO 객체에 저장해둘 VBO 객체 및 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
+
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window); // 윈도우 창 및 키 입력 감지 밎 이벤트 처리
 
-		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
-		// ...
-
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
 		glClear(GL_COLOR_BUFFER_BIT); // glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. (state-using)
 
+		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
+		// ...
+		// 삼각형 그리기 명령 실행
+		glUseProgram(shaderProgram); // 미리 생성 및 linking 해둔 쉐이더 프로그램 객체를 사용하여 그리도록 명령
+		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
+		// glDrawArrays 의 각 파라미터는 다음과 같다. 
+		// 1. 그려야 할 primitive 유형 
+		// 2. 정점 배열의 시작 인덱스(활성화된 정점 버퍼 배열에서 시작 요소의 인덱스) 
+		// 3. 현재 도형에 몇 개의 정점을 그릴지(삼각형이니 3개 겠지?))
+
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
 	}
+
+	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO, 쉐이더 프로그램 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
+	// 이들은 미리 생성 후 저장해두는 이유는, 렌더링이 진행중에 필요한 객체들을 다시 바인딩하여 교체하기 위한 목적이므로,
+	// 렌더링이 끝났다면 더 이상 메모리에 남겨둘 이유가 없음!!
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+	glDeleteProgram(shaderProgram);
 
 	glfwTerminate(); // while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 
