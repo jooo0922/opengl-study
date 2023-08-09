@@ -189,6 +189,9 @@ int main()
 
 	glBindVertexArray(0); // 마찬가지로, VAO 객체에 저장해둘 VBO 객체 및 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 
+	// 와이어프레임 모드로 그리기 (정확히는 각 polygon 의 rasterization mode 를 설정하는 것!)
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 각 파라미터는 (설정한 polygon mode 앞면/뒷면 적용, polygon rasterzing 방식 (선으로 그리기 or 면으로 채우기))
+
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
 	while (!glfwWindowShouldClose(window))
