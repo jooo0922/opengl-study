@@ -135,6 +135,7 @@ int main()
 
 	// 두 번째 쉐이더 프로그램 객체 생성
 	unsigned int shaderProgram2 = glCreateProgram(); // OpenGL 쉐이더 프로그램 객체(object)의 참조 id를 저장할 변수
+	std::cout << "shaderProgram2 id : " << shaderProgram2 << std::endl;
 	glAttachShader(shaderProgram2, vertexShader); // 그래픽 파이프라인의 입출력 순서에 따라 쉐이더를 프로그램 객체에 붙여줘야 함. (즉, 버텍스 쉐이더 -> 프래그먼트 쉐이더 순!)
 	glAttachShader(shaderProgram2, fragmentShader2);
 	glLinkProgram(shaderProgram2); // 쉐이더 프로그램에 붙여진 쉐이더 객체를 연결
