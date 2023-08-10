@@ -116,18 +116,17 @@ int main()
 	glDeleteShader(fragmentShader);
 
 	// 정점 위치 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
-	// 두 개의 삼각형을 Indexed Drawing 으로 그려서 사각형을 그려내기 위해, 사각형 정점을 추가함.
-	float vertices[] = {
+	// 두 개의 삼각형 정점 데이터를 각각의 버퍼로 생성하여 관리
+	float vertices1[] = {
 		 0.5f,  0.5f, 0.0f, // 우측 상단
 		 0.5f, -0.5f, 0.0f, // 우측 하단
-		-0.5f, -0.5f, 0.0f, // 좌측 하단
 		-0.5f,  0.5f, 0.0f  // 좌측 상단
 	};
 
-	// EBO(Element Buffer Object) 생성 시 사용할 정점 인덱스 배열 생성 > EBO 는 한마디로 인덱스 버퍼라고 보면 됨!
-	unsigned int indices[] = {
-		0, 1, 3, // 첫 번째 삼각형 인덱스
-		1, 2, 3 // 두 번째 삼각형 인덱스 
+	float vertices2[] = {
+		 0.5f, -0.5f, 0.0f, // 우측 하단
+		-0.5f, -0.5f, 0.0f, // 좌측 하단
+		-0.5f,  0.5f, 0.0f  // 좌측 상단
 	};
 
 	// VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 + VBO 에 쓰여진 버텍스 데이터 해석 방식 정의
@@ -155,24 +154,18 @@ int main()
 
 		즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
 	*/
-	unsigned int VBO, VAO, EBO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
-	glGenVertexArrays(1, &VAO); // VAO(Vertex Array Object) 객체 생성
-	glGenBuffers(1, &VBO); // VBO(Vertex Buffer Object) 객체 생성 > VBO 객체를 만들어서 정점 데이터를 GPU 로 전송해야 한 번에 많은 양의 정점 데이터를 전송할 수 있음!
-	glGenBuffers(1, &EBO); // EBO(Element Buffer Object) 객체 생성 > EBO 객체는 한 마디로, 정점의 인덱스 버퍼를 저장하는 객체로써, Indexed Drawing 으로 삼각형을 그릴 수 있게 해준다!
+	unsigned int VBOs[2], VAOs[2]; // VBO, VAO 객체(object) 참조 id 를 각각 두 개씩 저장할 변수
+	glGenVertexArrays(2, VAOs); // 두 개의 VAO(Vertex Array Object) 객체 생성
+	glGenBuffers(2, VBOs); // 두 개의 VBO(Vertex Buffer Object) 객체 생성 > VBO 객체를 만들어서 정점 데이터를 GPU 로 전송해야 한 번에 많은 양의 정점 데이터를 전송할 수 있음!
 
-	glBindVertexArray(VAO); // VAO 객체 먼저 컨텍스트에 바인딩(연결)함. > 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 VAO 에 바인딩된 VAO 에 저장할 수 있음.
+	/* 첫 번째 VAO, VBO 객체 바인딩 및 데이터 저장 */
+	glBindVertexArray(VAOs[0]); // VAO 객체 먼저 컨텍스트에 바인딩(연결)함. > 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 VAO 에 바인딩된 VAO 에 저장할 수 있음.
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO); // OpenGL 컨텍스트 중에서, VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+	glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]); // OpenGL 컨텍스트 중에서, VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices1), vertices1, GL_STATIC_DRAW); // 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
 	// 참고로, 각 인자는 (데이터를 복사해 집어넣을 버퍼 유형, 덮어쓸 데이터의 크기, 덮어쓸 실제 데이터, 그래픽 카드가 해당 데이터 관리 방식) 을 의미함
 	// 데이터 관리 방식은, 삼각형 정점 위치 데이터는 변경되지 않을 데이터이므로, GL_STATIC_DRAW 로 지정함. 
 	// 만약 변경이 잦은 데이터일 경우, GL_DYNAMIC_DRAW | GL_STREAM_DRAW 로 설정하면 그래픽 카드가 빠르게 데이터를 write 할 수 있는 메모리에 저장한다고 함.
-
-	// EBO 객체를 OpenGL 컨텍스트에 바인딩하고, 바인딩된 버퍼에 인덱스 배열 데이터 복사
-	// 참고로, VAO 객체 바인딩을 해제하기 전에 EBO 객체를 바인딩 및 버퍼를 복사하면,
-	// EBO 객체 및 설정 상태 또한 VAO 객체에 저장해서 재사용할 수 있음!!
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // OpenGL 컨텍스트 중에서, EBO 객체는 GL_ELEMENT_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); // 실제 정점 인덱스 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 EBO 객체에 덮어씀.
 
 	// VBO 객체 설정
 	// VBO 에 쓰여진 정점 데이터 해석 방식 설정
@@ -185,12 +178,21 @@ int main()
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0); // 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. > 그 중에서 0번 location 변수만 사용하도록 활성화한 것!
 
-	glBindBuffer(GL_ARRAY_BUFFER, 0); // VBO 객체 설정을 끝마쳤다면, OpenGL 컨텍스트로부터 바인딩(연결)을 해제함.
+	/* 두 번째 VAO, VBO 객체 바인딩 및 데이터 저장 */
+	glBindVertexArray(VAOs[1]); // 두 번째 VAO 객체를 컨텍스트에 바인딩(연결)함.
 
-	glBindVertexArray(0); // 마찬가지로, VAO 객체에 저장해둘 VBO 객체 및 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
+	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]); // 두 번째 VBO 객체 바인딩
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW); // 두 번째 버텍스 데이터를 두 번째 VBO 객체에 덮어쓰기
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); // 두 번째 VBO 객체에 쓰여진 정점 데이터 해석 방식 설정
+	glEnableVertexAttribArray(0); // 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. > 그 중에서 0번 location 변수만 사용하도록 활성화한 것!
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0); // 두 번째 VBO 객체 설정까지 끝마쳤다면, OpenGL 컨텍스트로부터 바인딩(연결)을 해제함.
+
+	glBindVertexArray(0); // 마찬가지로, 두 번째 VAO 객체에 저장해둘 VBO 객체 및 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 
 	// 와이어프레임 모드로 그리기 (정확히는 각 polygon 의 rasterization mode 를 설정하는 것!)
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 각 파라미터는 (설정한 polygon mode 앞면/뒷면 적용, polygon rasterzing 방식 (선으로 그리기 or 면으로 채우기))
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 각 파라미터는 (설정한 polygon mode 앞면/뒷면 적용, polygon rasterzing 방식 (선으로 그리기 or 면으로 채우기))
 
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
@@ -206,16 +208,16 @@ int main()
 		// ...
 		// 삼각형 그리기 명령 실행
 		glUseProgram(shaderProgram); // 미리 생성 및 linking 해둔 쉐이더 프로그램 객체를 사용하여 그리도록 명령
-		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		//glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
+		glBindVertexArray(VAOs[0]); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
 		// glDrawArrays 의 각 파라미터는 다음과 같다. 
 		// 1. 그려야 할 primitive 유형 
 		// 2. 정점 배열의 시작 인덱스(활성화된 정점 버퍼 배열에서 시작 요소의 인덱스) 
 		// 3. 현재 도형에 몇 개의 정점을 그릴지(삼각형이니 3개 겠지?))
 
-		// 앞서 바인딩된 VAO 에 저장해둔 EBO 객체 (즉, 정점 인덱스 버퍼)로부터 Indexed Drawing 으로 그리려면, 
-		// glDrawArrays() 대신 glDrawElements() 를 사용해줘야 함!
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 각 파라미터는 (삼각형 모드, 그리고 싶은 정점 개수, 인덱스들의 타입, EBO 버퍼 offset)
+		// 두 번째 VAO 객체 바인딩 후, 두 번째 삼각형 그리기 명령 수행
+		glBindVertexArray(VAOs[1]);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
@@ -224,9 +226,8 @@ int main()
 	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO, EBO, 쉐이더 프로그램 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
 	// 이들은 미리 생성 후 저장해두는 이유는, 렌더링이 진행중에 필요한 객체들을 다시 바인딩하여 교체하기 위한 목적이므로,
 	// 렌더링이 끝났다면 더 이상 메모리에 남겨둘 이유가 없음!!
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
+	glDeleteVertexArrays(2, VAOs); // 여러 개의 VAO 객체를 제거할 경우, 여러 개의 참조 id 가 담긴 배열 변수를 그대로 넘겨줌. (& 앰퍼샌드로 주소값 넘기기X)
+	glDeleteBuffers(2, VBOs); // 여러 개의 VBO 객체를 제거할 경우, 여러 개의 참조 id 가 담긴 배열 변수를 그대로 넘겨줌. (& 앰퍼샌드로 주소값 넘기기X)
 	glDeleteProgram(shaderProgram);
 
 	glfwTerminate(); // while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
