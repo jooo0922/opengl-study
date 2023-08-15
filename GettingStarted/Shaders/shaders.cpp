@@ -15,20 +15,22 @@ const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 // 버텍스 쉐이더 소스코드를 문자열로 저장한 포인터 변수 (나중에 Shader 클래스를 만들어서 .vs, .fs 파일로 사용할 수 있도록 할 것임.)
 const char* vertexShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
 "layout (location = 0) in vec3 aPos;\n" // 입력할 vertex attribute (위치값 데이터)의 location 을 0으로 받음.
-"out vec4 vertexColor;\n" // 프래그먼트 쉐이더로 전송할 출력 변수 선언
+//"out vec4 vertexColor;\n" // 프래그먼트 쉐이더로 전송할 출력 변수 선언
 "void main()\n"
 "{\n"
 "	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n" // 다음 파이프라인으로 넘길 버텍스 쉐이더의 출력값은 gl_Position 에 할당
-"	vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n" // 출력 변수에 짙은 빨강색 vec4 색상 데이터 할당 > 프래그먼트 쉐이더의 동일한 이름과 타입의 입력 변수로 전송
+//"	vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n" // 출력 변수에 짙은 빨강색 vec4 색상 데이터 할당 > 프래그먼트 쉐이더의 동일한 이름과 타입의 입력 변수로 전송
 "}\n\0"; // 참고로, '\0' 는 NULL 종료 문자를 나타내며, char 타입 문자열 배열 끝부분에 ASCII 코드 상에서 'NULL' 을 의미하는 '\0' 을 저장함으로써, 문자열의 끝부분임을 알림.
 
 // 프래그먼트 쉐이더 소스코드를 문자열로 저장한 포인터 변수
 const char* fragmentShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
 "out vec4 FragColor;\n" // out 키워드로 vec4 타입의 프래그먼트 쉐이더 출력 변수 선언
-"in vec4 vertexColor;\n" // 버텍스 쉐이더로부터 데이터를 입력받는 입력 변수 선언 (버텍스 쉐이더의 출력변수와 동일한 타입과 이름)
+//"in vec4 vertexColor;\n" // 버텍스 쉐이더로부터 데이터를 입력받는 입력 변수 선언 (버텍스 쉐이더의 출력변수와 동일한 타입과 이름)
+"uniform vec4 ourColor;\n" // 이번에는 uniform 변수를 선언하여 색상을 지정해보자
 "void main()\n"
 "{\n"
-"	FragColor = vertexColor;\n" // 프래그먼트 쉐이더의 최종 출력값을 버텍스 쉐이더 출력 변수로부터 입력받은 색상값으로 지정
+//"	FragColor = vertexColor;\n" // 프래그먼트 쉐이더의 최종 출력값을 버텍스 쉐이더 출력 변수로부터 입력받은 색상값으로 지정
+"	FragColor = ourColor;\n" // 프래그먼트 쉐이더의 최종 출력값을 uniform 변수로 전송되는 색상값으로 지정 (실제 색상값을 c++ 단에서 glUniform~() 함수로 전송됨.)
 "}\n\0"; // NULL 종료 문자 '\0' 로 문자열의 끝부분임을 표시
 
 int main()
@@ -193,8 +195,60 @@ int main()
 
 		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
 		// ...
+		
+		// 삼각형 색상값 계산 후, uniform 변수에 전송하기
+		float timeValue = glfwGetTime(); // glfwSetTime() 이 호출되지 않았다면, glfwInit() 이 호출된 이후의 경과시간(Elapsed Time) 을 반환하는 함수
+		float greenValue = sin(timeValue) / 2.0f + 0.5f; // 경과시간으로 계산된 -1 ~ 1 사이의 sin값을 0 ~ 1 사이의 값으로 맵핑
+
+		// uniform 변수도 attribute 와 마찬가지로 선언과 동시에 location 값을 갖음. 
+		// 따라서, 해당 쉐이더 프로그램 객체와, 거기에 linking 된 쉐이더에 선언된 uniform 변수명을 전달해서 해당 uniform 변수의 location 을 반환받음.
+		// 이 location 을 알아야 glUniform~() 함수로 실제 값을 전송할 수 있음.
+		// 또 참고로, glGetUniformLocation() 함수까지는 location 을 읽어오기만 하면 되는 함수이므로, 
+		// 쉐이더 프로그램 객체를 glUseProgram() 으로 바인딩하지는 않아도 됨!! 
+		int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");  
+		
 		// 삼각형 그리기 명령 실행
 		glUseProgram(shaderProgram); // 미리 생성 및 linking 해둔 쉐이더 프로그램 객체를 사용하여 그리도록 명령
+
+		// 바인딩된 쉐이더 프로그램 객체안에 특정 location 이 할당된 uniform 변수에 실제 값을 세팅하기
+		// 여기서부터는 실제로 쉐이더 프로그램 안의 uniform 변수의 값을 '설정'해줘야 하므로, 값을 설정할 쉐이더 프로그램을 먼저 바인딩해줘야 함! 
+		/*
+			OpenGL 타입 오버로딩 미지원
+
+			OpenGL 은 핵심 라이브러리가 C 로 구현되어 있음.
+			C 는 타입 오버로딩을 지원하지 않음.
+
+			참고로, 타입 오버로딩이란,
+			전달받은 인자의 타입에 따라서 서로 다른 동작을 수행하도록
+			동일한 이름의 함수를 매개변수 타입에 따라 여러 버전으로
+			중복선언하는 기능이라고 함.
+
+			예를 들어,
+			void doSomething(float data);
+			void doSomething(int data);
+			void doSomething(double data);
+
+			요런 식으로, 전달받는 매개변수 타입에 따라
+			다양한 버전으로 동일한 이름의 함수를 중복 선언함으로써,
+			인자 타입에 따라 다른 동작으로 대응할 수 있도록 하는 개념.
+
+			근데 C 에서는 동일한 이름의 함수 중복 선언이 불가하기 때문에,
+			타입 오버로딩이 안됨.
+
+			그래서, C 로 구현된 OpenGL 은
+			어떤 함수를 매개변수에 타입에 따라 다양하게 동작을 수행하도록
+			여러 버전으로 구현해놓기 위해서, 타입 오버로딩 대신,
+			'-4f', '-3f', '-f', '-i', '-ui' 등의 접미어를 함수명 뒤에 붙여서
+			인자 타입에 따라서 여러 동작으로 대응할 수 있도록 함.
+
+			그 대표적인 사례가 glUniform~() 함수!
+
+			여기서 우리는 uniform vec4 ourColor 유니폼 변수에 
+			데이터를 전송하고 싶기 때문에, -4f(float 타입의 요소 4개) 를 전달할 수 있는
+			glUniform4f() 함수를 사용함!
+		*/
+		glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 		glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
 		// glDrawArrays 의 각 파라미터는 다음과 같다. 
