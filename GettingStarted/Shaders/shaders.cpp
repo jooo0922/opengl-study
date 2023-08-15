@@ -15,22 +15,24 @@ const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 // 버텍스 쉐이더 소스코드를 문자열로 저장한 포인터 변수 (나중에 Shader 클래스를 만들어서 .vs, .fs 파일로 사용할 수 있도록 할 것임.)
 const char* vertexShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
 "layout (location = 0) in vec3 aPos;\n" // 입력할 vertex attribute (위치값 데이터)의 location 을 0으로 받음.
-//"out vec4 vertexColor;\n" // 프래그먼트 쉐이더로 전송할 출력 변수 선언
+"layout (location = 1) in vec3 aColor;\n" // 입력할 vertex attribute (색상 데이터)의 location 을 1로 받음.
+"out vec3 vertexColor;\n" // 프래그먼트 쉐이더로 전송할 출력 변수 선언
 "void main()\n"
 "{\n"
 "	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n" // 다음 파이프라인으로 넘길 버텍스 쉐이더의 출력값은 gl_Position 에 할당
 //"	vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n" // 출력 변수에 짙은 빨강색 vec4 색상 데이터 할당 > 프래그먼트 쉐이더의 동일한 이름과 타입의 입력 변수로 전송
+"	vertexColor = aColor;\n" // 출력 변수에 vertex attribute 로 전송되는 색상 데이터를 할당
 "}\n\0"; // 참고로, '\0' 는 NULL 종료 문자를 나타내며, char 타입 문자열 배열 끝부분에 ASCII 코드 상에서 'NULL' 을 의미하는 '\0' 을 저장함으로써, 문자열의 끝부분임을 알림.
 
 // 프래그먼트 쉐이더 소스코드를 문자열로 저장한 포인터 변수
 const char* fragmentShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
 "out vec4 FragColor;\n" // out 키워드로 vec4 타입의 프래그먼트 쉐이더 출력 변수 선언
-//"in vec4 vertexColor;\n" // 버텍스 쉐이더로부터 데이터를 입력받는 입력 변수 선언 (버텍스 쉐이더의 출력변수와 동일한 타입과 이름)
-"uniform vec4 ourColor;\n" // 이번에는 uniform 변수를 선언하여 색상을 지정해보자
+"in vec3 vertexColor;\n" // 버텍스 쉐이더로부터 데이터를 입력받는 입력 변수 선언 (버텍스 쉐이더의 출력변수와 동일한 타입과 이름)
+//"uniform vec4 ourColor;\n" // 이번에는 uniform 변수를 선언하여 색상을 지정해보자
 "void main()\n"
 "{\n"
-//"	FragColor = vertexColor;\n" // 프래그먼트 쉐이더의 최종 출력값을 버텍스 쉐이더 출력 변수로부터 입력받은 색상값으로 지정
-"	FragColor = ourColor;\n" // 프래그먼트 쉐이더의 최종 출력값을 uniform 변수로 전송되는 색상값으로 지정 (실제 색상값을 c++ 단에서 glUniform~() 함수로 전송됨.)
+"	FragColor = vec4(vertexColor, 1.0);\n" // 프래그먼트 쉐이더의 최종 출력값을 버텍스 쉐이더 출력 변수로부터 입력받은 색상값으로 지정
+//"	FragColor = ourColor;\n" // 프래그먼트 쉐이더의 최종 출력값을 uniform 변수로 전송되는 색상값으로 지정 (실제 색상값을 c++ 단에서 glUniform~() 함수로 전송됨.)
 "}\n\0"; // NULL 종료 문자 '\0' 로 문자열의 끝부분임을 표시
 
 int main()
@@ -121,11 +123,14 @@ int main()
 	glDeleteShader(fragmentShader);
 
 	// 정점 위치 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
-	// 두 개의 삼각형을 Indexed Drawing 으로 그려서 사각형을 그려내기 위해, 사각형 정점을 추가함.
+	// 여기에 정점 색상 데이터까지 추가함.
+	// 하나의 배열에 정점의 위치 데이터와 색상 데이터가 섞여있기 때문에, 
+	// glVertexAttribPointer() 를 통해서 정점 데이터 해석 방식을 잘 설정해줘야 함.
 	float vertices[] = {
-		 0.5f, -0.5f, 0.0f,  // bottom right
-		-0.5f, -0.5f, 0.0f,  // bottom left
-		 0.0f,  0.5f, 0.0f   // top 
+		// positions 데이터		// colors 데이터		
+		 0.5f, -0.5f, 0.0f,		1.0f, 0.0f, 0.0f,	// bottom right
+		-0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,	// bottom left
+		 0.0f,  0.5f, 0.0f,		0.0f, 0.0f, 1.0f	// top 
 	};
 
 	// VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 + VBO 에 쓰여진 버텍스 데이터 해석 방식 정의
@@ -171,10 +176,17 @@ int main()
 	// 2. 정점 당 필요한 데이터 개수
 	// 3. 데이터 타입
 	// 4. 데이터를 -1 ~ 1 사이로 정규화할 지 여부. 이미 vertices 배열은 NDC 좌표 기준으로 구성해놨으니 필요없겠군!
-	// 5. stride. 정점 데이터 세트 사이의 메모리 간격. 각 정점은 현재 3개의 위치 데이터만 가져다 쓰므로, <실수형 리터럴의 메모리 크기 * 3> 이 정점 데이터 세트 간 메모리 간격
+	// 5. stride. 정점 데이터 세트 사이의 메모리 간격. 각 정점은 현재 3개의 위치 데이터 + 3개의 색상 데이터(총합 6개)를 가져다 쓰므로, <실수형 리터럴의 메모리 크기 * 6> 이 정점 데이터 세트 간 메모리 간격
 	// 6. 정점 버퍼에서 데이터 시작 위치 offset > vertices 의 시작 지점부터 위치 데이터이므로, 그냥 0으로 하면 될건데, 마지막 파라미터 타입이 void* 타입으로만 받아서 형변환을 해준 것.
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0); // 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. > 그 중에서 0번 location 변수만 사용하도록 활성화한 것!
+
+	// vertex attribute 가 추가될 때마다, (색상 데이터가 추가되었지?)
+	// 각 정점 attribute 로 들어올 정점 데이터의 해석 방식을 별도로 설정해줘야 함.
+	// color attribute 의 location 은 1이였으니 1로 지정하고,
+	// 정점 버퍼에서 색상 데이터의 시작 위치(offset)는 x, y, z 3개의 위치 데이터 다음부터 시작하므로, 3 * sizeof(float) = 12 bytes 만큼의 메모리 공간을 띄운 지점부터 시작! 
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1); // color attribute 변수의 location 인 1번 location 변수도 사용할 수 있게 활성화함.
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0); // VBO 객체 설정을 끝마쳤다면, OpenGL 컨텍스트로부터 바인딩(연결)을 해제함.
 
@@ -197,15 +209,15 @@ int main()
 		// ...
 		
 		// 삼각형 색상값 계산 후, uniform 변수에 전송하기
-		float timeValue = glfwGetTime(); // glfwSetTime() 이 호출되지 않았다면, glfwInit() 이 호출된 이후의 경과시간(Elapsed Time) 을 반환하는 함수
-		float greenValue = sin(timeValue) / 2.0f + 0.5f; // 경과시간으로 계산된 -1 ~ 1 사이의 sin값을 0 ~ 1 사이의 값으로 맵핑
+		//float timeValue = glfwGetTime(); // glfwSetTime() 이 호출되지 않았다면, glfwInit() 이 호출된 이후의 경과시간(Elapsed Time) 을 반환하는 함수
+		//float greenValue = sin(timeValue) / 2.0f + 0.5f; // 경과시간으로 계산된 -1 ~ 1 사이의 sin값을 0 ~ 1 사이의 값으로 맵핑
 
 		// uniform 변수도 attribute 와 마찬가지로 선언과 동시에 location 값을 갖음. 
 		// 따라서, 해당 쉐이더 프로그램 객체와, 거기에 linking 된 쉐이더에 선언된 uniform 변수명을 전달해서 해당 uniform 변수의 location 을 반환받음.
 		// 이 location 을 알아야 glUniform~() 함수로 실제 값을 전송할 수 있음.
 		// 또 참고로, glGetUniformLocation() 함수까지는 location 을 읽어오기만 하면 되는 함수이므로, 
 		// 쉐이더 프로그램 객체를 glUseProgram() 으로 바인딩하지는 않아도 됨!! 
-		int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");  
+		//int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");  
 		
 		// 삼각형 그리기 명령 실행
 		glUseProgram(shaderProgram); // 미리 생성 및 linking 해둔 쉐이더 프로그램 객체를 사용하여 그리도록 명령
@@ -247,7 +259,7 @@ int main()
 			데이터를 전송하고 싶기 때문에, -4f(float 타입의 요소 4개) 를 전달할 수 있는
 			glUniform4f() 함수를 사용함!
 		*/
-		glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 		glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
