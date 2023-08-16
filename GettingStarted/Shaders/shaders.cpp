@@ -1,6 +1,8 @@
 #include <glad/glad.h> // 운영체제(플랫폼)별 OpenGL 함수를 함수 포인터에 저장 및 초기화 (OpenGL 을 사용하는 다른 라이브러리(GLFW)보다 먼저 include 할 것.)
 #include <GLFW/glfw3.h> // OpenGL 컨텍스트 생성, 윈도우 생성, 사용자 입력 처리 관련 OpenGL 라이브러리
 
+#include "shader_s.h"
+
 #include <iostream>
 
 // 콜백함수 전방선언
@@ -11,29 +13,6 @@ void processInput(GLFWwindow* window); // GLFW 윈도우 및 키 입력 감지 �
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
-
-// 버텍스 쉐이더 소스코드를 문자열로 저장한 포인터 변수 (나중에 Shader 클래스를 만들어서 .vs, .fs 파일로 사용할 수 있도록 할 것임.)
-const char* vertexShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
-"layout (location = 0) in vec3 aPos;\n" // 입력할 vertex attribute (위치값 데이터)의 location 을 0으로 받음.
-"layout (location = 1) in vec3 aColor;\n" // 입력할 vertex attribute (색상 데이터)의 location 을 1로 받음.
-"out vec3 vertexColor;\n" // 프래그먼트 쉐이더로 전송할 출력 변수 선언
-"void main()\n"
-"{\n"
-"	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n" // 다음 파이프라인으로 넘길 버텍스 쉐이더의 출력값은 gl_Position 에 할당
-//"	vertexColor = vec4(0.5, 0.0, 0.0, 1.0);\n" // 출력 변수에 짙은 빨강색 vec4 색상 데이터 할당 > 프래그먼트 쉐이더의 동일한 이름과 타입의 입력 변수로 전송
-"	vertexColor = aColor;\n" // 출력 변수에 vertex attribute 로 전송되는 색상 데이터를 할당
-"}\n\0"; // 참고로, '\0' 는 NULL 종료 문자를 나타내며, char 타입 문자열 배열 끝부분에 ASCII 코드 상에서 'NULL' 을 의미하는 '\0' 을 저장함으로써, 문자열의 끝부분임을 알림.
-
-// 프래그먼트 쉐이더 소스코드를 문자열로 저장한 포인터 변수
-const char* fragmentShaderSource = "#version 330 core\n" // 쉐이더 버전 명시
-"out vec4 FragColor;\n" // out 키워드로 vec4 타입의 프래그먼트 쉐이더 출력 변수 선언
-"in vec3 vertexColor;\n" // 버텍스 쉐이더로부터 데이터를 입력받는 입력 변수 선언 (버텍스 쉐이더의 출력변수와 동일한 타입과 이름)
-//"uniform vec4 ourColor;\n" // 이번에는 uniform 변수를 선언하여 색상을 지정해보자
-"void main()\n"
-"{\n"
-"	FragColor = vec4(vertexColor, 1.0);\n" // 프래그먼트 쉐이더의 최종 출력값을 버텍스 쉐이더 출력 변수로부터 입력받은 색상값으로 지정
-//"	FragColor = ourColor;\n" // 프래그먼트 쉐이더의 최종 출력값을 uniform 변수로 전송되는 색상값으로 지정 (실제 색상값을 c++ 단에서 glUniform~() 함수로 전송됨.)
-"}\n\0"; // NULL 종료 문자 '\0' 로 문자열의 끝부분임을 표시
 
 int main()
 {
@@ -73,54 +52,8 @@ int main()
 		return -1;
 	}
 
-	// 버텍스 쉐이더 객체 생성 및 컴파일
-	unsigned int vertexShader; // OpenGL 쉐이더 객체(object)의 참조 id를 저장할 변수
-	vertexShader = glCreateShader(GL_VERTEX_SHADER); // OpenGL 쉐이더 객체(object) 생성 > 버텍스 쉐이더 생성 시, GL_VERTEX_SHADER 파라미터 입력
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL); // 생성된 버텍스 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임 (두 번째 파라미터 1은 소스코드가 1개의 문자열(char) 변수로 구성됨을 의미.
-	glCompileShader(vertexShader); // 쉐이더 소스코드 문자열 변수의 주소값(&vertexShaderSource)이 연결된 버텍스 쉐이더 객체(object)를 런타임에 동적으로 컴파일
-
-	int success; // 컴파일 성공여부 저장하는 정수형 변수 선언
-	char infoLog[512]; // 최대 512개의 char 타입 문자를 저장할 수 있는 문자열 배열 변수 선언 > 일반적으로는 std::string 클래스로 문자열을 다루는 경우가 더 많음. > 암튼 여기에 컴파일 에러 메시지 저장
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success); // 생성된 쉐이더 객체에 대한 정보를 질의할 수 있는 쿼리 함수 > 컴파일 상태(	GL_COMPILE_STATUS)를 물어보고 결과를 success 변수에 저장
-
-	if (!success)
-	{
-		// 컴파일 실패 시, 에러 메시지 출력
-		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog); // 문자열 배열 변수 infoLog 에 버텍스 쉐이더 객체(object)에 대한 InfoLog 를 최대 512자까지 저장
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-
-	// 프래그먼트 쉐이더 객체 생성 및 컴파일
-	unsigned int fragmentShader; // OpenGL 쉐이더 객체(object)의 참조 id를 저장할 변수
-	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER); // OpenGL 쉐이더 객체(object) 생성
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL); // 생성된 프래그먼트 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임
-	glCompileShader(fragmentShader); // 프래그먼트 쉐이더 객체(object)를 런타임에 동적으로 컴파일
-
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success); // 생성된 쉐이더 객체에 대한 정보를 질의할 수 있는 쿼리 함수
-	if (!success)
-	{
-		// 컴파일 실패 시, 에러 메시지 출력
-		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog); // 문자열 배열 변수 infoLog 에 프래그먼트 쉐이더 객체(object)에 대한 InfoLog 를 최대 512자까지 저장
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-
-	// 생성된 여러 쉐이더 객체 연결 > 쉐이더 프로그램 객체 생성
-	unsigned int shaderProgram = glCreateProgram(); // OpenGL 쉐이더 프로그램 객체(object)의 참조 id를 저장할 변수
-	glAttachShader(shaderProgram, vertexShader); // 그래픽 파이프라인의 입출력 순서에 따라 쉐이더를 프로그램 객체에 붙여줘야 함. (즉, 버텍스 쉐이더 -> 프래그먼트 쉐이더 순!)
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram); // 쉐이더 프로그램에 붙여진 쉐이더 객체를 연결
-
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success); // 생성된 프로그램 객체에 대한 정보를 질의하는 쿼리 함수
-	if (!success)
-	{
-		// 쉐이더 프로그램 linking 실패 시, 에러 메시지 출력
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog); // 문자열 배열 변수 infoLog 에 쉐이더 프로그램 객체(object)에 대한 InfoLog 를 최대 512자까지 저장
-		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
-
-	// 이미 쉐이더 프로그램 객체에 연결한 쉐이더 객체들은 더 이상 불필요하므로 제거!
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
+	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
+	Shader ourShader("shader.vs", "shader.fs");
 
 	// 정점 위치 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
 	// 여기에 정점 색상 데이터까지 추가함.
@@ -220,7 +153,7 @@ int main()
 		//int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");  
 		
 		// 삼각형 그리기 명령 실행
-		glUseProgram(shaderProgram); // 미리 생성 및 linking 해둔 쉐이더 프로그램 객체를 사용하여 그리도록 명령
+		ourShader.use(); // Shader 클래스 내에서 생성된 쉐이더 프로그램 객체를 바인딩하는 메서드 호출
 
 		// 바인딩된 쉐이더 프로그램 객체안에 특정 location 이 할당된 uniform 변수에 실제 값을 세팅하기
 		// 여기서부터는 실제로 쉐이더 프로그램 안의 uniform 변수의 값을 '설정'해줘야 하므로, 값을 설정할 쉐이더 프로그램을 먼저 바인딩해줘야 함! 
@@ -277,7 +210,6 @@ int main()
 	// 렌더링이 끝났다면 더 이상 메모리에 남겨둘 이유가 없음!!
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	glDeleteProgram(shaderProgram);
 
 	glfwTerminate(); // while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 
