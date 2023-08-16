@@ -1,7 +1,7 @@
 #include <glad/glad.h> // 운영체제(플랫폼)별 OpenGL 함수를 함수 포인터에 저장 및 초기화 (OpenGL 을 사용하는 다른 라이브러리(GLFW)보다 먼저 include 할 것.)
 #include <GLFW/glfw3.h> // OpenGL 컨텍스트 생성, 윈도우 생성, 사용자 입력 처리 관련 OpenGL 라이브러리
 
-#include "shader_s.h"
+#include "MyHeaders/shader_s.h"
 
 #include <iostream>
 
@@ -53,7 +53,7 @@ int main()
 	}
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
-	Shader ourShader("shader.vs", "shader.fs");
+	Shader ourShader("MyShaders/shader.vs", "MyShaders/shader.fs");
 
 	// 정점 위치 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
 	// 여기에 정점 색상 데이터까지 추가함.
