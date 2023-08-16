@@ -117,12 +117,40 @@ public:
 		*/
 		const char* vShaderCode = vertexCode.c_str();
 		const char* fShaderCode = fragmentCode.c_str();
+
+		/* 아래부터는 기존 main 함수에 있던 쉐이더 / 쉐이더 프로그램 객체 생성 및 컴파일 / 링킹 작업을 그대로 옮겨온 것 */
+
+		// 쉐이더 객체 생성 및 컴파일
+		unsigned int vertex, fragment; // OpenGL 쉐이더 객체(object)의 참조 id를 저장할 변수
+
+		// 버텍스 쉐이더 생성 및 컴파일
+		vertex = glCreateShader(GL_VERTEX_SHADER); // OpenGL 쉐이더 객체(object) 생성
+		glShaderSource(vertex, 1, &vShaderCode, NULL); // 생성된 버텍스 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임
+		glCompileShader(vertex); // 쉐이더 소스코드 문자열이 연결된 버텍스 쉐이더 객체(object)를 런타임에 동적으로 컴파일
+		checkCompileErrors(vertex, "VERTEX"); // 쉐이더 컴파일 에러 대응
+
+		// 프래그먼트 쉐이더 생성 및 컴파일
+		fragment = glCreateShader(GL_FRAGMENT_SHADER); // OpenGL 쉐이더 객체(object) 생성
+		glShaderSource(fragment, 1, &fShaderCode, NULL); // 생성된 프래그먼트 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임
+		glCompileShader(fragment); // 쉐이더 소스코드 문자열이 연결된 프래그먼트 쉐이더 객체(object)를 런타임에 동적으로 컴파일
+		checkCompileErrors(fragment, "FRAGMENT"); // 쉐이더 컴파일 에러 대응
+
+		// 쉐이더 프로그램 객체 생성 및 쉐이더 객체 linking
+		ID = glCreateProgram(); // OpenGL 쉐이더 프로그램 객체(object)의 참조 id를 멤버변수에 저장
+		glAttachShader(ID, vertex); // 그래픽 파이프라인의 입출력 순서에 따라 쉐이더를 프로그램 객체에 붙여줘야 함. (즉, 버텍스 쉐이더 -> 프래그먼트 쉐이더 순!)
+		glAttachShader(ID, fragment);
+		glLinkProgram(ID); // 쉐이더 프로그램에 붙여진 쉐이더 객체를 연결 > 이때 쉐이더 간 입출력 변수들끼리 연결됨!
+		checkCompileErrors(ID, "PROGRAM"); // 쉐이더 프로그램 linking 에러 대응
+
+		// 이미 쉐이더 프로그램 객체에 연결한 쉐이더 객체들은 더 이상 불필요하므로 제거!
+		glDeleteShader(vertex);
+		glDeleteShader(fragment);
 	}
 
 	// ShaderProgram 객체 활성화(바인딩)
 	void use()
 	{
-
+		glUseProgram(ID); // 미리 생성 및 linking 해둔 쉐이더 프로그램 객체를 사용하도록 바인딩 (state-setting)
 	}
 
 	// 해당 쉐이더 프로그램의 uniform 변수 관련 utils
@@ -172,24 +200,55 @@ public:
 	*/
 	void setBool(const std::string &name, bool value) const
 	{
-
+		// glGetUniformLocation() 함수로 멤버변수 ID 가 가리키는 쉐이더 프로그램 객체에 존재하는
+		// 특정 유니폼 변수의 location 을 가져오고, 
+		// 이 location 값을 통해 bool 값을 유니폼 변수에 전송함.
+		// 이때, boolean 타입은 정수형 타입인 0 또는 1 로도 처리가 가능하여, 정수형으로 형변환해서 전달.
+		// 그래서 glUniform1i(1 int) 로 유니폼 변수를 전송함.
+		// 또한, OpenGL 함수들은 C 스타일 문자열만 받는다고 했으니까 유니폼 변수명 문자열을
+		// std::string 타입에서 c 스타일 문자열로 변환하여 전달함.
+		glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value);
 	}
 
 	void setInt(const std::string& name, int value) const
 	{
-
+		glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
 	}
 
 	void setFloat(const std::string& name, float value) const
 	{
-
+		glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
 	}
 
 private:
 	// Shader 객체 및 ShaderProgram 객체의 compile 및 linking 에러 대응
 	void checkCompileErrors(unsigned int shader, std::string type)
 	{
-
+		int success; // 컴파일 또는 링킹 성공여부 저장하는 정수형 변수 선언
+		char infoLog[1024]; // 최대 1024개의 char 타입 문자를 저장할 수 있는 문자열 배열 변수 선언 > 일반적으로는 std::string 클래스로 문자열을 다루는 경우가 더 많음. > 암튼 여기에 컴파일 에러 메시지 저장
+	
+		if (type != "PROGRAM")
+		{
+			// 쉐이더 객체 컴파일 에러 대응
+			glGetShaderiv(shader, GL_COMPILE_STATUS, &success); // 생성된 쉐이더 객체에 대한 정보를 질의할 수 있는 쿼리 함수 > 컴파일 상태(GL_COMPILE_STATUS)를 물어보고 결과를 success 변수에 저장
+			if (!success)
+			{
+				// 컴파일 실패 시, 에러 메시지 출력
+				glGetShaderInfoLog(shader, 1024, NULL, infoLog);  // 문자열 배열 변수 infoLog 에 쉐이더 객체(object)에 대한 InfoLog 를 최대 1024자까지 저장
+				std::cout << "ERROR::SHADER_COMPILATION_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+			}
+		}
+		else
+		{
+			// 쉐이더 프로그램 객체 링킹 에러 대응
+			glGetProgramiv(shader, GL_LINK_STATUS, &success); // 생성된 프로그램 객체에 대한 정보를 질의하는 쿼리 함수
+			if (!success)
+			{
+				// 쉐이더 프로그램 linking 실패 시, 에러 메시지 출력
+				glGetProgramInfoLog(shader, 1024, NULL, infoLog);  // 문자열 배열 변수 infoLog 에 쉐이더 프로그램 객체(object)에 대한 InfoLog 를 최대 1024자까지 저장
+				std::cout << "ERROR::PROGRAM_LINKING_ERROR of type: " << type << "\n" << infoLog << "\n -- --------------------------------------------------- -- " << std::endl;
+			}
+		}
 	}
 };
 
