@@ -193,6 +193,7 @@ int main()
 			glUniform4f() 함수를 사용함!
 		*/
 		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+		ourShader.setFloat("offset", 0.5f); // 유니폼 변수 전송 시, Shader 클래스에 정의된 메서드를 사용하면 간단!
 
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 		glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
