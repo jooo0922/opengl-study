@@ -17,6 +17,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_Quiz_1", "Shaders_Q
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_Quiz_2", "Shaders_Quiz_2\Shaders_Quiz_2.vcxproj", "{03193841-4B0D-4282-9F27-DCF6C24BF94E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_Quiz_3", "Shaders_Quiz_3\Shaders_Quiz_3.vcxproj", "{4BE94FD5-8746-4466-8D8F-45B861B19D4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -81,6 +83,14 @@ Global
 		{03193841-4B0D-4282-9F27-DCF6C24BF94E}.Release|x64.Build.0 = Release|x64
 		{03193841-4B0D-4282-9F27-DCF6C24BF94E}.Release|x86.ActiveCfg = Release|Win32
 		{03193841-4B0D-4282-9F27-DCF6C24BF94E}.Release|x86.Build.0 = Release|Win32
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Debug|x64.ActiveCfg = Debug|x64
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Debug|x64.Build.0 = Debug|x64
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Debug|x86.ActiveCfg = Debug|Win32
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Debug|x86.Build.0 = Debug|Win32
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Release|x64.ActiveCfg = Release|x64
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Release|x64.Build.0 = Release|x64
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Release|x86.ActiveCfg = Release|Win32
+		{4BE94FD5-8746-4466-8D8F-45B861B19D4E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
