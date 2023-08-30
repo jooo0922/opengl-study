@@ -26,5 +26,8 @@
     <ClInclude Include="MyHeaders\shader_s.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MyHeaders\stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
