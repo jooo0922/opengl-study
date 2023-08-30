@@ -187,6 +187,69 @@ int main()
 	// 와이어프레임 모드로 그리기 (정확히는 각 polygon 의 rasterization mode 를 설정하는 것!)
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 각 파라미터는 (설정한 polygon mode 앞면/뒷면 적용, polygon rasterzing 방식 (선으로 그리기 or 면으로 채우기))
 
+	// 텍스쳐 이미지 로드 및 텍스쳐 객체 생성 
+	// (텍스쳐 객체 생성 및 바인딩, 데이터 덮어쓰기 등의 과정은 VBO, VAO, EBO 객체 생성 과정과 매우 유사함!)
+	unsigned int texture; // 텍스쳐 객체(object) 참조 id 를 저장할 변수
+	glGenTextures(1, &texture); // 텍스쳐 객체 생성
+	glBindTexture(GL_TEXTURE_2D, texture); // OpenGL 컨텍스트 중에서, 2D 텍스쳐로 사용할 객체는 GL_TEXTURE_2D 타입의 상태에 바인딩됨 > 이제 GL_TEXTURE_2D 관련 텍스쳐 명령은 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정에 적용됨.
+
+	// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정 명령
+	// Texture Wrapping 모드 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리 모드)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Texture Wrapping 을 반복 모드로 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
+	/*
+		텍셀(텍스쳐 픽셀) 필터링 방식을 지정해줘야 하는 이유
+
+		텍스쳐가 확대되거나 축소될 때,
+		보간된 어떤 텍스쳐 좌표가 예를 들어, (0.1234567..., 0.1234567...) 이라고 쳐보자.
+
+		그런데, 텍스쳐 이미지의 텍셀(텍스쳐 해상도 상에서 각 텍스쳐 픽셀 하나하나의 단위)에서
+		정확히 (0.1234567..., 0.1234567...) 에 대응되는 텍셀이 존재한다고 볼 수 있나?
+
+		절대 아님!
+		예를 들어, 텍스쳐 이미지 해상도가 256 * 256 이라고 한다면,
+		(n/256, n/256 (단, n 은 0 ~ 256 사이)) 텍스쳐 좌표에 대응하는 텍셀은 찾을 수 있지만,
+		정확히 (0.1234567..., 0.1234567...) 좌표에 대응하는 텍셀은 알 수가 없겠지?
+
+		이런 식으로, 소수점이 너무 긴 텍스쳐 좌표의 경우,
+		어떤 텍셀이 대응되는지 정확히 알 수 없으므로,
+		저러한 텍스쳐 좌표를 받았을 때, 어떤 텍스쳐 색상값을 반환해줘야 하는지
+		그 방식을 정의하는 게 Texture Filtering 이라고 볼 수 있음.
+
+		GL_NEAREST 은 그냥 현재 텍스쳐 좌표와 각 텍셀의 중점 사이의 거리를 비교해서
+		가장 가까운 텍셀의 색상값을 넘겨주는 것이고, (> 그래서 약간 blocky 하고 각져보이는 느낌이 듦.)
+
+		GL_LINEAR 은 현재 텍스쳐 좌표와 가까이에 있는 텍셀들을 적당하게 섞어서
+		주변 텍셀들 사이의 근사치를 색상값으로 계산하여 넘겨주는 방식 
+		> 즉, 주변 텍셀 색상들을 섞어서 반환해 줌! (> 그래서 약간 antialiasing 이 적용된 느낌이 듦.)
+	*/
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Mipmap 은 텍스쳐 축소 시에만 사용되므로, 텍스쳐 확대 시에는 Mipmap 필터링 옵션을 적용할 필요 없음 > 심지어 적용하면 에러가 발생함.
+
+	// 텍스쳐 객체에 사용할 이미지 로드하기 (stb_image.h 라이브러리 사용)
+	int width, height, nrChannels; // 로드한 이미지의 width, height, 색상 채널 개수를 저장할 변수 선언
+	unsigned char* data = stbi_load("images/container.jpg", &width, &height, &nrChannels, 0); // 이미지 데이터 가져와서 char 타입의 bytes 데이터로 저장. (이미지의 width, height, 색상 채널 수도 저장)
+	if (data)
+	{
+		// 이미지 데이터 로드 성공 시 처리
+		// 로드한 이미지 데이터를 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체에 덮어쓰기 (VBO 에 버퍼 데이터 덮어쓰는 원리랑 유사!)
+		// 각 매개변수에 대한 설명은 https://learnopengl.com/Getting-started/Textures 참고
+		// 참고로 두 번째 파라미터 0은 우리가 생성할 텍스쳐 Mipmap 의 레벨을 지정하는 것이지만, 일단 기본 레벨인 0단계만 전달함.
+		// 각 단계마다 밉맵을 생성하려면 0, 1, 2, 3, 4,... 이런식으로 두 번째 파라미터에 이어서 전달해줘야 하지만,
+		// glGenerateMipmap() 을 사용하면 모든 단계의 밉맵을 알아서 자동으로 생성해준다고 함.
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D); // 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체에 필요한 모든 단계의 Mipmap 을 자동 생성함. 
+	}
+	else
+	{
+		// 이미지 데이터 로드 실패 시 처리
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data); // 텍스쳐 객체에 이미지 데이터를 전달하고, 밉맵까지 생성 완료했다면, 로드한 이미지 데이터는 항상 메모리 해제할 것!
+
+
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
 	while (!glfwWindowShouldClose(window))
