@@ -1,6 +1,28 @@
 #include <glad/glad.h> // 운영체제(플랫폼)별 OpenGL 함수를 함수 포인터에 저장 및 초기화 (OpenGL 을 사용하는 다른 라이브러리(GLFW)보다 먼저 include 할 것.)
 #include <GLFW/glfw3.h> // OpenGL 컨텍스트 생성, 윈도우 생성, 사용자 입력 처리 관련 OpenGL 라이브러리
 
+/*
+	stb_image.h
+
+	주요 이미지 파일 포맷을 로드할 수 있는
+	싱글 헤더 이미지로드 라이브러리.
+
+	#define 매크로 전처리기를 통해
+	특정 매크로를 선언함으로써, 헤더파일 내에서
+	해당 매크로 영역의 코드만 include 할 수 있도록 함.
+
+	실제로 stb_image.h 안에 보면
+	
+	#ifdef STB_IMAGE_IMPLEMENTATION
+	~
+	#endif
+
+	요렇게 전처리기가 정의되어 있는 부분이 있음.
+	이 부분의 코드들만 include 하겠다는 것이지!
+*/
+#define STB_IMAGE_IMPLEMENTATION
+#include "MyHeaders/stb_image.h"
+
 #include "MyHeaders/shader_s.h"
 
 #include <iostream>
