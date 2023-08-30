@@ -78,15 +78,15 @@ int main()
 	Shader ourShader("MyShaders/shader.vs", "MyShaders/shader.fs");
 
 	// 정점 위치 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
-	// 여기에 정점 색상 데이터까지 추가함.
-	// 하나의 배열에 정점의 위치 데이터와 색상 데이터가 섞여있기 때문에, 
+	// 여기에 정점 색상 데이터와 텍스쳐 좌표(uv) 데이터까지 추가함. 
+	// 하나의 배열에 정점의 위치 데이터와 색상 데이터, uv 데이터가 섞여있기 때문에, 
 	// glVertexAttribPointer() 를 통해서 정점 데이터 해석 방식을 잘 설정해줘야 함.
 	float vertices[] = {
-		// positions 데이터		// colors 데이터		
-		 0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,   // top right
-		 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,	// bottom right
-		-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f,	// bottom left
-		-0.5f,  0.5f, 0.0f,		1.0f, 1.0f, 0.0f	// top left
+		// positions 데이터		// colors 데이터		  // 텍스쳐 좌표(uv) 데이터	
+		 0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,	  1.0f, 1.0f,				// top right
+		 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,	  1.0f, 0.0f,				// bottom right
+		-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f,	  0.0f, 0.0f,				// bottom left
+		-0.5f,  0.5f, 0.0f,		1.0f, 1.0f, 0.0f,	  0.0f, 1.0f				// top left
 	};
 
 	// EBO(Element Buffer Object) 생성 시 사용할 정점 인덱스 배열 생성 > EBO 는 한마디로 인덱스 버퍼라고 보면 됨!
@@ -145,17 +145,24 @@ int main()
 	// 2. 정점 당 필요한 데이터 개수
 	// 3. 데이터 타입
 	// 4. 데이터를 -1 ~ 1 사이로 정규화할 지 여부. 이미 vertices 배열은 NDC 좌표 기준으로 구성해놨으니 필요없겠군!
-	// 5. stride. 정점 데이터 세트 사이의 메모리 간격. 각 정점은 현재 3개의 위치 데이터 + 3개의 색상 데이터(총합 6개)를 가져다 쓰므로, <실수형 리터럴의 메모리 크기 * 6> 이 정점 데이터 세트 간 메모리 간격
+	// 5. stride. 정점 데이터 세트 사이의 메모리 간격. 각 정점은 현재 3개의 위치 데이터 + 3개의 색상 데이터 + 2개의 uv 데이터(총합 8개)를 가져다 쓰므로, <실수형 리터럴의 메모리 크기 * 8> 이 정점 데이터 세트 간 메모리 간격
 	// 6. 정점 버퍼에서 데이터 시작 위치 offset > vertices 의 시작 지점부터 위치 데이터이므로, 그냥 0으로 하면 될건데, 마지막 파라미터 타입이 void* 타입으로만 받아서 형변환을 해준 것.
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0); // 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. > 그 중에서 0번 location 변수만 사용하도록 활성화한 것!
 
 	// vertex attribute 가 추가될 때마다, (색상 데이터가 추가되었지?)
 	// 각 정점 attribute 로 들어올 정점 데이터의 해석 방식을 별도로 설정해줘야 함.
 	// color attribute 의 location 은 1이였으니 1로 지정하고,
 	// 정점 버퍼에서 색상 데이터의 시작 위치(offset)는 x, y, z 3개의 위치 데이터 다음부터 시작하므로, 3 * sizeof(float) = 12 bytes 만큼의 메모리 공간을 띄운 지점부터 시작! 
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1); // color attribute 변수의 location 인 1번 location 변수도 사용할 수 있게 활성화함.
+
+	// vertex attribute 로 텍스쳐 좌표(uv) 데이터를 가져다 쓸 aTexCoord 가 추가됨.
+	// 그에 따라, 각 정점 attribute 로 들어올 uv 데이터 해석 방식을 추가로 설정함
+	// aTexCoord attribute 의 location 은 2로 설정했고,
+	// 정점 버퍼에서 uv 데이터의 시작 위치(offset)는 x, y, z 3개의 위치 데이터와 r, g, b 3개의 색상 데이터 다음부터 시작하므로 6 * sizeof(float) = 24 bytes 만큼의 메모리 공간을 띄운 지점부터 시작!
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2); // uv attribute 변수의 location 인 2번 location 변수도 사용할 수 있게 활성화함.
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0); // VBO 객체 설정을 끝마쳤다면, OpenGL 컨텍스트로부터 바인딩(연결)을 해제함.
 
