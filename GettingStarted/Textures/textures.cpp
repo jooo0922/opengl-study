@@ -196,9 +196,11 @@ int main()
 
 	// 텍스쳐 이미지 로드 및 텍스쳐 객체 생성 
 	// (텍스쳐 객체 생성 및 바인딩, 데이터 덮어쓰기 등의 과정은 VBO, VAO, EBO 객체 생성 과정과 매우 유사함!)
-	unsigned int texture; // 텍스쳐 객체(object) 참조 id 를 저장할 변수
-	glGenTextures(1, &texture); // 텍스쳐 객체 생성
-	glBindTexture(GL_TEXTURE_2D, texture); // OpenGL 컨텍스트 중에서, 2D 텍스쳐로 사용할 객체는 GL_TEXTURE_2D 타입의 상태에 바인딩됨 > 이제 GL_TEXTURE_2D 관련 텍스쳐 명령은 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정에 적용됨.
+	unsigned int texture1, texture2; // 텍스쳐 객체(object) 참조 id 를 저장할 변수들 선언
+
+	// 첫 번째 텍스쳐 처리
+	glGenTextures(1, &texture1); // 텍스쳐 객체 생성
+	glBindTexture(GL_TEXTURE_2D, texture1); // OpenGL 컨텍스트 중에서, 2D 텍스쳐로 사용할 객체는 GL_TEXTURE_2D 타입의 상태에 바인딩됨 > 이제 GL_TEXTURE_2D 관련 텍스쳐 명령은 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정에 적용됨.
 
 	// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정 명령
 	// Texture Wrapping 모드 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리 모드)
@@ -237,6 +239,12 @@ int main()
 
 	// 텍스쳐 객체에 사용할 이미지 로드하기 (stb_image.h 라이브러리 사용)
 	int width, height, nrChannels; // 로드한 이미지의 width, height, 색상 채널 개수를 저장할 변수 선언
+	
+	// stb_image.h 이미지를 로드할 때, 이미지 데이터의 y축을 뒤집도록 함.
+	// why? 보통 이미지 데이터는 y축 상단이 0.0 으로 정의되어 있지만, OpenGL 은 y축 하단을 0.0 으로 인식해서 이미지를 읽으므로, 
+	// 그냥 로드하면 이미지가 뒤집어지는 이슈 발생.
+	stbi_set_flip_vertically_on_load(true);
+
 	unsigned char* data = stbi_load("images/container.jpg", &width, &height, &nrChannels, 0); // 이미지 데이터 가져와서 char 타입의 bytes 데이터로 저장. (이미지의 width, height, 색상 채널 수도 저장)
 	if (data)
 	{
@@ -256,6 +264,40 @@ int main()
 	}
 	stbi_image_free(data); // 텍스쳐 객체에 이미지 데이터를 전달하고, 밉맵까지 생성 완료했다면, 로드한 이미지 데이터는 항상 메모리 해제할 것!
 
+	// 두 번째 텍스쳐 처리
+	glGenTextures(1, &texture2); // 두 번째 텍스쳐 객체 생성
+	glBindTexture(GL_TEXTURE_2D, texture2); // 두 번째 텍스쳐 객체를 GL_TEXTURE_2D 타입의 상태에 바인딩 > 이제 텍스쳐 객체 설정 명령이 바인딩된 두 번째 텍스쳐 객체에 적용될 것임.
+
+	// 현재 바인딩된 두 번째 텍스쳐 객체 설정 명령
+	// Texture Wrapping 모드 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리 모드)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Texture Wrapping 을 반복 모드로 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Mipmap 은 텍스쳐 축소 시에만 사용되므로, 텍스쳐 확대 시에는 Mipmap 필터
+
+	data = stbi_load("images/awesomeface.png", &width, &height, &nrChannels, 0); // 두 번째 텍스쳐 객체에 사용할 이미지 데이터 로드
+	if (data)
+	{
+		// 이미지 데이터 로드 성공 시 처리
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // .png 는 알파 채널을 포함하므로, GL_RGBA 로 텍스쳐 포맷 및 원본 이미지 데이터 포맷 설정
+		glGenerateMipmap(GL_TEXTURE_2D); // 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체에 필요한 모든 단계의 Mipmap 을 자동 생성함. 
+	}
+	else
+	{
+		// 이미지 데이터 로드 실패 시 처리
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data); // 텍스쳐 객체에 이미지 데이터를 전달하고, 밉맵까지 생성 완료했다면, 로드한 이미지 데이터는 항상 메모리 해제할 것!
+
+	// 여러 개의 텍스쳐 객체를 생성해서 쉐이더 프로그램의 sampler 타입 uniform 변수로 전송하고 싶다면,
+	// 각 sampler 변수가 몇 번 텍스쳐 위치(보통 Texture Unit 이라고도 함.)에 바인딩된 텍스쳐 객체를 가져다 쓸 것인지 알려줘야 함.
+	// 이 작업은 매 프레임마다 텍스쳐 이미지를 바꿔줄 게 아니라면 렌더링 루프 이전에 수행해줘도 괜찮음.
+	// 이는 정수형 데이터를 유니폼 변수로 전송하는 glUniform1i() 함수를 사용하면 됨!
+	ourShader.use(); // 항상 uniform 변수에 값을 전송할 때에는, 해당 변수가 선언된 Shader Program 을 바인딩해줌.
+	ourShader.setInt("texture1", 0); // texture1 이라는 이름의 sampler 유니폼 변수에는 텍스쳐 유닛(텍스쳐 위치)을 0으로 전달함. > 0번 위치에 바인딩된 텍스쳐 객체를 사용하겠군. (참고로, Shader.setInt() 는 내부적으로 glUniform1i() 로 구현되어 있음!)
+	ourShader.setInt("texture2", 1); // texture2 이라는 이름의 sampler 유니폰 변수에는 텍스쳐 유닛을 1로 전달함. > 1번 위치에 바인딩된 텍스쳐 객체를 사용하겠군.
 
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
@@ -280,6 +322,17 @@ int main()
 		// 또 참고로, glGetUniformLocation() 함수까지는 location 을 읽어오기만 하면 되는 함수이므로, 
 		// 쉐이더 프로그램 객체를 glUseProgram() 으로 바인딩하지는 않아도 됨!! 
 		//int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");  
+
+		// Texture Unit(바인딩할 텍스쳐 위치) 활성화 및 텍스쳐 바인딩
+		// GL_TEXTURE_2D 상태에 texture1 텍스쳐 객체를 바인딩할 때, 0번 텍스쳐 유닛 위치에 바인딩하도록 0번 위치 활성화
+		// -> 참고로, 0번 위치는 항상 기본으로 활성화되어 있는 텍스쳐 유닛이므로, 하나의 텍스쳐 객체만 바인딩해서 사용할 경우 glActiveTexture() 를 생략할 수 있었음!
+		glActiveTexture(GL_TEXTURE0); // 앞전에 texture1 이라는 sampler uniform 변수는 0번 텍스쳐 유닛을 할당받았으니, 0번 위치에 바인딩된 텍스쳐 객체를 가져다 쓰겠군!
+		glBindTexture(GL_TEXTURE_2D, texture1); // 0번 위치에 바인딩할 텍스쳐 객체 바인딩 > 텍스쳐 바인딩 정보는 VAO 객체에는 저장할 수 없어 매번 따로 바인딩해줘야 함.
+
+		// GL_TEXTURE_2D 상태에 texture2 텍스쳐 객체를 바인딩할 때, 1번 텍스쳐 유닛 위치에 바인딩하도록 1번 위치 활성화
+		glActiveTexture(GL_TEXTURE1); // 앞전에 texture2 이라는 sampler uniform 변수는 1번 텍스쳐 유닛을 할당받았으니, 1번 위치에 바인딩된 텍스쳐 객체를 가져다 쓰겠군!
+		glBindTexture(GL_TEXTURE_2D, texture2); // 1번 위치에 바인딩할 텍스쳐 객체 바인딩
+
 
 		// 삼각형 그리기 명령 실행
 		ourShader.use(); // Shader 클래스 내에서 생성된 쉐이더 프로그램 객체를 바인딩하는 메서드 호출
@@ -323,7 +376,6 @@ int main()
 		*/
 		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 
-		glBindTexture(GL_TEXTURE_2D, texture); // 그리기 명령에 사용할 텍스쳐 객체 바인딩 > 텍스쳐 바인딩 정보는 VAO 객체에는 저장할 수 없어 매번 따로 바인딩해줘야 함.
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 		
 		//glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
