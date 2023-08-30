@@ -323,6 +323,7 @@ int main()
 		*/
 		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 
+		glBindTexture(GL_TEXTURE_2D, texture); // 그리기 명령에 사용할 텍스쳐 객체 바인딩 > 텍스쳐 바인딩 정보는 VAO 객체에는 저장할 수 없어 매번 따로 바인딩해줘야 함.
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 		
 		//glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
