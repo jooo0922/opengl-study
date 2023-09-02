@@ -83,10 +83,10 @@ int main()
 	// glVertexAttribPointer() 를 통해서 정점 데이터 해석 방식을 잘 설정해줘야 함.
 	float vertices[] = {
 		// positions 데이터		// colors 데이터		  // 텍스쳐 좌표(uv) 데이터	
-		 0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,	  1.0f, 1.0f,				// top right
-		 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,	  1.0f, 0.0f,				// bottom right
+		 0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,	  2.0f, 2.0f,				// top right
+		 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,	  2.0f, 0.0f,				// bottom right
 		-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f,	  0.0f, 0.0f,				// bottom left
-		-0.5f,  0.5f, 0.0f,		1.0f, 1.0f, 0.0f,	  0.0f, 1.0f				// top left
+		-0.5f,  0.5f, 0.0f,		1.0f, 1.0f, 0.0f,	  0.0f, 2.0f				// top left
 	};
 
 	// EBO(Element Buffer Object) 생성 시 사용할 정점 인덱스 배열 생성 > EBO 는 한마디로 인덱스 버퍼라고 보면 됨!
@@ -204,8 +204,20 @@ int main()
 
 	// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정 명령
 	// Texture Wrapping 모드 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리 모드)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Texture Wrapping 을 반복 모드로 설정
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Texture Wrapping 을 반복 모드로 설정
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Texture Wrapping 을 Clamp to Edge(모서리로 샘플링을 고정하여 반복 샘플링) 로 설정
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT); // Texture Wrapping 을 대칭 반복으로 설정
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER); // Texture Wrapping 을 범위 밖 좌표는 지정한 색으로 칠하도록 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	// Texture Wrapping 모드를 GL_CLAMP_TO_BORDER 로 설정할 경우,
+	// [0, 1] 범위 밖 uv 좌표에 대해 칠해줄 색상을 지정해줘야 함.
+	float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
 
 	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
 	/*
@@ -270,8 +282,20 @@ int main()
 
 	// 현재 바인딩된 두 번째 텍스쳐 객체 설정 명령
 	// Texture Wrapping 모드 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리 모드)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Texture Wrapping 을 반복 모드로 설정
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Texture Wrapping 을 반복 모드로 설정
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Texture Wrapping 을 Clamp to Edge(모서리로 샘플링을 고정하여 반복 샘플링) 로 설정
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT); // Texture Wrapping 을 대칭 반복으로 설정
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER); // Texture Wrapping 을 범위 밖 좌표는 지정한 색으로 칠하도록 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	// Texture Wrapping 모드를 GL_CLAMP_TO_BORDER 로 설정할 경우,
+	// [0, 1] 범위 밖 uv 좌표에 대해 칠해줄 색상을 지정해줘야 함.
+	float borderColor2[] = { 0.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor2);
+
 
 	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
