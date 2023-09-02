@@ -75,6 +75,9 @@ int main()
 		return -1;
 	}
 
+	glEnable(GL_BLEND); // .png 텍스쳐의 투명한 영역을 투명하게 렌더링하려면, GL_BLEND 상태를 활성화하여, 블렌딩 모드를 활성화해줘야 함.
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // 블렌딩 함수를 <원본픽셀(여기서는 사각형 픽셀)의 투명도>를 원본픽셀 투명도로 정의하고, <1 - 원본픽셀의 투명도> 를 대상픽셀의 투명도로 정의하여 혼합해 줌.
+
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader ourShader("MyShaders/shader.vs", "MyShaders/shader.fs");
 
@@ -414,7 +417,7 @@ void processInput(GLFWwindow* window, Shader ourShader)
 	// 프래그먼트 쉐이더 mix() 함수의 세번째 파라미터로 넣어줄 값 
 	// 콜백함수 최초 호출 시에만 초기화하고, 이후에는 정적 메모리 공간에 저장된 값을 가져와 사용하도록 static 변수로 선언 
 	// > class 구조가 아니다보니 상태값을 전역변수 또는 정적변수로 관리해줘야 함.
-	static float mixAlpha = 0.2f; 
+	static float mixAlpha = 1.0f; 
 
 	// 현재 GLFWwindow 에 대하여(활성화 시,) 특정 키(esc 키)가 입력되었는지 여부를 감지
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
