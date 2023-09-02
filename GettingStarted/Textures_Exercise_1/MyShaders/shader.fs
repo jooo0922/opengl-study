@@ -18,5 +18,6 @@ void main() {
 
   // texture1 과 texture2 를 샘플링한 색상을 혼합해서 최종 색상 계산.
   // mix() 함수의 세 번째 인자에 0.2 를 전달함으로써, 첫 번째 샘플링 색상을 80% 로, 두 번째 샘플링 색상을 20% 비율로 선형보간하여 섞어주도록 함.
-  FragColor = mix(texture2D(texture1, texCoord), texture2D(texture2, texCoord), 0.2);
+  vec4 tex2 = texture2D(texture2, vec2(1.0 - texCoord.x, texCoord.y)); // 웃는 얼굴 텍스쳐만 X축 방향을 반대로 뒤집어서 샘플링
+  FragColor = mix(texture2D(texture1, texCoord), tex2, 0.2);
 }
