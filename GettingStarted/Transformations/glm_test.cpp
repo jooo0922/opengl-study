@@ -28,8 +28,7 @@ using namespace std;
 int test()
 {
 	glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f); // 위치 벡터 (1, 0, 0) 을 glm::vec4 타입 변수로 선언 및 초기화
-	// 위치 벡터를 이렇게 초기화한 것과 동일함. 초기화 문법이 다를 뿐임.
-	//glm::vec4 vec = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	//glm::vec4 vec = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f); // 위치 벡터를 이렇게 초기화한 것과 동일함. 초기화 문법이 다를 뿐임.
 	
 	glm::mat4 trans = glm::mat4(1.0f); // 이동 변환행렬로 만들 glm::mat4 타입 변수 선언 및 단위행렬로 초기화
 
@@ -39,8 +38,8 @@ int test()
 	trans = glm::translate(trans, glm::vec3(1.0f, 1.0f, 0.0f));
 
 	// 위치 벡터를 정의한 glm::vec4 타입 변수 vec 에
-    // glm::mat4 타입의 이동 변환행렬을 행렬 곱하여 vec 을 이동 변환시킴 
-    // 따라서, 정상적으로 변환이 적용되었다면 vec 변수 벡터는 (2, 1, 0) 으로 변환되어 있어야 할 것임.
+	// glm::mat4 타입의 이동 변환행렬을 행렬 곱하여 vec 을 이동 변환시킴 
+	// 따라서, 정상적으로 변환이 적용되었다면 vec 변수 벡터는 (2, 1, 0) 으로 변환되어 있어야 할 것임.
 	vec = trans * vec;
 
 	cout << vec.x << vec.y << vec.z << endl; // 이동 변환이 정상적으로 수행되었다면, 210 이 출력됨.
