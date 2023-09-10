@@ -25,7 +25,7 @@
 
 using namespace std;
 
-int main()
+int test()
 {
 	glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f); // 위치 벡터 (1, 0, 0) 을 glm::vec4 타입 변수로 선언 및 초기화
 	// 위치 벡터를 이렇게 초기화한 것과 동일함. 초기화 문법이 다를 뿐임.
