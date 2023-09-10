@@ -29,5 +29,8 @@
     <ClCompile Include="glm_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="transformations.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
