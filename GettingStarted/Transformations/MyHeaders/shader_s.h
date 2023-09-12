@@ -7,6 +7,7 @@
 */
 
 #include <glad/glad.h> // 운영체제(플랫폼)별 OpenGL 함수를 함수 포인터에 저장 및 초기화 > shader 관련 OpenGL 함수가 필요하니까!
+#include <glm/glm.hpp> // glm 으로 생성한 벡터 및 행렬 데이터를 쉐이더 프로그램의 유니폼 변수로 전송하기 위해 include
 
 #include <string> // std::string 을 사용할 시, 이 라이브러리를 include 해줘야 함.
 #include <fstream> // 파일 입출력(파일 열기, 읽기, 쓰기 등...) 관련 라이브러리 (.vs, .fs 등의 shader 파일을 다룰 때 필요)
@@ -218,6 +219,106 @@ public:
 	void setFloat(const std::string& name, float value) const
 	{
 		glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
+	}
+	
+	// vec2 타입 데이터를 배열 형태로 전달하는 메서드
+	void setVec2(const std::string& name, const glm::vec2& value) const
+	{
+		/*
+			glUniform2fv()
+
+			vec2 타입 유니폼 변수에 데이터를 배열 형태로 전송할 때 사용
+			
+			각 매개변수는 다음과 같다.
+			1. name 에 해당하는 uniform 변수 location
+			2. 몇 개의 vec2 데이터를 넣어줄 것인가
+			3. vec2 타입의 요소들을 모두 직접 전송하는 것이 아니라, 첫 번째 요소의 메모리 주소값만 전달함.
+
+			즉, glUniform2fv() 는 vec2 타입 데이터를 '배열' 형태로 미리 저장해놨다가 
+			포인터(배열의 첫 번째 요소의 주소값)로 전달하는 구조임.
+		*/
+		glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+	}
+
+	// vec2 타입 데이터를 직접 전달하는 메서드
+	void setVec2(const std::string& name, float x, float y) const
+	{
+		/*
+			glUniform2f()
+
+			vec2 타입 유니폼 변수에 float 데이터 2개를 직접 전달함.
+
+			각 매개변수는 다음과 같다.
+			1. name 에 해당하는 uniform 변수 location
+			2. 직접 전달할 vec2 의 x값
+			3. 직접 전달할 vec2 의 y값
+
+			즉, glUniform2f() 는 vec2 의 요소 x, y 를 
+			실제 float 타입 데이터로 직접 전달하는 구조임.
+		*/
+		glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y);
+	}
+
+	// vec3 타입 데이터를 배열 형태로 전달하는 메서드
+	void setVec3(const std::string& name, const glm::vec3& value) const
+	{
+		glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+	}
+
+	// vec3 타입 데이터를 직접 전달하는 메서드
+	void setVec3(const std::string& name, float x, float y, float z) const
+	{
+		glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z);
+	}
+
+	// vec4 타입 데이터를 배열 형태로 전달하는 메서드
+	void setVec4(const std::string& name, const glm::vec4& value) const
+	{
+		glUniform4fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+	}
+
+	// vec4 타입 데이터를 직접 전달하는 메서드
+	void setVec4(const std::string& name, float x, float y, float z, float w) const
+	{
+		glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
+	}
+
+	// mat2 타입 데이터를 2차원 배열로 전달하는 메서드
+	void setMat2(const std::string& name, const glm::mat2& mat) const
+	{
+		/*
+			glUniformMatrix2fv()
+			
+			mat2 타입 유니폼 변수에 데이터를 2차원 배열 형태로 전송할 때 사용
+			(c++ 에서 행렬은 보통 2차원 배열로 표현.
+			다차원 배열에 대해서는 https://github.com/jooo0922/cpp-study/blob/main/TBCppStudy/Chapter6_05/Chapter6_05.cpp 참고)
+
+			각 매개변수는 다음과 같다.
+			1. name 에 해당하는 uniform 변수 location
+			2. 몇 개의 mat2 데이터를 넣어줄 것인가
+			3. 행과 열을 바꿀 것인지 boolean 값 전달
+			4. 2차원 배열 요소들을 모두 직접 전송하는 것이 아니라, 첫 번째 요소의 메모리 주소값만 전달함.
+
+			참고로 3번은 뭐냐면, OpenGL 이 열 우선 행렬을 사용하고,
+			GLM 또한 기본 행렬 레이아웃을 열 우선 행렬로 구현하고 있기 때문에,
+			굳이 열과 행을 바꿀 필요가 없음.
+
+			즉, glUniformMatrix2fv() 는 mat2 타입 데이터를 '다차원 배열' 형태로 미리 저장해놨다가
+			포인터(배열의 첫 번째 요소의 주소값)로 전달하는 구조임.
+		*/
+		glUniformMatrix2fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+	}
+
+	// mat3 타입 데이터를 2차원 배열로 전달하는 메서드
+	void setMat3(const std::string& name, const glm::mat3& mat) const
+	{
+		glUniformMatrix3fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+	}
+
+	// mat4 타입 데이터를 2차원 배열로 전달하는 메서드
+	void setMat4(const std::string& name, const glm::mat4& mat) const
+	{
+		glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
 	}
 
 private:
