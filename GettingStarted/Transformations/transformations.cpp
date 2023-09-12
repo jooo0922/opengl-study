@@ -24,6 +24,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "MyHeaders/stb_image.h"
 
+// 행렬 및 벡터 계산에서 사용할 Header Only 라이브러리 include
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "MyHeaders/shader_s.h"
 
 #include <iostream>
@@ -337,9 +342,16 @@ int main()
 		glActiveTexture(GL_TEXTURE1); // 앞전에 texture2 이라는 sampler uniform 변수는 1번 텍스쳐 유닛을 할당받았으니, 1번 위치에 바인딩된 텍스쳐 객체를 가져다 쓰겠군!
 		glBindTexture(GL_TEXTURE_2D, texture2); // 1번 위치에 바인딩할 텍스쳐 객체 바인딩
 
+		// glm 라이브러리로 변환행렬 계산
+		glm::mat4 transform = glm::mat4(1.0f); // 4*4 행렬을 단위행렬로 초기화 > 1.0f 를 전달하지 않으면 null 행렬로 초기화됨.
+		//transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // vec3 타입으로 이동벡터를 전달하여 이동행렬 적용
+		transform = glm::rotate(transform, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)); // 라디안 각도와 vec3 타입의 회전축 벡터를 전달하여 회전행렬 적용
+		transform = glm::scale(transform, glm::vec3(0.5f, 0.5f, 0.5f)); // vec3 타입의 스케일 벡터를 전달하여 크기행렬 적용
 
 		// 삼각형 그리기 명령 실행
 		ourShader.use(); // Shader 클래스 내에서 생성된 쉐이더 프로그램 객체를 바인딩하는 메서드 호출
+
+		ourShader.setMat4("transform", transform);
 
 		// 바인딩된 쉐이더 프로그램 객체안에 특정 location 이 할당된 uniform 변수에 실제 값을 세팅하기
 		// 여기서부터는 실제로 쉐이더 프로그램 안의 uniform 변수의 값을 '설정'해줘야 하므로, 값을 설정할 쉐이더 프로그램을 먼저 바인딩해줘야 함! 
