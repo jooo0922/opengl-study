@@ -346,12 +346,10 @@ int main()
 		// 코드로는 T > R > S 순으로 변환을 적용했지만,
 		// 실제 변환은 S > R > T 순으로 적용됨 (이래야 형태가 변형되지 않는 '강체 변환'이 적용됨. 게임수학 p.301 참고)
 		glm::mat4 transform = glm::mat4(1.0f); // 4*4 행렬을 단위행렬로 초기화 > 1.0f 를 전달하지 않으면 null 행렬로 초기화됨.
+
+		// 회전 > 이동 순으로 적용 시, 강체변환 순서에 어긋나 원점을 중심으로 '공전'하는 것처럼 보임
+		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f)); // vec3 타입의 회전축 벡터를 전달하여 회전행렬 적용
 		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // vec3 타입으로 이동벡터를 전달하여 이동행렬 적용
-		// 시간에 따른 각도 변화를 위해 glfwGetTime() 함수로 elapsedTime(경과시간) 을 각도로 사용.
-		// glm::rotate() 가 float 타입 라디안 각만 받기 때문에 float 타입으로 형변환함.
-		// vec3 타입의 회전축 벡터를 전달하여 회전행렬 적용
-		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-		//transform = glm::scale(transform, glm::vec3(0.5f, 0.5f, 0.5f)); // vec3 타입의 스케일 벡터를 전달하여 크기행렬 적용
 
 		// 삼각형 그리기 명령 실행
 		ourShader.use(); // Shader 클래스 내에서 생성된 쉐이더 프로그램 객체를 바인딩하는 메서드 호출
