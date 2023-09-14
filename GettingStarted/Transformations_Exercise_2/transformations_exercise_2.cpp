@@ -32,6 +32,7 @@
 #include "MyHeaders/shader_s.h"
 
 #include <iostream>
+#include <cmath>
 
 // 콜백함수 전방선언
 void framebuffer_size_callback(GLFWwindow* window, int width, int height); // GLFW 윈도우 크기 변경 감지 시, 호출할 콜백함수
@@ -319,18 +320,6 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT); // glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. (state-using)
 
 		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
-		// ...
-
-		// 삼각형 색상값 계산 후, uniform 변수에 전송하기
-		//float timeValue = glfwGetTime(); // glfwSetTime() 이 호출되지 않았다면, glfwInit() 이 호출된 이후의 경과시간(Elapsed Time) 을 반환하는 함수
-		//float greenValue = sin(timeValue) / 2.0f + 0.5f; // 경과시간으로 계산된 -1 ~ 1 사이의 sin값을 0 ~ 1 사이의 값으로 맵핑
-
-		// uniform 변수도 attribute 와 마찬가지로 선언과 동시에 location 값을 갖음. 
-		// 따라서, 해당 쉐이더 프로그램 객체와, 거기에 linking 된 쉐이더에 선언된 uniform 변수명을 전달해서 해당 uniform 변수의 location 을 반환받음.
-		// 이 location 을 알아야 glUniform~() 함수로 실제 값을 전송할 수 있음.
-		// 또 참고로, glGetUniformLocation() 함수까지는 location 을 읽어오기만 하면 되는 함수이므로, 
-		// 쉐이더 프로그램 객체를 glUseProgram() 으로 바인딩하지는 않아도 됨!! 
-		//int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");  
 
 		// Texture Unit(바인딩할 텍스쳐 위치) 활성화 및 텍스쳐 바인딩
 		// GL_TEXTURE_2D 상태에 texture1 텍스쳐 객체를 바인딩할 때, 0번 텍스쳐 유닛 위치에 바인딩하도록 0번 위치 활성화
@@ -404,6 +393,16 @@ int main()
 		// 앞서 바인딩된 VAO 에 저장해둔 EBO 객체 (즉, 정점 인덱스 버퍼)로부터 Indexed Drawing 으로 그리려면, 
 		// glDrawArrays() 대신 glDrawElements() 를 사용해줘야 함!
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 각 파라미터는 (삼각형 모드, 그리고 싶은 정점 개수, 인덱스들의 타입, EBO 버퍼 offset)
+
+		// 두 번째 컨테이너에 적용할 변환행렬 생성
+		glm::mat4 transform2 = glm::mat4(1.0f); // 4*4 행렬을 단위행렬로 초기화
+		transform2 = glm::translate(transform2, glm::vec3(-0.5f, 0.5f, 0.0f)); // 화면의 좌상단으로 이동시키는 이동행렬 적용
+		float scaleValue = std::sin(glfwGetTime()); // elapsedTime 을 sin 함수에 넣어 매 프레임마다 -1 ~ 1 사이의 scale 값 계산 
+		transform2 = glm::scale(transform2, glm::vec3(scaleValue, scaleValue, 1.0f)); // 시간에 따라 -1 ~ 1 사이로 변화하는 scale 값으로 크기행렬 계산
+
+		ourShader.setMat4("transform", transform2); // 두 번째 컨테이너를 그리기 전, 두 번째 변환행렬을 유니폼 변수에 전송
+
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 두 번째 컨테이너 그리기 명령 수행
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
