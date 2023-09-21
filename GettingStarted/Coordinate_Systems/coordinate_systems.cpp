@@ -342,21 +342,22 @@ int main()
 		glActiveTexture(GL_TEXTURE1); // 앞전에 texture2 이라는 sampler uniform 변수는 1번 텍스쳐 유닛을 할당받았으니, 1번 위치에 바인딩된 텍스쳐 객체를 가져다 쓰겠군!
 		glBindTexture(GL_TEXTURE_2D, texture2); // 1번 위치에 바인딩할 텍스쳐 객체 바인딩
 
-		// glm 라이브러리로 변환행렬 계산
-		// 코드로는 T > R > S 순으로 변환을 적용했지만,
-		// 실제 변환은 S > R > T 순으로 적용됨 (이래야 형태가 변형되지 않는 '강체 변환'이 적용됨. 게임수학 p.301 참고)
-		glm::mat4 transform = glm::mat4(1.0f); // 4*4 행렬을 단위행렬로 초기화 > 1.0f 를 전달하지 않으면 null 행렬로 초기화됨.
-		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f)); // vec3 타입으로 이동벡터를 전달하여 이동행렬 적용
-		// 시간에 따른 각도 변화를 위해 glfwGetTime() 함수로 elapsedTime(경과시간) 을 각도로 사용.
-		// glm::rotate() 가 float 타입 라디안 각만 받기 때문에 float 타입으로 형변환함.
-		// vec3 타입의 회전축 벡터를 전달하여 회전행렬 적용
-		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-		//transform = glm::scale(transform, glm::vec3(0.5f, 0.5f, 0.5f)); // vec3 타입의 스케일 벡터를 전달하여 크기행렬 적용
+		// Shader 클래스 내에서 생성된 쉐이더 프로그램 객체를 바인딩하는 메서드 호출
+		ourShader.use();
 
-		// 삼각형 그리기 명령 실행
-		ourShader.use(); // Shader 클래스 내에서 생성된 쉐이더 프로그램 객체를 바인딩하는 메서드 호출
+		// glm 라이브러리로 좌표계 변환행렬 계산
+		glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
+		glm::mat4 view = glm::mat4(1.0f); // 뷰 행렬을 단위행렬로 초기화
+		glm::mat4 projection = glm::mat4(1.0f); // 투영 행렬을 단위행렬로 초기화
 
-		ourShader.setMat4("transform", transform);
+		model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // x축으로 -55도 회전하는 모델행렬 생성
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 전체 오브젝트들을 z축으로 -3만큼 이동(즉, 카메라가 z축으로 3만큼 앞으로 이동)시키는 뷰 행렬 생성
+		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 변환행렬 전송
+		ourShader.setMat4("model", model);
+		ourShader.setMat4("view", view);
+		ourShader.setMat4("projection", projection);
 
 		// 바인딩된 쉐이더 프로그램 객체안에 특정 location 이 할당된 uniform 변수에 실제 값을 세팅하기
 		// 여기서부터는 실제로 쉐이더 프로그램 안의 uniform 변수의 값을 '설정'해줘야 하므로, 값을 설정할 쉐이더 프로그램을 먼저 바인딩해줘야 함! 
