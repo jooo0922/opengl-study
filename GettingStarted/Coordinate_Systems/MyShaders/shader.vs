@@ -7,10 +7,13 @@ layout(location = 2) in vec2 aTexCoord; // uv 데이터를 전송받는 attribut
 out vec3 ourColor;
 out vec2 texCoord; // 프래그먼트 쉐이더와 linking 시 보간해서 넘겨줄 uv 데이터 출력 변수 추가
 
-uniform mat4 transform; // glm 으로 만든 mat4 변환행렬을 전닳받는 uniform 변수
+// glm::mat4 타입 좌표계 변환 행렬을 전송받는 uniform 변수 선언
+uniform mat4 model; // 모델 행렬
+uniform mat4 view; // 뷰 행렬
+uniform mat4 projection; // 투영 행렬
 
 void main() {
-  gl_Position = transform * vec4(aPos, 1.0); // gl_Position 에 할당하기 전에, 버텍스의 오브젝트 공간 좌표에 변환행렬을 곱해서 변환처리함.
+  gl_Position = projection * view * model * vec4(aPos, 1.0); // 오브젝트 공간 좌표에 모델 행렬 > 뷰 행렬 > 투영 행렬 순으로 곱해서 좌표계를 변환시킴.
   ourColor = aColor;
   texCoord = aTexCoord; // 출력 변수에 텍스쳐 uv 데이터 할당
 }
