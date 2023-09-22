@@ -388,6 +388,10 @@ int main()
 				z축 회전은 지정한 회전각의 50% 만큼만 회전시키라는 뜻!
 			*/
 			float angle = 20.0f * i; // 큐브마다 회전각이 달라지겠군
+			if (i % 3 == 0) {
+				// 3번째 큐브마다 회전 애니메이션을 적용하도록, ElapsedTime 값과 곱한 회전각 계산
+				angle = (float)glfwGetTime() * 25.0f;
+			}
 			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 			//model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 
