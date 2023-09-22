@@ -87,21 +87,52 @@ int main()
 	Shader ourShader("MyShaders/shader.vs", "MyShaders/shader.fs");
 
 	// 정점 위치 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
-	// 여기에 정점 색상 데이터와 텍스쳐 좌표(uv) 데이터까지 추가함. 
-	// 하나의 배열에 정점의 위치 데이터와 색상 데이터, uv 데이터가 섞여있기 때문에, 
+	// 여기에 텍스쳐 좌표(uv) 데이터까지 추가함. 
+	// 하나의 배열에 정점의 위치 데이터 uv 데이터가 섞여있기 때문에, 
 	// glVertexAttribPointer() 를 통해서 정점 데이터 해석 방식을 잘 설정해줘야 함.
 	float vertices[] = {
-		// positions 데이터		// colors 데이터		  // 텍스쳐 좌표(uv) 데이터	
-		 0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,	  1.0f, 1.0f,				// top right
-		 0.5f, -0.5f, 0.0f,		0.0f, 1.0f, 0.0f,	  1.0f, 0.0f,				// bottom right
-		-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 1.0f,	  0.0f, 0.0f,				// bottom left
-		-0.5f,  0.5f, 0.0f,		1.0f, 1.0f, 0.0f,	  0.0f, 1.0f				// top left
-	};
+		// 정점 위치 데이터    // 정점 uv 데이터
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
-	// EBO(Element Buffer Object) 생성 시 사용할 정점 인덱스 배열 생성 > EBO 는 한마디로 인덱스 버퍼라고 보면 됨!
-	unsigned int indices[] = {
-		0, 1, 3, // 첫 번째 삼각형 인덱스
-		1, 2, 3 // 두 번째 삼각형 인덱스
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 	};
 
 	// VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 + VBO 에 쓰여진 버텍스 데이터 해석 방식 정의
@@ -129,12 +160,11 @@ int main()
 
 		즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
 	*/
-	unsigned int VBO, VAO, EBO; // VBO, VAO, EBO 객체(object) 참조 id 를 저장할 변수
+	unsigned int VBO, VAO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
 	glGenVertexArrays(1, &VAO); // VAO(Vertex Array Object) 객체 생성
 	glGenBuffers(1, &VBO); // VBO(Vertex Buffer Object) 객체 생성 > VBO 객체를 만들어서 정점 데이터를 GPU 로 전송해야 한 번에 많은 양의 정점 데이터를 전송할 수 있음!
-	glGenBuffers(1, &EBO); // EBO(Element Buffer Object) 객체 생성 > EBO 객체는 한 마디로, 정점의 인덱스 버퍼를 저장하는 객체로써, Indexed Drawing 으로 삼각형을 그릴 수 있게 해준다!
 
-	glBindVertexArray(VAO); // VAO 객체 먼저 컨텍스트에 바인딩(연결)함. > 그래야 재사용할 여러 개의 VBO 객체들, EBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
+	glBindVertexArray(VAO); // VAO 객체 먼저 컨텍스트에 바인딩(연결)함. > 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO); // OpenGL 컨텍스트 중에서, VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
@@ -142,63 +172,27 @@ int main()
 	// 데이터 관리 방식은, 삼각형 정점 위치 데이터는 변경되지 않을 데이터이므로, GL_STATIC_DRAW 로 지정함. 
 	// 만약 변경이 잦은 데이터일 경우, GL_DYNAMIC_DRAW | GL_STREAM_DRAW 로 설정하면 그래픽 카드가 빠르게 데이터를 write 할 수 있는 메모리에 저장한다고 함.
 
-	// EBO 객체를 OpenGL 컨텍스트에 바인딩하고, 바인딩된 버퍼에 인덱스 배열 데이터 복사
-	// 참고로, VAO 객체 바인딩을 해제하기 전에 EBO 객체를 바인딩 및 버퍼를 복사하면,
-	// EBO 객체 및 설정 상태 또한 VAO 객체에 저장해서 재사용할 수 있음!!
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // OpenGL 컨텍스트 중에서, EBO 객체는 GL_ELEMENT_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW); // 실제 정점 인덱스 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 EBO 객체에 덮어씀.
-
 	// VBO 객체 설정
 	// VBO 에 쓰여진 정점 데이터 해석 방식 설정
 	// 각 파라미터는 1. 이 데이터를 가져다 쓸 버텍스 쉐이더의 attribute 변수의 location (0이 aPos 였으니 0으로 지정)
 	// 2. 정점 당 필요한 데이터 개수
 	// 3. 데이터 타입
 	// 4. 데이터를 -1 ~ 1 사이로 정규화할 지 여부. 이미 vertices 배열은 NDC 좌표 기준으로 구성해놨으니 필요없겠군!
-	// 5. stride. 정점 데이터 세트 사이의 메모리 간격. 각 정점은 현재 3개의 위치 데이터 + 3개의 색상 데이터 + 2개의 uv 데이터(총합 8개)를 가져다 쓰므로, <실수형 리터럴의 메모리 크기 * 8> 이 정점 데이터 세트 간 메모리 간격
+	// 5. stride. 정점 데이터 세트 사이의 메모리 간격. 각 정점은 현재 3개의 위치 데이터 + 2개의 uv 데이터(총합 5개)를 가져다 쓰므로, <실수형 리터럴의 메모리 크기 * 5> 이 정점 데이터 세트 간 메모리 간격
 	// 6. 정점 버퍼에서 데이터 시작 위치 offset > vertices 의 시작 지점부터 위치 데이터이므로, 그냥 0으로 하면 될건데, 마지막 파라미터 타입이 void* 타입으로만 받아서 형변환을 해준 것.
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0); // 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. > 그 중에서 0번 location 변수만 사용하도록 활성화한 것!
-
-	// vertex attribute 가 추가될 때마다, (색상 데이터가 추가되었지?)
-	// 각 정점 attribute 로 들어올 정점 데이터의 해석 방식을 별도로 설정해줘야 함.
-	// color attribute 의 location 은 1이였으니 1로 지정하고,
-	// 정점 버퍼에서 색상 데이터의 시작 위치(offset)는 x, y, z 3개의 위치 데이터 다음부터 시작하므로, 3 * sizeof(float) = 12 bytes 만큼의 메모리 공간을 띄운 지점부터 시작! 
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1); // color attribute 변수의 location 인 1번 location 변수도 사용할 수 있게 활성화함.
 
 	// vertex attribute 로 텍스쳐 좌표(uv) 데이터를 가져다 쓸 aTexCoord 가 추가됨.
 	// 그에 따라, 각 정점 attribute 로 들어올 uv 데이터 해석 방식을 추가로 설정함
-	// aTexCoord attribute 의 location 은 2로 설정했고,
-	// 정점 버퍼에서 uv 데이터의 시작 위치(offset)는 x, y, z 3개의 위치 데이터와 r, g, b 3개의 색상 데이터 다음부터 시작하므로 6 * sizeof(float) = 24 bytes 만큼의 메모리 공간을 띄운 지점부터 시작!
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2); // uv attribute 변수의 location 인 2번 location 변수도 사용할 수 있게 활성화함.
+	// aTexCoord attribute 의 location 은 1로 설정했고,
+	// 정점 버퍼에서 uv 데이터의 시작 위치(offset)는 x, y, z 3개의 위치 데이터 다음부터 시작하므로 3 * sizeof(float) = 12 bytes 만큼의 메모리 공간을 띄운 지점부터 시작!
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1); // uv attribute 변수의 location 인 2번 location 변수도 사용할 수 있게 활성화함.
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0); // VBO 객체 설정을 끝마쳤다면, OpenGL 컨텍스트로부터 바인딩(연결)을 해제함.
 
-	/*
-		EBO 객체는 왜 unbind 하지 않을까?
-
-		삼각형을 인덱싱으로 draw 하고 싶다면,
-		렌더링 루프에서 glDrawElements() 로 인덱싱 그리기 명령을 호출하기 전,
-		glBindBuffer() 로 EBO 객체를 매번 바인딩해줘야 하는 번거로움이 있음.
-
-		그러나, VAO 객체가 바인딩 되어있는 동안, EBO 객체도 바인딩되어 있다면,
-		VAO 객체에 바인딩된 EBO 객체도 저장해둘 수 있기 때문에,
-		EBO 객체를 매번 바인딩하지 않고,
-		VAO 객체만 그리기 명령 전에 바인딩 해주면
-		EBO 도 알아서 자동으로 바인딩 됨!
-
-		그러나, 만약 VAO 객체가 바인딩 되어있는 동안,
-		EBO 객체를 unbind 해버리면, 그 unbind 이력이 VAO 객체에 저장되어 버려서
-		그리기 명령 전에 VAO 객체를 바인딩한다고 하더라도,
-		EBO 객체까지 자동으로 바인딩되지 않음!
-
-		따라서, EBO 로 인덱싱 그리기를 하고 싶다면,
-		VAO 가 바인딩 되어있는 동안에는 절대로 EBO 를 unbind 하면 안됨!
-	*/
-	// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	glBindVertexArray(0); // 마찬가지로, VAO 객체에 저장해둘 VBO, EBO 객체 및 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
+	glBindVertexArray(0); // 마찬가지로, VAO 객체에 저장해둘 VBO 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 
 	// 와이어프레임 모드로 그리기 (정확히는 각 polygon 의 rasterization mode 를 설정하는 것!)
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 각 파라미터는 (설정한 polygon mode 앞면/뒷면 적용, polygon rasterzing 방식 (선으로 그리기 or 면으로 채우기))
@@ -321,17 +315,6 @@ int main()
 		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
 		// ...
 
-		// 삼각형 색상값 계산 후, uniform 변수에 전송하기
-		//float timeValue = glfwGetTime(); // glfwSetTime() 이 호출되지 않았다면, glfwInit() 이 호출된 이후의 경과시간(Elapsed Time) 을 반환하는 함수
-		//float greenValue = sin(timeValue) / 2.0f + 0.5f; // 경과시간으로 계산된 -1 ~ 1 사이의 sin값을 0 ~ 1 사이의 값으로 맵핑
-
-		// uniform 변수도 attribute 와 마찬가지로 선언과 동시에 location 값을 갖음. 
-		// 따라서, 해당 쉐이더 프로그램 객체와, 거기에 linking 된 쉐이더에 선언된 uniform 변수명을 전달해서 해당 uniform 변수의 location 을 반환받음.
-		// 이 location 을 알아야 glUniform~() 함수로 실제 값을 전송할 수 있음.
-		// 또 참고로, glGetUniformLocation() 함수까지는 location 을 읽어오기만 하면 되는 함수이므로, 
-		// 쉐이더 프로그램 객체를 glUseProgram() 으로 바인딩하지는 않아도 됨!! 
-		//int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");  
-
 		// Texture Unit(바인딩할 텍스쳐 위치) 활성화 및 텍스쳐 바인딩
 		// GL_TEXTURE_2D 상태에 texture1 텍스쳐 객체를 바인딩할 때, 0번 텍스쳐 유닛 위치에 바인딩하도록 0번 위치 활성화
 		// -> 참고로, 0번 위치는 항상 기본으로 활성화되어 있는 텍스쳐 유닛이므로, 하나의 텍스쳐 객체만 바인딩해서 사용할 경우 glActiveTexture() 를 생략할 수 있었음!
@@ -359,63 +342,21 @@ int main()
 		ourShader.setMat4("view", view);
 		ourShader.setMat4("projection", projection);
 
-		// 바인딩된 쉐이더 프로그램 객체안에 특정 location 이 할당된 uniform 변수에 실제 값을 세팅하기
-		// 여기서부터는 실제로 쉐이더 프로그램 안의 uniform 변수의 값을 '설정'해줘야 하므로, 값을 설정할 쉐이더 프로그램을 먼저 바인딩해줘야 함! 
-		/*
-			OpenGL 타입 오버로딩 미지원
-
-			OpenGL 은 핵심 라이브러리가 C 로 구현되어 있음.
-			C 는 타입 오버로딩을 지원하지 않음.
-
-			참고로, 타입 오버로딩이란,
-			전달받은 인자의 타입에 따라서 서로 다른 동작을 수행하도록
-			동일한 이름의 함수를 매개변수 타입에 따라 여러 버전으로
-			중복선언하는 기능이라고 함.
-
-			예를 들어,
-			void doSomething(float data);
-			void doSomething(int data);
-			void doSomething(double data);
-
-			요런 식으로, 전달받는 매개변수 타입에 따라
-			다양한 버전으로 동일한 이름의 함수를 중복 선언함으로써,
-			인자 타입에 따라 다른 동작으로 대응할 수 있도록 하는 개념.
-
-			근데 C 에서는 동일한 이름의 함수 중복 선언이 불가하기 때문에,
-			타입 오버로딩이 안됨.
-
-			그래서, C 로 구현된 OpenGL 은
-			어떤 함수를 매개변수에 타입에 따라 다양하게 동작을 수행하도록
-			여러 버전으로 구현해놓기 위해서, 타입 오버로딩 대신,
-			'-4f', '-3f', '-f', '-i', '-ui' 등의 접미어를 함수명 뒤에 붙여서
-			인자 타입에 따라서 여러 동작으로 대응할 수 있도록 함.
-
-			그 대표적인 사례가 glUniform~() 함수!
-
-			여기서 우리는 uniform vec4 ourColor 유니폼 변수에
-			데이터를 전송하고 싶기 때문에, -4f(float 타입의 요소 4개) 를 전달할 수 있는
-			glUniform4f() 함수를 사용함!
-		*/
-		//glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
-
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 
-		//glDrawArrays(GL_TRIANGLES, 0, 3); // 실제 primitive 그리기 명령을 수행하는 함수 
-
-		// 앞서 바인딩된 VAO 에 저장해둔 EBO 객체 (즉, 정점 인덱스 버퍼)로부터 Indexed Drawing 으로 그리려면, 
-		// glDrawArrays() 대신 glDrawElements() 를 사용해줘야 함!
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); // 각 파라미터는 (삼각형 모드, 그리고 싶은 정점 개수, 인덱스들의 타입, EBO 버퍼 offset)
+		// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로,
+		// glDrawArrays() 로 그려줘야겠지!
+		glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
 	}
 
-	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO, EBO, 쉐이더 프로그램 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
+	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
 	// 이들은 미리 생성 후 저장해두는 이유는, 렌더링이 진행중에 필요한 객체들을 다시 바인딩하여 교체하기 위한 목적이므로,
 	// 렌더링이 끝났다면 더 이상 메모리에 남겨둘 이유가 없음!!
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
 
 	glfwTerminate(); // while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 
