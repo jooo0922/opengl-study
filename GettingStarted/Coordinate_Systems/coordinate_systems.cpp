@@ -83,6 +83,12 @@ int main()
 	glEnable(GL_BLEND); // .png 텍스쳐의 투명한 영역을 투명하게 렌더링하려면, GL_BLEND 상태를 활성화하여, 블렌딩 모드를 활성화해줘야 함.
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // 블렌딩 함수를 <원본픽셀(여기서는 사각형 픽셀)의 투명도>를 원본픽셀 투명도로 정의하고, <1 - 원본픽셀의 투명도> 를 대상픽셀의 투명도로 정의하여 혼합해 줌.
 
+	// 각 프래그먼트에 대한 깊이 버퍼(z-buffer)를 새로운 프래그먼트의 깊이값과 비교해서
+	// 프래그먼트 값을 덮어쓸 지 말 지를 결정하는 Depth Test(깊이 테스팅) 상태를 활성화함
+	// -> 이래야 큐브의 각 프래그먼트들이 그려지는 순서대로 무작정 덮어씌워짐에 따라 렌더링이 부자연스러워지는 이슈 해결!
+	// OpenGL 컨텍스트의 state-setting 함수 중 하나겠지! 
+	glEnable(GL_DEPTH_TEST);
+
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader ourShader("MyShaders/shader.vs", "MyShaders/shader.fs");
 
@@ -310,7 +316,12 @@ int main()
 
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
-		glClear(GL_COLOR_BUFFER_BIT); // glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. (state-using)
+
+		// glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. 
+		// glEnable() 로 깊이 테스팅을 활성화한 상태이므로, 이전 프레임에 그렸던 깊이 버퍼도 초기화하도록,
+		// 깊이 버퍼 제거를 명시하는 비트 단위 연산을 수행하여 비트 플래그 설정
+		// (state-using)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
 		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
 		// ...
@@ -333,7 +344,19 @@ int main()
 		glm::mat4 view = glm::mat4(1.0f); // 뷰 행렬을 단위행렬로 초기화
 		glm::mat4 projection = glm::mat4(1.0f); // 투영 행렬을 단위행렬로 초기화
 
-		model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // x축으로 -55도 회전하는 모델행렬 생성
+		// 큐브를 회전시키는 모델행렬 계산
+		/*
+			1. 회전 애니메이션을 위해, glfwGetTime() 함수를 사용해서 
+			ElapsedTime 을 반환받아 radians 값과 곱해서 회전각 계산
+			이때, glm::radians() 가 float 타입 라디안 각을 반환하므로, 
+			double 타입을 반환하는 glfwGetTime() 의 반환값을 형변환 해줌.
+
+			2. 회전축을 (0.5f, 1.0f, 0.0f) 로 설정
+			이것이 의미하는 바는, x축과 y축을 중심으로 회전시키되,
+			x축 회전은 지정한 회전각의 50% 만큼만 회전시키고,
+			y축 회전은 지정한 회전각의 100% 만큼 회전시키라는 뜻!
+		*/
+		model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
 		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 전체 오브젝트들을 z축으로 -3만큼 이동(즉, 카메라가 z축으로 3만큼 앞으로 이동)시키는 뷰 행렬 생성
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
 
