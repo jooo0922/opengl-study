@@ -141,6 +141,20 @@ int main()
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 	};
 
+	// 10개의 큐브를 렌더링하기 위해, 각 큐브의 위치값을 저장해 둔 배열 생성
+	glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
+	};
+
 	// VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 + VBO 에 쓰여진 버텍스 데이터 해석 방식 정의
 	/*
 		VAO 는 왜 만드는걸까?
@@ -340,36 +354,48 @@ int main()
 		ourShader.use();
 
 		// glm 라이브러리로 좌표계 변환행렬 계산
-		glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
 		glm::mat4 view = glm::mat4(1.0f); // 뷰 행렬을 단위행렬로 초기화
 		glm::mat4 projection = glm::mat4(1.0f); // 투영 행렬을 단위행렬로 초기화
 
-		// 큐브를 회전시키는 모델행렬 계산
-		/*
-			1. 회전 애니메이션을 위해, glfwGetTime() 함수를 사용해서 
-			ElapsedTime 을 반환받아 radians 값과 곱해서 회전각 계산
-			이때, glm::radians() 가 float 타입 라디안 각을 반환하므로, 
-			double 타입을 반환하는 glfwGetTime() 의 반환값을 형변환 해줌.
 
-			2. 회전축을 (0.5f, 1.0f, 0.0f) 로 설정
-			이것이 의미하는 바는, x축과 y축을 중심으로 회전시키되,
-			x축 회전은 지정한 회전각의 50% 만큼만 회전시키고,
-			y축 회전은 지정한 회전각의 100% 만큼 회전시키라는 뜻!
-		*/
-		model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
 		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 전체 오브젝트들을 z축으로 -3만큼 이동(즉, 카메라가 z축으로 3만큼 앞으로 이동)시키는 뷰 행렬 생성
 		projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
 
 		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 변환행렬 전송
-		ourShader.setMat4("model", model);
 		ourShader.setMat4("view", view);
 		ourShader.setMat4("projection", projection);
 
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 
-		// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로,
-		// glDrawArrays() 로 그려줘야겠지!
-		glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
+		// 그리고자 하는 큐브 개수(10개) 만큼 반복문 순회
+		for (unsigned int i = 0; i < 10; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
+
+			model = glm::translate(model, cubePositions[i]); // 미리 저장된 각 큐브의 위치값을 가지고 이동행렬 계산
+			
+			// 회전행렬 계산
+			/*
+				1. 회전 애니메이션을 위해, glfwGetTime() 함수를 사용해서
+				ElapsedTime 을 반환받아 radians 값과 곱해서 회전각 계산
+				이때, glm::radians() 가 float 타입 라디안 각을 반환하므로,
+				double 타입을 반환하는 glfwGetTime() 의 반환값을 형변환 해줌.
+
+				2. 회전축을 (1.0f, 0.3f, 0.5f) 로 설정
+				이것이 의미하는 바는, x축과 y축과 z축을 중심으로 회전시키되,
+				x축 회전은 지정한 회전각의 100% 만큼 회전시키고,
+				y축 회전은 지정한 회전각의 30% 만큼만 회전시키고,
+				z축 회전은 지정한 회전각의 50% 만큼만 회전시키라는 뜻!
+			*/
+			float angle = 20.0f * i; // 큐브마다 회전각이 달라지겠군
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+			//model = glm::rotate(model, (float)glfwGetTime() * glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+
+			ourShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+
+			// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로, glDrawArrays() 로 그려줘야겠지!
+			glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
+		}
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
