@@ -42,6 +42,15 @@ void processInput(GLFWwindow* window, Shader ourShader); // GLFW 윈도우 및 �
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
+// 카메라 LookAt 행렬 생성에 필요한 벡터 선언 및 초기화
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f); // 카메라 위치
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // 카메라 (앞쪽)방향 벡터
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f); // 월드공간 up 벡터
+
+// 카메라 이동속도 보정에 사용되는 deltaTime 변수 선언 및 초기화
+float deltaTime = 0.0f; // 마지막에 그려진 프레임 ~ 현재 프레임 사이의 시간 간격
+float lastFrame = 0.0f; // 마지막에 그려진 프레임의 ElapsedTime(경과시간)
+
 int main()
 {
 	// GLFW 초기화
@@ -330,6 +339,11 @@ int main()
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
 	while (!glfwWindowShouldClose(window))
 	{
+		// 카메라 이동속도 보정을 위한 deltaTime 계산
+		float currentFrame = static_cast<float>(glfwGetTime()); // 현재 프레임 경과시간
+		deltaTime = currentFrame - lastFrame; // 현재 프레임 경과시간 - 마지막 프레임 경과시간 = 두 프레임 사이의 시간 간격
+		lastFrame = currentFrame; // 마지막 프레임 경과시간을 현재 프레임 경과시간으로 업데이트!
+
 		processInput(window, ourShader); // 윈도우 창 및 키 입력 감지 밎 이벤트 처리
 
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
@@ -424,14 +438,19 @@ int main()
 			카메라 현재 위치벡터, 카메라 target 벡터, 월드공간 up 벡터를 인자로 전달하면
 			내부에서 자동으로 LookAt 행렬을 계산하여 반환해줌!
 		*/
-		float radius = 10.0f; // 카메라를 회전시킬 반경
-		float camX = static_cast<float>(sin(glfwGetTime()) * radius); // radius 를 반경으로 하는 원의 x좌표 계산
-		float camZ = static_cast<float>(cos(glfwGetTime()) * radius); // radius 를 반경으로 하는 원의 z좌표 계산
+		//float radius = 10.0f; // 카메라를 회전시킬 반경
+		//float camX = static_cast<float>(sin(glfwGetTime()) * radius); // radius 를 반경으로 하는 원의 x좌표 계산
+		//float camZ = static_cast<float>(cos(glfwGetTime()) * radius); // radius 를 반경으로 하는 원의 z좌표 계산
 		
 		// 매 프레임마다 원점(glm::vec3(0.0f, 0.0f, 0.0f))을 중심으로 공전하는 LookAt 행렬(= 뷰 행렬) 계산 
-		view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		//view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 		//view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 전체 오브젝트들을 z축으로 -3만큼 이동(즉, 카메라가 z축으로 3만큼 앞으로 이동)시키는 뷰 행렬 생성
+
+		
+		// 이번에는 전역변수로 선언된 카메라 관련 벡터들로 LookAt 행렬(= 뷰 행렬) 계산해보자
+		// 참고로, '카메라 위치 + 카메라 (앞쪽)방향벡터 = 카메라가 앞쪽 방향으로 바라보는 지점 target' 이 나오겠지?
+		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
 		ourShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
 
@@ -492,29 +511,30 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // GLFWwindow 윈도우 입력 및 키 입력 감지 후 이벤트 처리 함수 (렌더링 루프에서 반복 감지)
 void processInput(GLFWwindow* window, Shader ourShader)
 {
-	// 프래그먼트 쉐이더 mix() 함수의 세번째 파라미터로 넣어줄 값 
-	// 콜백함수 최초 호출 시에만 초기화하고, 이후에는 정적 메모리 공간에 저장된 값을 가져와 사용하도록 static 변수로 선언 
-	// > class 구조가 아니다보니 상태값을 전역변수 또는 정적변수로 관리해줘야 함.
-	static float mixAlpha = 1.0f;
-
 	// 현재 GLFWwindow 에 대하여(활성화 시,) 특정 키(esc 키)가 입력되었는지 여부를 감지
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, true); // GLFWwindow 의 WindowShouldClose 플래그(상태값)을 true 로 설정 -> main() 함수의 while 조건문에서 렌더링 루프 탈출 > 렌더링 종료!
 	}
 
-	// 위쪽 방향키 입력 여부 감지
-	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-	{
-		mixAlpha = std::min(mixAlpha + 0.01f, 1.0f); // 기존 mixAlpha 에서 0.1 증가시킴. (단, 최댓값 1.0을 넘지 않도록 함.)
-	}
+	// 카메라 이동속도 보정 (기본 속도 2.5 가 어느 컴퓨터에서든 유지될 수 있도록 deltaTime 값으로 속도 보정)
+	float cameraSpeed = static_cast<float>(2.5 * deltaTime);
 
-	// 아래쪽 방향키 입력 여부 감지
-	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		mixAlpha = std::max(mixAlpha - 0.01f, 0.0f); // 기존 mixAlpha 에서 0.1 증가시킴. (단, 최댓값 1.0을 넘지 않도록 함.)
+		cameraPos += cameraFront * cameraSpeed; // <+(카메라 앞쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 앞쪽 이동
 	}
-
-	ourShader.use(); // 항상 uniform 변수에 값을 전송할 때에는, 해당 변수가 선언된 Shader Program 을 바인딩해줌.
-	ourShader.setFloat("mixAlpha", mixAlpha); // 매 프레임마다 변경된 mixAlpha 값을 쉐이더 유니폼 변수로 전송
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	{
+		cameraPos -= cameraFront * cameraSpeed; // <-(카메라 앞쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 뒷쪽 이동
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	{
+		// 참고로, 카메라 앞쪽 방향벡터와 월드공간 UP 벡터를 외적하면 '카메라 right 벡터' 가 나온댔지?
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // <-(카메라 오른쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 왼쪽 이동
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	{
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // <+(카메라 오른쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 오른쪽 이동
+	}
 }
