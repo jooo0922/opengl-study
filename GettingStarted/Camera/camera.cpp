@@ -35,7 +35,10 @@
 
 // 콜백함수 전방선언
 void framebuffer_size_callback(GLFWwindow* window, int width, int height); // GLFW 윈도우 크기 변경 감지 시, 호출할 콜백함수
+void mouse_callback(GLFWwindow* window, double xpos, double ypos); // GLFW 윈도우에 마우스 입력 감지 시, 호출할 콜백함수
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset); // GLFW 윈도우에 스크롤 입력 감지 시, 호출할 콜백함수
 void processInput(GLFWwindow* window, Shader ourShader); // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
+
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
@@ -44,8 +47,65 @@ const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
 // 카메라 LookAt 행렬 생성에 필요한 벡터 선언 및 초기화
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f); // 카메라 위치
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // 카메라 (앞쪽)방향 벡터
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // 카메라 (앞쪽)방향 벡터 (정확히는 카메라 '뒷쪽'방향벡터 인 게 맞음.)
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f); // 월드공간 up 벡터
+
+bool firstMouse = true; // 첫 번째 마우스 입력 여부를 나타내는 상태값 > 첫 번째 마우스 입력에 대한 예외처리 목적
+
+// 카메라 방향벡터 계산을 위한 오일러 각
+/*
+	왜 yaw 초기각을 -90도로 설정했을까?
+
+	yaw 초기각을 0도로 설정하면 
+	월드 공간에서 카메라 방향벡터가 양의 x축을 향하게 됨.
+
+	우리는 월드 공간에서 카메라 방향벡터가 x축을 향하는 게 아닌,
+	원점을 바라보도록 초기화하고 싶은 게 목적임!
+
+	이를 달성하려면,
+	카메라 월드공간 위치 z값이 양수라고 가정한다면, 
+	카메라 방향벡터는 '월드 공간에서 음의 z축'을 향하도록 초기화해야
+	카메라가 월드 공간 상의 원점을 바라볼 수 있음.
+
+	그러나, 여기서 말하는 '카메라 방향벡터' 란,
+	카메라가 원점인 '뷰 좌표계 상의 카메라 방향벡터' 를 칭하므로,
+	실제 월드 공간상의 카메라 방향벡터와 정반대 방향으로 계산되어 있음.
+
+	그래서 LearnOpenGL 본문에서도
+	"'direction vector' 라는 이름이 실제 월드공간에서 카메라가 바라봐야 할 방향의 
+	정반대 방향을 가리키다보니 좋은 이름은 아닐 수 있다"
+	고 명시하고 있음.
+
+	어쨋든, 카메라 월드공간 위치의 z값이 양수인 상태에서 
+	카메라가 월드 공간의 원점을 바라보려면,
+	카메라가 '월드 공간의 음의 z축'을 바라봐야 하고,
+
+	이는 월드 공간의 반대방향으로 변환되는 뷰 좌표계 상에서는
+	'뷰 좌표계의 양의 z축'을 바라보는 것에 해당하기 때문에,
+	결과적으로 '뷰 좌표계 상의 카메라 방향벡터' 는 
+	'월드 공간 상의 카메라 방향벡터'와 정반대 방향으로 뒤집어서 계산해줘야 함!
+
+	이 전제 하에, 
+	yaw 축 각도가 -90도 회전하게 되면,
+	'뷰 좌표계 상의 카메라 방향벡터'는 '양의 z축'을 바라보게 되고,
+	이는 '월드 공간 상의 카메라 방향벡터'가 정반대 방향으로 뒤집어져서 '음의 z축'을 바라보는 것과 같지?
+
+	따라서, 카메라 방향벡터의 yaw 각도를 -90도로 설정하면,
+
+	월드 공간 상의 카메라 위치의 z값이 양수인 상태에서
+	월드 공간 상의 카메라 방향벡터가 음의 z축을 바라보게 되는 것이고,
+	
+	이는 월드 공간 상의 카메라가 원점을 바라보도록 초기화한 것이라고 볼 수 있겠지!
+*/
+float yaw = -90.f; // yaw 축 초기 각도를 -90도로 설정 
+float pitch = 0.0f; // pitch 축 초기 각도를 0도로 설정
+
+// 가장 최근 마우스 입력 좌표값을 스크린 좌표의 중점으로 초기화
+float lastX = 800.0f / 2.0f;
+float lastY = 600.0f / 2.0f;
+
+// zoom 을 구현하기 위해 사용할 fov 값을 전역변수로 선언 및 초기화
+float fov = 45.0f;
 
 // 카메라 이동속도 보정에 사용되는 deltaTime 변수 선언 및 초기화
 float deltaTime = 0.0f; // 마지막에 그려진 프레임 ~ 현재 프레임 사이의 시간 간격
@@ -81,6 +141,13 @@ int main()
 	glfwMakeContextCurrent(window); // 새로운 GLFWwindow 윈도우 객체를 만들면, 해당 윈도우의 OpenGL 컨텍스트를 현재 실행중인 스레드의 현재 컨텍스트로 지정
 
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback); // GLFWwindow 창 크기 변경(resize) 감지 시, 발생시킬 리사이징 콜백함수 등록 (콜백함수는 항상 게임루프 시작 전 등록!)
+	glfwSetCursorPosCallback(window, mouse_callback); // GLFWwindow 에 마우스 커서 입력 감지 시, 발생시킬 콜백함수 등록
+	glfwSetScrollCallback(window, scroll_callback); // GLFWwindow 에 마우스 스크롤 입력 감지 시, 발생시킬 콜백함수 등록
+
+	// 마우스 커서 입력에 대한 설정을 지정
+	// GLFW_CURSOR_DISABLED 로 커서 입력을 설정할 경우, 
+	// 마우스 이동 시, 커서를 보이지 않게 함과 동시에, 마우스 커서 위치가 window 창 범위를 벗어나지 않도록(capture) 함
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
 
 	// GLAD 로 런타임에 각 운영체제에 걸맞는 OpenGL 함수 포인터 초기화 및 실패 시 예외 처리.
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -331,9 +398,9 @@ int main()
 	ourShader.setInt("texture1", 0); // texture1 이라는 이름의 sampler 유니폼 변수에는 텍스쳐 유닛(텍스쳐 위치)을 0으로 전달함. > 0번 위치에 바인딩된 텍스쳐 객체를 사용하겠군. (참고로, Shader.setInt() 는 내부적으로 glUniform1i() 로 구현되어 있음!)
 	ourShader.setInt("texture2", 1); // texture2 이라는 이름의 sampler 유니폰 변수에는 텍스쳐 유닛을 1로 전달함. > 1번 위치에 바인딩된 텍스쳐 객체를 사용하겠군.
 
-	// 보통 투영행렬은 런타임에 변경할 일이 많이 없기 때문에, 렌더링 루프 진입 전에 생성 후, 쉐이더 프로그램으로 전송함.
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
-	ourShader.setMat4("projection", projection);
+	//// 보통 투영행렬은 런타임에 변경할 일이 많이 없기 때문에, 렌더링 루프 진입 전에 생성 후, 쉐이더 프로그램으로 전송함.
+	//glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+	//ourShader.setMat4("projection", projection);
 
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
@@ -447,11 +514,15 @@ int main()
 
 		//view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 전체 오브젝트들을 z축으로 -3만큼 이동(즉, 카메라가 z축으로 3만큼 앞으로 이동)시키는 뷰 행렬 생성
 
+		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
+		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함.
+		// 그래서 이번에는 투영행렬을 게임루프에서 계산한 것!
+		glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+		ourShader.setMat4("projection", projection);
 		
 		// 이번에는 전역변수로 선언된 카메라 관련 벡터들로 LookAt 행렬(= 뷰 행렬) 계산해보자
 		// 참고로, '카메라 위치 + 카메라 (앞쪽)방향벡터 = 카메라가 앞쪽 방향으로 바라보는 지점 target' 이 나오겠지?
 		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
 		ourShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
 
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
@@ -506,6 +577,119 @@ int main()
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height); // GLFWwindow 상에 렌더링될 뷰포트 영역을 정의. (뷰포트 영역의 좌상단 좌표, 뷰포트 영역의 너비와 높이)
+}
+
+// GLFW 윈도우에 마우스 입력 감지 시, 호출할 콜백함수 정의
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+{
+	// 콜백함수의 매개변수로 전달받는 마우스 좌표값의 타입을 double > float 으로 형변환
+	float xpos = static_cast<float>(xposIn);
+	float ypos = static_cast<float>(yposIn);
+
+	if (firstMouse)
+	{
+		// 맨 처음 전달받은 마우스 좌표값은 초기에 설정된 lastX, Y 와 offset 차이가 심할 것임.
+		// 이 offset 으로 yaw, pitch 변화를 계산하면 회전이 급격하게 튀다보니,
+		// 맨 처음 전달받은 마우스 좌표값으로는 offset 을 계산하지 않고, lastX, Y 값을 업데이트 하는 데에만 사용함.
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	// 마지막 프레임의 마우스 좌표값에서 현재 프레임의 마우스 좌표값까지 이동한 offset 계산
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // y축 좌표는 스크린좌표계와 3D 좌표계(오른손 좌표계)와 방향이 반대이므로, -(ypos - lastY) 와 같이 뒤집어준 것!
+
+	// 마지막 프레임의 마우스 좌표값 갱신
+	lastX = xpos;
+	lastY = ypos;
+
+	// 마우스 움직임에 의한 회전량이 급격하게 증가하지 않도록, 
+	// 마우스 이동량에 감도(sensitivity)를 곱해서 마우스 움직임 속도를 조절함
+	const float sensitivity = 0.1f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	// 최종적으로 계산된 마우스 이동량(offset)을 yaw, pitch 각도에 적용함
+	yaw += xoffset; // 수평 회전(= yaw 축 회전)에 대해서는 xoffset 적용
+	pitch += yoffset; // 수직 회전(= pitch 축 회전)에 대해서는 yoffset 적용
+
+	/*
+		LookAt flip 현상 방지
+
+		LearnOpenGL 본문에서 봐서 알겠지만, 
+		LookAt 행렬을 구하는 과정에서 카메라 right 벡터를 계산해야 하는데,
+
+		카메라 right 벡터는 카메라 방향벡터와 월드공간 Up 벡터의 외적으로 계산했었지?
+
+		문제는, 이때 카메라 방향벡터와 월드공간 Up 벡터가 서로 평행해진다면,
+		평행한 두 벡터의 외적의 결과가 아무런 방향을 가지지 않는 '영 벡터'가 나와버림.
+
+		즉, right 벡터가 영벡터가 되어버리면 LookAt 행렬을 정확하게 계산할 수 없음.
+
+		따라서, 이러한 상황이 되는 것을 방지하려면,
+		pitch 축 각도가 -90도보다 작아져서는 안되고, 90도보다 커져서도 안됨.
+		만약에 그렇게 되는 순간 카메라 방향벡터가 월드공간 Up 벡터와 평행해짐.
+
+		이러한 제한사항을 코드로 구현하기 위해,
+		pitch 축 각도를 -89도 에서 89도 사이로 안전하게 clamping 한 것!
+	*/
+	if (pitch > 89.0f)
+	{
+		pitch = 89.0f;
+	}
+	if (pitch < -89.0f)
+	{
+		pitch = -89.0f;
+	}
+
+	// 이제 최종적으로 (뷰 좌표계 상의)카메라 방향벡터 계산
+	/*
+		LearnOpenGL 본문에서 삼각법으로 카메라 방향벡터 계산 시, 
+		direction.x, z 에 cos(pitch) 가 곱해졌던 이유는 직관적으로 보면 명확함. 
+
+		yaw 삼각형의 빗변의 길이가 cos(pitch) 와 일치하도록 그려져야 하기 때문!
+
+		즉, yaw 삼각형의 빗변의 길이가 1임을 가정하고, 
+		cos(yaw) 와 sin(yaw) 를 방향벡터의 x, z 값으로 정할 수 있었던 것이지만, 
+		결국 최종적으로는 pitch 삼각형에서의 빗변의 길이가 1로써 최종 방향벡터와 길이가 같아야 함.
+
+		pitch 삼각형의 빗변과 최종 방향벡터의 길이가 같아야 하고, 
+		pitch 삼각형의 빗변의 길이가 1이어야 한다면, 
+		yaw 삼각형의 빗변의 길이가 동시에 1일 수는 없다!
+
+		따라서, yaw 삼각형의 빗변의 길이는 그에 맞춰서 cos(pitch) 만큼으로 줄어들 수밖에 없다! 
+
+		그렇기 때문에 yaw 삼각형의 빗변의 길이를 결정하는 밑변과 높이인 cos(yaw), sin(yaw) 
+		즉, direction.x, z 의 값에 cos(pitch) 만큼의 가중치가 곱해져서, 
+		최종적으로는 yaw 삼각형의 빗변의 길이가 cos(pitch) 로 줄어들게 된다!
+
+		이것이 LearnOpenGL 본문에서 xz sides 가 cos(pitch) 의 영향을 받는다고 말한 것의 의미임!
+	*/
+	glm::vec3 direction;
+	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	direction.y = sin(glm::radians(pitch));
+	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(direction); // 최종 계산된 방향벡터로 LookAt 행렬 계산에 사용되는 전역변수 cameraFront 업데이트!
+}
+
+// GLFW 윈도우에 스크롤 입력 감지 시, 호출할 콜백함수 정의
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	// y축 방향 스크롤량(yoffset) 만큼 투영행렬 계산 시 사용될 fov(시야각) 값 변경
+	// fov 값으로 줌을 구현하는 이유는, fov(시야각)에 따라 전체 Scene 공간으로부터 NDC 로 투영되는 영역이 달라지다보니,
+	// 마치 카메라 줌인 줌아웃을 하는 것과 동일한 착시효과를 줄 수 있기 때문임!
+	fov -= (float)yoffset;
+
+	// 카메라 줌의 최댓값과 최솟값을 제한하기 위해, fov 값을 1.0 ~ 45.0 사이로 clamping 해놓음.
+	if (fov < 1.0f)
+	{
+		fov = 1.0f;
+	}
+	if (fov > 45.0f)
+	{
+		fov = 45.0f;
+	}
 }
 
 // GLFWwindow 윈도우 입력 및 키 입력 감지 후 이벤트 처리 함수 (렌더링 루프에서 반복 감지)
