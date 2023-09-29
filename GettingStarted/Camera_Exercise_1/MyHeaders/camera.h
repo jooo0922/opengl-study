@@ -69,7 +69,8 @@ public:
     // 현재 카메라의 위치, 타겟, 카메라 업 벡터를 가지고 LookAt 행렬(= 뷰 행렬)을 계산하여 반환
     glm::mat4 GetViewMatrix()
     {
-        return glm::lookAt(Position, Position + Front, Up);
+        //return glm::lookAt(Position, Position + Front, Up);
+        return GetLookAtMatrix(Position, Position + Front, Up);
     }
 
     // 매 프레임마다 키 입력에 대한 현재 클래스에서만 사용되는 독립적인 Enum 을 입력받아 카메라 이동 처리 
@@ -137,6 +138,38 @@ private:
         // 또한, 카메라 right 벡터는 ProcessKeyboard() 에서 카메라 좌우 이동 시 방향벡터로 사용되므로, 길이를 1로 정규화해야 일정한 속도로 좌우 이동됨!
         Right = glm::normalize(glm::cross(Front, WorldUp)); 
         Up = glm::normalize(glm::cross(Right, Front));
+    }
+
+    // glm::lookAt() 함수 직접 구현해보기
+    glm::mat4 GetLookAtMatrix(const glm::vec3 position, const glm::vec3 target, const glm::vec3 up)
+    {
+        // 회전행렬의 세 로컬 축(카메라 방향벡터, 카메라 right 벡터, 카메라 up 벡터) 계산
+        glm::vec3 cameraDirection = glm::normalize(position - target);
+        glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+        glm::vec3 cameraUp = glm::normalize(glm::cross(cameraDirection, cameraRight));
+
+        // 세 카메라 로컬 축을 열벡터로 꽂아서 회전행렬 계산
+        // 이때, 뷰 좌표계는 회전하고자 하는 방향의 '역변환'을 계산해야 하므로, 회전행렬의 전치행렬로 역행렬을 계산함 
+        // why? 카메라 로컬 축은 서로 직교하는 직교행렬이므로, 직교행렬의 역행렬은 직교행렬의 전치행렬과 같음! 
+        glm::mat4 rotation = glm::transpose(
+            glm::mat4(
+                glm::vec4(cameraRight, 0.0f),
+                glm::vec4(cameraUp, 0.0f),
+                glm::vec4(cameraDirection, 0.0f),
+                glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
+            )
+        );
+
+        // 카메라 위치값을 negate 하여 이동하고자 하는 방향의 '역변환', 즉, 이동행렬의 역행렬 계산!
+        glm::mat4 translation = glm::translate(glm::mat4(1.0f), -Position);
+
+        // 원래는 강체 변환을 위해 S > R > T (코드로 작성 시, translation * rotation * scale) 순으로 곱해줘야 하지만,
+        // 역행렬을 사용한 '역변환' 계산 시에는, 모델행렬의 곱셈 순서도 거꾸로 뒤집어줘야 함.
+        // 따라서, T > R (코드로 작성 시, rotation * translation) 순으로 역행렬을 곱셈함. (게임수학 p.349 참고) 
+        glm::mat4 lookAt = rotation * translation;
+
+        // 최종 계산된 LookAt 행렬 반환
+        return lookAt;
     }
 };
 #endif
