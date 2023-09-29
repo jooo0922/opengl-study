@@ -46,67 +46,15 @@ void processInput(GLFWwindow* window, Shader ourShader); // GLFW 윈도우 및 �
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
-// 카메라 LookAt 행렬 생성에 필요한 벡터 선언 및 초기화
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f); // 카메라 위치
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // 카메라 (앞쪽)방향 벡터 (정확히는 카메라 '뒷쪽'방향벡터 인 게 맞음.)
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f); // 월드공간 up 벡터
-
-bool firstMouse = true; // 첫 번째 마우스 입력 여부를 나타내는 상태값 > 첫 번째 마우스 입력에 대한 예외처리 목적
-
-// 카메라 방향벡터 계산을 위한 오일러 각
-/*
-	왜 yaw 초기각을 -90도로 설정했을까?
-
-	yaw 초기각을 0도로 설정하면
-	월드 공간에서 카메라 방향벡터가 양의 x축을 향하게 됨.
-
-	우리는 월드 공간에서 카메라 방향벡터가 x축을 향하는 게 아닌,
-	원점을 바라보도록 초기화하고 싶은 게 목적임!
-
-	이를 달성하려면,
-	카메라 월드공간 위치 z값이 양수라고 가정한다면,
-	카메라 방향벡터는 '월드 공간에서 음의 z축'을 향하도록 초기화해야
-	카메라가 월드 공간 상의 원점을 바라볼 수 있음.
-
-	그러나, 여기서 말하는 '카메라 방향벡터' 란,
-	카메라가 원점인 '뷰 좌표계 상의 카메라 방향벡터' 를 칭하므로,
-	실제 월드 공간상의 카메라 방향벡터와 정반대 방향으로 계산되어 있음.
-
-	그래서 LearnOpenGL 본문에서도
-	"'direction vector' 라는 이름이 실제 월드공간에서 카메라가 바라봐야 할 방향의
-	정반대 방향을 가리키다보니 좋은 이름은 아닐 수 있다"
-	고 명시하고 있음.
-
-	어쨋든, 카메라 월드공간 위치의 z값이 양수인 상태에서
-	카메라가 월드 공간의 원점을 바라보려면,
-	카메라가 '월드 공간의 음의 z축'을 바라봐야 하고,
-
-	이는 월드 공간의 반대방향으로 변환되는 뷰 좌표계 상에서는
-	'뷰 좌표계의 양의 z축'을 바라보는 것에 해당하기 때문에,
-	결과적으로 '뷰 좌표계 상의 카메라 방향벡터' 는
-	'월드 공간 상의 카메라 방향벡터'와 정반대 방향으로 뒤집어서 계산해줘야 함!
-
-	이 전제 하에,
-	yaw 축 각도가 -90도 회전하게 되면,
-	'뷰 좌표계 상의 카메라 방향벡터'는 '양의 z축'을 바라보게 되고,
-	이는 '월드 공간 상의 카메라 방향벡터'가 정반대 방향으로 뒤집어져서 '음의 z축'을 바라보는 것과 같지?
-
-	따라서, 카메라 방향벡터의 yaw 각도를 -90도로 설정하면,
-
-	월드 공간 상의 카메라 위치의 z값이 양수인 상태에서
-	월드 공간 상의 카메라 방향벡터가 음의 z축을 바라보게 되는 것이고,
-
-	이는 월드 공간 상의 카메라가 원점을 바라보도록 초기화한 것이라고 볼 수 있겠지!
-*/
-float yaw = -90.f; // yaw 축 초기 각도를 -90도로 설정 
-float pitch = 0.0f; // pitch 축 초기 각도를 0도로 설정
+// 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 // 가장 최근 마우스 입력 좌표값을 스크린 좌표의 중점으로 초기화
 float lastX = 800.0f / 2.0f;
 float lastY = 600.0f / 2.0f;
 
-// zoom 을 구현하기 위해 사용할 fov 값을 전역변수로 선언 및 초기화
-float fov = 45.0f;
+// 첫 번째 마우스 입력 여부를 나타내는 상태값 > 첫 번째 마우스 입력에 대한 예외처리 목적
+bool firstMouse = true;
 
 // 카메라 이동속도 보정에 사용되는 deltaTime 변수 선언 및 초기화
 float deltaTime = 0.0f; // 마지막에 그려진 프레임 ~ 현재 프레임 사이의 시간 간격
@@ -439,91 +387,14 @@ int main()
 		// Shader 클래스 내에서 생성된 쉐이더 프로그램 객체를 바인딩하는 메서드 호출
 		ourShader.use();
 
-		// glm 라이브러리로 좌표계 변환행렬 계산
-		glm::mat4 view = glm::mat4(1.0f); // 뷰 행렬을 단위행렬로 초기화
-
-		/*
-			LookAt 행렬(glm::lookAt())로 뷰 행렬 만들기
-
-			'LookAt 행렬'이라는 개념이 약간 생소할 수 있음.
-
-			'LookAt' 이라는 개념 자체는 카메라가 어느 지점을 바라보도록 target 을
-			설정하는 값 정도로 Three.js 에서 사용해본 적이 꽤 있었지.
-
-			그러나, 사실 이 'LookAt' 이라는 개념은
-			'LookAt 행렬'이라는 것에서 파생된 것인데,
-			'LookAt 행렬'은 놀랍게도 '뷰 행렬'의 일종이라고 보면 됨.
-
-			즉, 본질적으로 'LookAt 행렬'은
-			카메라의 이동과 회전을 계산해주는,
-			카메라가 움직이고자 하는 방향과 정반대 방향으로
-			Scene 안의 모든 오브젝트들을 역변환시키는 '뷰 행렬' 이라는 것!
-
-			일반적으로 뷰 행렬은
-			카메라가 이동 및 회전하고자 하는
-			이동행렬과 회전행렬의 역행렬을 곱해서 계산했었지? (게임수학 p.347 ~ p.350 참고)
-
-			LookAt 행렬도 이와 다르지 않음.
-			카메라의 이동행렬과 회전행렬의 역행렬을 계산하여 서로 곱하는 방식임.
-
-			그런데, LookAt 행렬은 회전행렬을 계산할 때,
-			glm::rotate() 를 사용하는 것이 아니라,
-			1. 카메라 방향벡터(카메라 위치 - 카메라 타겟)
-			2. 카메라 right 벡터 (월드 up 벡터와 카메라 방향벡터 외적)
-			3. 카메라 up 벡터 (카메라 방향벡터와 카메라 right 벡터 외적)
-			3개의 벡터를 계산하고, 이 3개의 벡터를 정규화한 다음,
-			이 3개의 벡터를 회전이 적용된 기저축으로 삼는 회전행렬을 만듦.
-
-			회전행렬은 회전이 적용된 로컬 축 벡터를
-			열 벡터로 꽂아넣어 만든 것이라고 게임수학에서 배웠었지? (p.344)
-			이것과 완전 동일한 원리인 것임.
-
-			현재 카메라를 중심으로한 3개의 직교 벡터를 정의한 뒤,
-			이를 회전이 적용된 로컬 축 벡터로 삼아 열 벡터로 꽂아넣으면
-			현재 카메라의 회전행렬이 되는 것이지!
-
-			다만, 이 회전행렬에는 카메라가 어느 방향을 바라보고 있는지,
-			즉, target 에 대한 정보를 갖고있는 로컬 축(1. 카메라 방향벡터)을
-			포함하고 있기에, 일반적인 회전행렬과 다르게 카메라의 'LookAt' 을
-			구현할 수 있는 아주 특별한 회전행렬이라고 볼 수 있음!
-
-			한 편, 이동행렬은 어떻게 구하냐?
-			이건 아주 간단함. 그냥 카메라 위치 벡터를 카메라의 이동벡터 삼아서
-			그 이동벡터를 가지고 이동행렬을 만들어버리면 됨.
-
-			단, 카메라 뷰 행렬은 언제나 그렇듯, 카메라가 회전 및 이동하고자 하는 방향과
-			정반대 방향의 변환을 적용해줘야 하기에, 회전행렬과 이동행렬 모두 '역행렬'로 계산해줘야 함.
-
-			이때, 이동행렬은 이동벡터의 각 컴포넌트를 음수로 뒤집어주면(negate) 되고,
-			회전행렬은 직교행렬이라면(즉, 회전행렬의 각 열벡터가 직교하는 행렬) 전치행렬과 역행렬이 같으므로,
-			회전행렬의 대각성분을 기준으로 뒤집어주면(즉, 전치행렬을 구해주면), 그것이 곧 회전행렬의 역행렬이 되어버림.
-			(이 내용도 게임수학 p.349 에 나와있음.)
-
-			그렇게 역행렬로 계산된 회전행렬과 이동행렬을 곱한 것이
-			https://learnopengl.com/Getting-started/Camera 에 나온 LookAt 행렬을 구하는 공식이 된 것임!
-
-			그리고, glm::lookAt() 함수는
-			카메라 현재 위치벡터, 카메라 target 벡터, 월드공간 up 벡터를 인자로 전달하면
-			내부에서 자동으로 LookAt 행렬을 계산하여 반환해줌!
-		*/
-		//float radius = 10.0f; // 카메라를 회전시킬 반경
-		//float camX = static_cast<float>(sin(glfwGetTime()) * radius); // radius 를 반경으로 하는 원의 x좌표 계산
-		//float camZ = static_cast<float>(cos(glfwGetTime()) * radius); // radius 를 반경으로 하는 원의 z좌표 계산
-
-		// 매 프레임마다 원점(glm::vec3(0.0f, 0.0f, 0.0f))을 중심으로 공전하는 LookAt 행렬(= 뷰 행렬) 계산 
-		//view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-		//view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); // 전체 오브젝트들을 z축으로 -3만큼 이동(즉, 카메라가 z축으로 3만큼 앞으로 이동)시키는 뷰 행렬 생성
-
 		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
 		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함.
 		// 그래서 이번에는 투영행렬을 게임루프에서 계산한 것!
-		glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
 		ourShader.setMat4("projection", projection);
 
-		// 이번에는 전역변수로 선언된 카메라 관련 벡터들로 LookAt 행렬(= 뷰 행렬) 계산해보자
-		// 참고로, '카메라 위치 + 카메라 (앞쪽)방향벡터 = 카메라가 앞쪽 방향으로 바라보는 지점 target' 이 나오겠지?
-		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져와서 쉐이더 프로그램에 전달
+		glm::mat4 view = camera.GetViewMatrix();
 		ourShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
 
 		glBindVertexArray(VAO); // 미리 생성한 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
@@ -605,92 +476,15 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 	lastX = xpos;
 	lastY = ypos;
 
-	// 마우스 움직임에 의한 회전량이 급격하게 증가하지 않도록, 
-	// 마우스 이동량에 감도(sensitivity)를 곱해서 마우스 움직임 속도를 조절함
-	const float sensitivity = 0.1f;
-	xoffset *= sensitivity;
-	yoffset *= sensitivity;
-
-	// 최종적으로 계산된 마우스 이동량(offset)을 yaw, pitch 각도에 적용함
-	yaw += xoffset; // 수평 회전(= yaw 축 회전)에 대해서는 xoffset 적용
-	pitch += yoffset; // 수직 회전(= pitch 축 회전)에 대해서는 yoffset 적용
-
-	/*
-		LookAt flip 현상 방지
-
-		LearnOpenGL 본문에서 봐서 알겠지만,
-		LookAt 행렬을 구하는 과정에서 카메라 right 벡터를 계산해야 하는데,
-
-		카메라 right 벡터는 카메라 방향벡터와 월드공간 Up 벡터의 외적으로 계산했었지?
-
-		문제는, 이때 카메라 방향벡터와 월드공간 Up 벡터가 서로 평행해진다면,
-		평행한 두 벡터의 외적의 결과가 아무런 방향을 가지지 않는 '영 벡터'가 나와버림.
-
-		즉, right 벡터가 영벡터가 되어버리면 LookAt 행렬을 정확하게 계산할 수 없음.
-
-		따라서, 이러한 상황이 되는 것을 방지하려면,
-		pitch 축 각도가 -90도보다 작아져서는 안되고, 90도보다 커져서도 안됨.
-		만약에 그렇게 되는 순간 카메라 방향벡터가 월드공간 Up 벡터와 평행해짐.
-
-		이러한 제한사항을 코드로 구현하기 위해,
-		pitch 축 각도를 -89도 에서 89도 사이로 안전하게 clamping 한 것!
-	*/
-	if (pitch > 89.0f)
-	{
-		pitch = 89.0f;
-	}
-	if (pitch < -89.0f)
-	{
-		pitch = -89.0f;
-	}
-
-	// 이제 최종적으로 (뷰 좌표계 상의)카메라 방향벡터 계산
-	/*
-		LearnOpenGL 본문에서 삼각법으로 카메라 방향벡터 계산 시,
-		direction.x, z 에 cos(pitch) 가 곱해졌던 이유는 직관적으로 보면 명확함.
-
-		yaw 삼각형의 빗변의 길이가 cos(pitch) 와 일치하도록 그려져야 하기 때문!
-
-		즉, yaw 삼각형의 빗변의 길이가 1임을 가정하고,
-		cos(yaw) 와 sin(yaw) 를 방향벡터의 x, z 값으로 정할 수 있었던 것이지만,
-		결국 최종적으로는 pitch 삼각형에서의 빗변의 길이가 1로써 최종 방향벡터와 길이가 같아야 함.
-
-		pitch 삼각형의 빗변과 최종 방향벡터의 길이가 같아야 하고,
-		pitch 삼각형의 빗변의 길이가 1이어야 한다면,
-		yaw 삼각형의 빗변의 길이가 동시에 1일 수는 없다!
-
-		따라서, yaw 삼각형의 빗변의 길이는 그에 맞춰서 cos(pitch) 만큼으로 줄어들 수밖에 없다!
-
-		그렇기 때문에 yaw 삼각형의 빗변의 길이를 결정하는 밑변과 높이인 cos(yaw), sin(yaw)
-		즉, direction.x, z 의 값에 cos(pitch) 만큼의 가중치가 곱해져서,
-		최종적으로는 yaw 삼각형의 빗변의 길이가 cos(pitch) 로 줄어들게 된다!
-
-		이것이 LearnOpenGL 본문에서 xz sides 가 cos(pitch) 의 영향을 받는다고 말한 것의 의미임!
-	*/
-	glm::vec3 direction;
-	direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	direction.y = sin(glm::radians(pitch));
-	direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	cameraFront = glm::normalize(direction); // 최종 계산된 방향벡터로 LookAt 행렬 계산에 사용되는 전역변수 cameraFront 업데이트!
+	// 마우스 이동량(offset)에 따른 카메라 오일러 각 재계산 및 카메라 로컬 축 벡터 업데이트
+	camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 // GLFW 윈도우에 스크롤 입력 감지 시, 호출할 콜백함수 정의
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	// y축 방향 스크롤량(yoffset) 만큼 투영행렬 계산 시 사용될 fov(시야각) 값 변경
-	// fov 값으로 줌을 구현하는 이유는, fov(시야각)에 따라 전체 Scene 공간으로부터 NDC 로 투영되는 영역이 달라지다보니,
-	// 마치 카메라 줌인 줌아웃을 하는 것과 동일한 착시효과를 줄 수 있기 때문임!
-	fov -= (float)yoffset;
-
-	// 카메라 줌의 최댓값과 최솟값을 제한하기 위해, fov 값을 1.0 ~ 45.0 사이로 clamping 해놓음.
-	if (fov < 1.0f)
-	{
-		fov = 1.0f;
-	}
-	if (fov > 45.0f)
-	{
-		fov = 45.0f;
-	}
+	// 마우스 수직방향 스크롤 이동량(yoffset)에 따른 카메라 zoom 값 재계산
+	camera.ProcessMouseScroll(yoffset);
 }
 
 // GLFWwindow 윈도우 입력 및 키 입력 감지 후 이벤트 처리 함수 (렌더링 루프에서 반복 감지)
@@ -707,19 +501,18 @@ void processInput(GLFWwindow* window, Shader ourShader)
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		cameraPos += cameraFront * cameraSpeed; // <+(카메라 앞쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 앞쪽 이동
+		camera.ProcessKeyboard(FORWARD, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		cameraPos -= cameraFront * cameraSpeed; // <-(카메라 앞쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 뒷쪽 이동
+		camera.ProcessKeyboard(BACKWARD, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		// 참고로, 카메라 앞쪽 방향벡터와 월드공간 UP 벡터를 외적하면 '카메라 right 벡터' 가 나온댔지?
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // <-(카메라 오른쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 왼쪽 이동
+		camera.ProcessKeyboard(LEFT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed; // <+(카메라 오른쪽 방향 * 이동속도)> 만큼 카메라 위치 이동 > 오른쪽 이동
+		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
 }
