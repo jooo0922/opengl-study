@@ -84,6 +84,9 @@ public:
             Position -= Right * velocity;
         if (direction == RIGHT)
             Position += Right * velocity;
+
+        // 카메라가 xz축 평면 상에서만 이동하고 y축 수직이동은 못하게 막음.
+        Position.y = 0.0f;
     }
 
     // 매 프레임마다 마우스 이동량(offset)을 입력받아 현재 카메라 오일러 각 재계산
