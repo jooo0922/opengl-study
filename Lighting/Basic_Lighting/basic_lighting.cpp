@@ -118,7 +118,7 @@ int main()
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	// 광원 큐브 쉐이더 객체를 별도로 생성함으로써, 광원 큐브의 색상이 빛을 받는 물체의 쉐이더에서 계산된 색상에 의존성을 갖지 않도록 함! 
-	Shader lightingShader("MyShaders/colors.vs", "MyShaders/colors.fs"); // 광원 큐브로부터 빛을 받는 물체의 조명 계산을 실행하는 Shader 객체 생성
+	Shader lightingShader("MyShaders/basic_lighting.vs", "MyShaders/basic_lighting.fs"); // 광원 큐브로부터 빛을 받는 물체의 조명 계산을 실행하는 Shader 객체 생성
 	Shader lightCubeShader("MyShaders/light_cube.vs", "MyShaders/light_cube.fs"); // 광원 큐브의 색상 계산을 독립적으로 실행하는 Shader 객체 생성
 
 	// 정점 위치 및 노멀 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
