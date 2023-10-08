@@ -243,8 +243,8 @@ int main()
 		lightingShader.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
 		lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 물체가 반사할 색상값(= 물체의 색상) vec3 전송  
 		lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원의 색상값 (= 조명 색상) vec3 전송
-		//lightingShader.setVec3("lightPos", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원 위치 vec3 전송 > 조명벡터 계산 목적
-		//lightingShader.setVec3("viewPos", camera.Position); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 카메라 위치 벡터 vec3 전송 > 뷰 벡터 계산 목적
+		lightingShader.setVec3("lightPos", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원 위치 vec3 전송 > 조명벡터 계산 목적
+		lightingShader.setVec3("viewPos", camera.Position); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 카메라 위치 벡터 vec3 전송 > 뷰 벡터 계산 목적
 
 		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
 		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
