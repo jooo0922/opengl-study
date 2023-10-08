@@ -239,6 +239,16 @@ int main()
 		// ...
 
 
+		/* 광원 위치 회전 계산 */
+		float radius = 2.0f; // 광원큐브 회전 반경
+		lightPos.x = static_cast<float>(sin(glfwGetTime()) * radius); // radius 를 반경으로 하는 광원큐브 x좌표 계산 
+		lightPos.z = static_cast<float>(cos(glfwGetTime()) * radius); // radius 를 반경으로 하는 광원큐브 z좌표 계산 
+
+		// 튜토리얼 솔루션 첨부
+		//lightPos.x = 1.0f + sin(glfwGetTime()) * 2.0f;
+		//lightPos.y = sin(glfwGetTime() / 2.0f) * 1.0f;
+
+
 		/* 빛을 받는 큐브 그리기 */
 		lightingShader.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
 		lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 물체가 반사할 색상값(= 물체의 색상) vec3 전송  
