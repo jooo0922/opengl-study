@@ -208,7 +208,7 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO); // 광원 큐브와 빛을 받는 큐브 모두 동일한 버텍스 데이터(위치값)를 사용하므로, 버텍스 데이터가 담긴 VBO 객체는 공유해도 됨.
 
 	// VBO 객체에 쓰여진 정점 데이터 해석 방식 설정
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0); // 위치값 데이터만 사용하므로, 빛을 받는 큐브와 동일하게 정점 데이터 해석 방식을 설정함.
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0); // 위치값 데이터만 사용하므로, 빛을 받는 큐브와 동일하게 정점 데이터 해석 방식을 설정함.
 	glEnableVertexAttribArray(0); // 빛을 받는 큐브의 버텍스 쉐이더와 동일하게 0번 location 변수만 사용하도록 활성화해서 aPos 변수만 활성화함.
 
 	// 각 큐브의 VAO, VBO 객체 설정을 끝마쳤으므로, 각 버퍼 객체를 OpenGL 컨텍스트로부터 바인딩 해제
