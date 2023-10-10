@@ -286,6 +286,8 @@ int main()
 		/* 광원 큐브 그리기 */
 		lightCubeShader.use(); // 광원 큐브에 적용할 쉐이더 프로그램 객체 바인딩
 
+		lightCubeShader.setVec3("lightColor", lightColor); // 빛을 받는 큐브를 따라 광원큐브도 조명 색상 변경 
+
 		lightCubeShader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송 (동일한 투영행렬 재사용)
 		lightCubeShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송 (동일한 뷰 행렬 재사용)
 
