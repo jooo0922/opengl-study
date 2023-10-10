@@ -118,7 +118,7 @@ int main()
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	// 광원 큐브 쉐이더 객체를 별도로 생성함으로써, 광원 큐브의 색상이 빛을 받는 물체의 쉐이더에서 계산된 색상에 의존성을 갖지 않도록 함! 
-	Shader lightingShader("MyShaders/basic_lighting.vs", "MyShaders/basic_lighting.fs"); // 광원 큐브로부터 빛을 받는 물체의 조명 계산을 실행하는 Shader 객체 생성
+	Shader lightingShader("MyShaders/materials.vs", "MyShaders/materials.fs"); // 광원 큐브로부터 빛을 받는 물체의 조명 계산을 실행하는 Shader 객체 생성
 	Shader lightCubeShader("MyShaders/light_cube.vs", "MyShaders/light_cube.fs"); // 광원 큐브의 색상 계산을 독립적으로 실행하는 Shader 객체 생성
 
 	// 정점 위치 및 노멀 데이터 배열 생성 (좌표 변환을 배우기 전이므로, 버텍스 쉐이더의 출력변수에 바로 할당할 수 있는 NDC좌표계([-1, 1] 사이)로 구성)
@@ -241,10 +241,29 @@ int main()
 
 		/* 빛을 받는 큐브 그리기 */
 		lightingShader.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-		lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 물체가 반사할 색상값(= 물체의 색상) vec3 전송  
-		lightingShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원의 색상값 (= 조명 색상) vec3 전송
-		lightingShader.setVec3("lightPos", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원 위치 vec3 전송 > 조명벡터 계산 목적
+		lightingShader.setVec3("light.position", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원 위치 vec3 전송 > 조명벡터 계산 목적
 		lightingShader.setVec3("viewPos", camera.Position); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 카메라 위치 벡터 vec3 전송 > 뷰 벡터 계산 목적
+
+		// 쉐이더 프로그램에 전송할 조명 색상 계산 (시간 흐름에 따라 일정 주기로 조명색상을 바꿔주도록 sin(glfwGetTime()) 로 계산)
+		glm::vec3 lightColor;
+		lightColor.x = static_cast<float>(sin(glfwGetTime() * 2.0));
+		lightColor.y = static_cast<float>(sin(glfwGetTime() * 0.7));
+		lightColor.z = static_cast<float>(sin(glfwGetTime() * 1.3));
+
+		// 항상 light 의 ambient 밝기는 0.2 정도로 어둡게, diffuse 밝기는 0.5 정도로 적당히 밝게!
+		glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // diffuse 조명 색상 강도를 절반만큼 줄임
+		glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // ambient 조명 색상 강도를 diffuse 조명 색상의 20% 로 줄임
+
+		// 프래그먼트 쉐이더 > Light 구조체 타입의 uniform 변수의 각 멤버에 값 전송 (prefix 로 Light 구조체 변수명만 붙여주면 됨.)
+		lightingShader.setVec3("light.ambient", ambientColor);
+		lightingShader.setVec3("light.diffuse", diffuseColor);
+		lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f); // 항상 light 의 specular 밝기는 full intensity!
+
+		// 프래그먼트 쉐이더 > Material 구조체 타입의 unfirom 변수의 각 멤버에 값 전송
+		lightingShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
+		lightingShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f); // 항상 material 의 diffuse 와 ambient 는 물체 색상으로 동일하게 맞춤
+		lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // 항상 material 의 specular 는 너무 밝아지지 않게 중간 밝기로 맞춤
+		lightingShader.setFloat("material.shininess", 32.0f);
 
 		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
 		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
