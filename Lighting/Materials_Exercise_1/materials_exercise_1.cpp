@@ -244,26 +244,22 @@ int main()
 		lightingShader.setVec3("light.position", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원 위치 vec3 전송 > 조명벡터 계산 목적
 		lightingShader.setVec3("viewPos", camera.Position); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 카메라 위치 벡터 vec3 전송 > 뷰 벡터 계산 목적
 
-		// 쉐이더 프로그램에 전송할 조명 색상 계산 (시간 흐름에 따라 일정 주기로 조명색상을 바꿔주도록 sin(glfwGetTime()) 로 계산)
-		glm::vec3 lightColor;
-		lightColor.x = static_cast<float>(sin(glfwGetTime() * 2.0));
-		lightColor.y = static_cast<float>(sin(glfwGetTime() * 0.7));
-		lightColor.z = static_cast<float>(sin(glfwGetTime() * 1.3));
-
-		// 항상 light 의 ambient 밝기는 0.2 정도로 어둡게, diffuse 밝기는 0.5 정도로 적당히 밝게!
-		glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f); // diffuse 조명 색상 강도를 절반만큼 줄임
-		glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // ambient 조명 색상 강도를 diffuse 조명 색상의 20% 로 줄임
+		// 쉐이더 프로그램에 전송할 조명 색상 초기화 (material table 의 각 요소별 색상 적용을 위해 조명색상은 full intensity 로 통일)
+		glm::vec3 lightColor = glm::vec3(1.0f);
 
 		// 프래그먼트 쉐이더 > Light 구조체 타입의 uniform 변수의 각 멤버에 값 전송 (prefix 로 Light 구조체 변수명만 붙여주면 됨.)
-		lightingShader.setVec3("light.ambient", ambientColor);
-		lightingShader.setVec3("light.diffuse", diffuseColor);
-		lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f); // 항상 light 의 specular 밝기는 full intensity!
+		lightingShader.setVec3("light.ambient", lightColor);
+		lightingShader.setVec3("light.diffuse", lightColor);
+		lightingShader.setVec3("light.specular", lightColor); // 항상 light 의 specular 밝기는 full intensity!
 
 		// 프래그먼트 쉐이더 > Material 구조체 타입의 unfirom 변수의 각 멤버에 값 전송
-		lightingShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
-		lightingShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f); // 항상 material 의 diffuse 와 ambient 는 물체 색상으로 동일하게 맞춤
-		lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // 항상 material 의 specular 는 너무 밝아지지 않게 중간 밝기로 맞춤
-		lightingShader.setFloat("material.shininess", 32.0f);
+		// material table > plastic cyan 색상 전송
+		// ambient 와 diffuse 색상값이 다른 것으로 보아, 이는 물체가 반사해야 하는 순수한 material 색상값이 아니고,
+		// 이미 각각의 조명 색상과 곱해져서 실제로 반사된 색상값 그 자체를 사용하고 있는 것 같음. > 즉, material 색상과 light 색상(intensity) 를 구분하지 않은 색상값이라고 봐야 할 듯...
+		lightingShader.setVec3("material.ambient", 0.0f, 0.1f, 0.06f);
+		lightingShader.setVec3("material.diffuse", 0.0f, 0.50980392f, 0.50980392f);
+		lightingShader.setVec3("material.specular", 0.50196078f, 0.50196078f, 0.50196078f);
+		lightingShader.setFloat("material.shininess", 25.0f);
 
 		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
 		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
