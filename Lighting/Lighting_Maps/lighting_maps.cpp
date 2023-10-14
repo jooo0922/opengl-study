@@ -224,6 +224,15 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, 0); // VBO 객체 설정을 끝마쳤다면, OpenGL 컨텍스트로부터 바인딩(연결)을 해제함.
 	glBindVertexArray(0); // 마찬가지로, VAO 객체에 저장해둘 VBO 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 
+	// 각 lighting map 텍스쳐 객체 생성 및 참조 ID 를 반환받아 저장
+	unsigned int diffuseMap = loadTexture("images/container2.png");
+	unsigned int specularMap = loadTexture("images/container2_specular.png");
+
+	// 각 sampler 변수가 몇 번 Texture Unit 에 바인딩된 텍스쳐 객체를 가져다 쓸 것인지 쉐이더 프로그램에 전송
+	lightingShader.use(); // sampler 변수가 선언된 Shader Program 을 바인딩.
+	lightingShader.setInt("material.diffuse", 0); // diffuseMap sampler 변수는 0번 위치에 바인딩된 텍스쳐 객체를 참조하도록 전달
+	lightingShader.setInt("material.specular", 1); // diffuseMap sampler 변수는 1번 위치에 바인딩된 텍스쳐 객체를 참조하도록 전달
+
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
 	while (!glfwWindowShouldClose(window))
@@ -259,9 +268,6 @@ int main()
 		lightingShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f); // 항상 light 의 specular 밝기는 full intensity!
 
 		// 프래그먼트 쉐이더 > Material 구조체 타입의 unfirom 변수의 각 멤버에 값 전송
-		lightingShader.setVec3("material.ambient", 1.0f, 0.5f, 0.31f);
-		lightingShader.setVec3("material.diffuse", 1.0f, 0.5f, 0.31f); // 항상 material 의 diffuse 와 ambient 는 물체 색상으로 동일하게 맞춤
-		lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // 항상 material 의 specular 는 너무 밝아지지 않게 중간 밝기로 맞춤
 		lightingShader.setFloat("material.shininess", 64.0f);
 
 		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
@@ -276,6 +282,15 @@ int main()
 
 		glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
 		lightingShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+
+		// 큐브를 그릴 때 사용할 lighting map 텍스쳐 바인딩
+		// diffuseMap 바인딩
+		glActiveTexture(GL_TEXTURE0); // diffuseMap sampler 변수는 0번 Texture Unit 을 할당받았으니, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
+		glBindTexture(GL_TEXTURE_2D, diffuseMap); // 0번 위치에 바인딩할 텍스쳐 객체 바인딩
+
+		// specularMap 바인딩
+		glActiveTexture(GL_TEXTURE1); // specularMap sampler 변수는 1번 Texture Unit 을 할당받았으니, 1번 위치에 텍스쳐 객체가 바인딩되도록 활성화
+		glBindTexture(GL_TEXTURE_2D, specularMap); // 1번 위치에 바인딩할 텍스쳐 객체 바인딩
 
 		// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로, glDrawArrays() 로 그려줘야겠지!
 		glBindVertexArray(cubeVAO); // 빛을 받는 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
