@@ -2,10 +2,12 @@
 
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal; // 정점 노멀 데이터를 전송받는 attribute 변수 선언
+layout(location = 2) in vec2 aTexCoords; // 정점 uv 데이터를 전송받는 attribute 변수 선언
 
 // 프래그먼트 쉐이더로 출력할 보간변수 선언
 out vec3 FragPos; // 보간될 프래그먼트 월드공간 좌표 
 out vec3 Normal; // 보간될 프래그먼트 노멀벡터
+out vec2 TexCoords; // 보간된 프래그먼트 uv 좌표
 
 // glm::mat4 타입 좌표계 변환 행렬을 전송받는 uniform 변수 선언
 uniform mat4 model; // 모델 행렬
@@ -15,6 +17,8 @@ uniform mat4 projection; // 투영 행렬
 void main() {
   FragPos = vec3(model * vec4(aPos, 1.0)); // 정점 위치에 모델행렬만 곱해서 월드공간 좌표로 변환 > 프래그먼트 쉐이더로 보간 전송
   Normal = mat3(transpose(inverse(model))) * aNormal; // 정점 노멀벡터를 월드공간 노멀벡터로 변환 > 프래그먼트 쉐이더로 보간 전송
+  TexCoords = aTexCoords; // 정점 uv 좌표를 프래그먼트 쉐이더로 보간 전송
+
   gl_Position = projection * view * vec4(FragPos, 1.0); // 오브젝트 공간 좌표에 모델 행렬 > 뷰 행렬 > 투영 행렬 순으로 곱해서 좌표계를 변환시킴.
 }
 

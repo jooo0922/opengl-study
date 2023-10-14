@@ -23,6 +23,7 @@ struct Light {
 // 버텍스 쉐이더에서 전송된 보간 변수
 in vec3 Normal; // 월드공간 노멀벡터
 in vec3 FragPos; // 월드공간 프래그먼트 위치값
+in vec2 TexCoords; // 보간된 프래그먼트 uv 좌표값
 
 // OpenGL 에서 전송해 줄 uniform 변수들 선언
 uniform vec3 viewPos; // 카메라 위치 > 뷰 벡터 계산에서 사용
