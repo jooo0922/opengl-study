@@ -226,7 +226,7 @@ int main()
 
 	// 각 lighting map 텍스쳐 객체 생성 및 참조 ID 를 반환받아 저장
 	unsigned int diffuseMap = loadTexture("images/container2.png");
-	unsigned int specularMap = loadTexture("images/container2_specular.png");
+	unsigned int specularMap = loadTexture("images/lighting_maps_specular_color.png");
 
 	// 각 sampler 변수가 몇 번 Texture Unit 에 바인딩된 텍스쳐 객체를 가져다 쓸 것인지 쉐이더 프로그램에 전송
 	lightingShader.use(); // sampler 변수가 선언된 Shader Program 을 바인딩.
