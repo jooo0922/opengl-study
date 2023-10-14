@@ -39,6 +39,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height); // GL
 void mouse_callback(GLFWwindow* window, double xpos, double ypos); // GLFW 윈도우에 마우스 입력 감지 시, 호출할 콜백함수
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset); // GLFW 윈도우에 스크롤 입력 감지 시, 호출할 콜백함수
 void processInput(GLFWwindow* window, Shader ourShader); // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
+unsigned int loadTexture(const char* path); // 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
@@ -385,6 +386,58 @@ void processInput(GLFWwindow* window, Shader ourShader)
 	}
 }
 
+// 텍스쳐 이미지 로드 및 객체 생성 함수 구현부 (텍스쳐 객체 참조 id 반환)
+unsigned int loadTexture(const char* path)
+{
+	unsigned int textureID; // 텍스쳐 객체(object) 참조 id 를 저장할 변수 선언
+	glGenTextures(1, &textureID); // 텍스쳐 객체 생성
+
+	int width, height, nrComponents; // 로드한 이미지의 width, height, 색상 채널 개수를 저장할 변수 선언
+
+	// 이미지 데이터 가져와서 char 타입의 bytes 데이터로 저장. 
+	// 이미지 width, height, 색상 채널 변수의 주소값도 넘겨줌으로써, 해당 함수 내부에서 값을 변경. -> 출력변수 역할
+	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+	if (data)
+	{
+		// 이미지 데이터 로드 성공 시 처리
+
+		// 이미지 데이터의 색상 채널 개수에 따라 glTexImage2D() 에 넘겨줄 픽셀 데이터 포맷의 ENUM 값을 결정
+		GLenum format;
+		if (nrComponents == 1)
+			format = GL_RED;
+		else if (nrComponents == 3)
+			format = GL_RGB;
+		else if (nrComponents == 4)
+			format = GL_RGBA;
+
+		// 텍스쳐 객체 바인딩 및 로드한 이미지 데이터 쓰기
+		glBindTexture(GL_TEXTURE_2D, textureID); // GL_TEXTURE_2D 타입의 상태에 텍스쳐 객체 바인딩 > 이후 텍스쳐 객체 설정 명령은 바인딩된 텍스쳐 객체에 적용.
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data); // 로드한 이미지 데이터를 현재 바인딩된 텍스쳐 객체에 덮어쓰기
+		glGenerateMipmap(GL_TEXTURE_2D); // 현재 바인딩된 텍스쳐 객체에 필요한 모든 단계의 Mipmap 을 자동 생성함. 
+
+		// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
+		// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정 (관련 필기 정리 하단 참고)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+	else
+	{
+		// 이미지 데이터 로드 실패 시 처리
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+	}
+
+	// 텍스쳐 객체에 이미지 데이터를 전달하고, 밉맵까지 생성 완료했다면, 로드한 이미지 데이터는 항상 메모리 해제할 것!
+	stbi_image_free(data);
+
+	// 텍스쳐 객체 참조 ID 반환
+	return textureID;
+}
+
+
 /*
 	VAO 는 왜 만드는걸까?
 
@@ -408,4 +461,31 @@ void processInput(GLFWwindow* window, Shader ourShader)
 	필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
 
 	즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
+*/
+
+/*
+	텍셀(텍스쳐 픽셀) 필터링 방식을 지정해줘야 하는 이유
+
+	텍스쳐가 확대되거나 축소될 때,
+	보간된 어떤 텍스쳐 좌표가 예를 들어, (0.1234567..., 0.1234567...) 이라고 쳐보자.
+
+	그런데, 텍스쳐 이미지의 텍셀(텍스쳐 해상도 상에서 각 텍스쳐 픽셀 하나하나의 단위)에서
+	정확히 (0.1234567..., 0.1234567...) 에 대응되는 텍셀이 존재한다고 볼 수 있나?
+
+	절대 아님!
+	예를 들어, 텍스쳐 이미지 해상도가 256 * 256 이라고 한다면,
+	(n/256, n/256 (단, n 은 0 ~ 256 사이)) 텍스쳐 좌표에 대응하는 텍셀은 찾을 수 있지만,
+	정확히 (0.1234567..., 0.1234567...) 좌표에 대응하는 텍셀은 알 수가 없겠지?
+
+	이런 식으로, 소수점이 너무 긴 텍스쳐 좌표의 경우,
+	어떤 텍셀이 대응되는지 정확히 알 수 없으므로,
+	저러한 텍스쳐 좌표를 받았을 때, 어떤 텍스쳐 색상값을 반환해줘야 하는지
+	그 방식을 정의하는 게 Texture Filtering 이라고 볼 수 있음.
+
+	GL_NEAREST 은 그냥 현재 텍스쳐 좌표와 각 텍셀의 중점 사이의 거리를 비교해서
+	가장 가까운 텍셀의 색상값을 넘겨주는 것이고, (> 그래서 약간 blocky 하고 각져보이는 느낌이 듦.)
+
+	GL_LINEAR 은 현재 텍스쳐 좌표와 가까이에 있는 텍셀들을 적당하게 섞어서
+	주변 텍셀들 사이의 근사치를 색상값으로 계산하여 넘겨주는 방식
+	> 즉, 주변 텍셀 색상들을 섞어서 반환해 줌! (> 그래서 약간 antialiasing 이 적용된 느낌이 듦.)
 */
