@@ -7,6 +7,7 @@ out vec4 FragColor;
 struct Material {
   sampler2D diffsue; // 물체가 diffuse 및 ambient 조명에 대해 반사하는 색상을 diffuseMap 텍스쳐에서 샘플링해와서 계산할 것임!
   sampler2D specular; // 물체가 specular 조명에 대해 반사하는 색상을 specularMap 텍스쳐에서 샘플링해와서 계산할 것임!
+  sampler2D emission; // 물체가 발산하는 빛의 색상을 emissionMap 텍스쳐에서 샘플링해와서 계산할 것임!
   float shininess;
 };
 
@@ -46,8 +47,11 @@ void main() {
   float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); // 뷰 벡터와 반사 벡터의 내적값을 32제곱 > 32는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨. > specular 조도 계산
   vec3 specular = light.specular * (spec * texture2D(material.specular, TexCoords).rgb); // specular 조명색상 * (specular 조도 * 물체가 specular 에 대해 반사하는 색상) 으로 specular 성분값 계산
 
+  /* emission 성분 계산 */
+  vec3 emission = texture2D(material.emission, TexCoords).rgb;
+
   // 3가지 성분을 모두 더한 조명 색상에 물체 색상을 component-wise 곱으로 계산하여 최종 색상 결정
-  vec3 result = ambient + diffuse + specular;
+  vec3 result = ambient + diffuse + specular + emission;
   FragColor = vec4(result, 1.0);
 }
 
