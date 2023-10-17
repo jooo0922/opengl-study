@@ -169,6 +169,20 @@ int main()
 
 	};
 
+	// 10개 큐브의 위치가 담긴 glm::vec3 정적배열
+	glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
+	};
+
 	// 빛을 받는 큐브에 대한 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 (하단 VAO 관련 필기 참고)
 	unsigned int VBO, cubeVAO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
 	glGenVertexArrays(1, &cubeVAO); // VAO(Vertex Array Object) 객체 생성
@@ -294,8 +308,19 @@ int main()
 
 		// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로, glDrawArrays() 로 그려줘야겠지!
 		glBindVertexArray(cubeVAO); // 빛을 받는 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
 
+		// 10개의 빛을 받는 큐브 그리기
+		for (unsigned int i = 0; i < 10; i++)
+		{
+			// 각 큐브들에 대해 서로 다른 위치와 회전각을 적용하여 모델행렬 계산
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, cubePositions[i]); // 이동행렬 적용
+			float angle = 20.0f * i;
+			model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f)); // 회전행렬 적용
+			lightingShader.setMat4("model", model); // 모델행렬을 쉐이더 프로그램에 전송
+
+			glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
+		}
 
 		/* 광원 큐브 그리기 */
 		lightCubeShader.use(); // 광원 큐브에 적용할 쉐이더 프로그램 객체 바인딩
