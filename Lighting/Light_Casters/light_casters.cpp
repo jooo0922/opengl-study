@@ -61,7 +61,7 @@ float deltaTime = 0.0f; // 마지막에 그려진 프레임 ~ 현재 프레임 �
 float lastFrame = 0.0f; // 마지막에 그려진 프레임의 ElapsedTime(경과시간)
 
 // 광원 큐브의 위치값을 전역 변수로 선언 및 초기화
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+//glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 int main()
 {
@@ -273,7 +273,7 @@ int main()
 
 		/* 빛을 받는 큐브 그리기 */
 		lightingShader.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-		lightingShader.setVec3("light.position", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 광원 위치 vec3 전송 > 조명벡터 계산 목적
+		lightingShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 Directional Light 방향벡터 vec3 전송 > 조명벡터 계산 목적
 		lightingShader.setVec3("viewPos", camera.Position); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 카메라 위치 벡터 vec3 전송 > 뷰 벡터 계산 목적
 
 		// 프래그먼트 쉐이더 > Light 구조체 타입의 uniform 변수의 각 멤버에 값 전송 (prefix 로 Light 구조체 변수명만 붙여주면 됨.)
