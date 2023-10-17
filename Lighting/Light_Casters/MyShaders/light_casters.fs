@@ -10,9 +10,15 @@ struct Material {
   float shininess;
 };
 
+/* Directional Light 구조체 선언 */
 // Light 구조체 선언 (조명 위치 및 색상)
 struct Light {
-  vec3 position;
+  // vec3 position; // Directional Light 는 광원의 위치를 기준으로 조명벡터를 계산하지 않음!
+
+   // Directional Light 는 광원의 위치와 무관하게 모든 프래그먼트에 평행한 방향으로 입사하는 조명을 계산하므로, 
+   // 모든 조명벡터에 대해 '동일한 방향벡터'를 사용함.
+   // 이때, 광원에서 프래그먼트 방향으로 입사되는 방향벡터를 입력받기 때문에, 실제 조명계산 시, negate 해줘야 함!
+  vec3 direction;
 
   vec3 ambient;
   vec3 diffuse;
@@ -36,7 +42,7 @@ void main() {
   /* diffuse 성분 계산 */
   // 조명계산에 사용되는 모든 방향벡터들은 항상 정규화를 해줄 것! -> 그래야 내적계산 시 정확한 cos 값만 얻을 수 있음!
   vec3 norm = normalize(Normal); // 프래그먼트에 수직인 노멀벡터
-  vec3 lightDir = normalize(light.position - FragPos); // 조명벡터 (프래그먼트 위치 ~ 광원 위치)
+  vec3 lightDir = normalize(-light.direction); // 조명벡터 (Directional Light 구조체에 정의된 동일한 방향으로 평행하게 입사하는 방향벡터)
   float diff = max(dot(norm, lightDir), 0.0); // 노멀벡터와 조명벡터 내적 > diffuse 성분의 세기(조도) 계산 (참고로, 음수인 diffuse 값은 조명값 계산을 부정확하게 만들기 때문에, 0.0 으로 clamping 시킴)
   vec3 diffuse = light.diffuse * (diff * texture2D(material.diffsue, TexCoords).rgb); // diffuse 조명 색상 * (diffuse 조도 * 물체가 diffuse 에 대해 반사하는 색상) 으로 최종 diffuse 성분값 계산
 
