@@ -61,7 +61,7 @@ float deltaTime = 0.0f; // 마지막에 그려진 프레임 ~ 현재 프레임 �
 float lastFrame = 0.0f; // 마지막에 그려진 프레임의 ElapsedTime(경과시간)
 
 // 광원 큐브의 위치값을 전역 변수로 선언 및 초기화
-//glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 int main()
 {
@@ -273,7 +273,7 @@ int main()
 
 		/* 빛을 받는 큐브 그리기 */
 		lightingShader.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-		lightingShader.setVec3("light.direction", -0.2f, -1.0f, -0.3f); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 Directional Light 방향벡터 vec3 전송 > 조명벡터 계산 목적
+		lightingShader.setVec3("light.position", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 Point Light 위치값 vec3 전송 > 조명벡터 계산 목적
 		lightingShader.setVec3("viewPos", camera.Position); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 카메라 위치 벡터 vec3 전송 > 뷰 벡터 계산 목적
 
 		// 프래그먼트 쉐이더 > Light 구조체 타입의 uniform 변수의 각 멤버에 값 전송 (prefix 로 Light 구조체 변수명만 붙여주면 됨.)
@@ -322,20 +322,19 @@ int main()
 			glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
 		}
 
-		/* Directional Light 는 태양같은 아주 멀리 떨어진 광원에 해당하므로,
-		가까운 거리게 광원 큐브를 렌더링하는 것은 비현실적임. 따라서, 이번에는 광원 큐브를 그리지 않음. */
-		//lightCubeShader.use(); // 광원 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-		//lightCubeShader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송 (동일한 투영행렬 재사용)
-		//lightCubeShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송 (동일한 뷰 행렬 재사용)
+		/* Point Light 광원 큐브 그리기 */
+		lightCubeShader.use(); // 광원 큐브에 적용할 쉐이더 프로그램 객체 바인딩
+		lightCubeShader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송 (동일한 투영행렬 재사용)
+		lightCubeShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송 (동일한 뷰 행렬 재사용)
 
-		//model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
-		//model = glm::translate(model, lightPos); // 전역변수에 선언한 광원 큐브 위치값으로 이동행렬 계산
-		//model = glm::scale(model, glm::vec3(0.2f)); // 광원 큐브는 너무 크게 그려지면 안되므로, 크기를 0.2배 줄임 (광원의 위치만 표시하면 되기 때문에...)
-		//lightCubeShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+		model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
+		model = glm::translate(model, lightPos); // 전역변수에 선언한 광원 큐브 위치값으로 이동행렬 계산
+		model = glm::scale(model, glm::vec3(0.2f)); // 광원 큐브는 너무 크게 그려지면 안되므로, 크기를 0.2배 줄임 (광원의 위치만 표시하면 되기 때문에...)
+		lightCubeShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
 
-		//// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로, glDrawArrays() 로 그려줘야겠지!
-		//glBindVertexArray(lightCubeVAO); // 빛을 받는 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		//glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
+		// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로, glDrawArrays() 로 그려줘야겠지!
+		glBindVertexArray(lightCubeVAO); // 빛을 받는 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
 
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
