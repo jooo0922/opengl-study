@@ -29,6 +29,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Light_Casters", "Light_Cast
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Light_Casters_2", "Light_Casters_2\Light_Casters_2.vcxproj", "{DF7D5E93-092C-4C21-AFDD-69C5D3AC0B5E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Light_Casters_3", "Light_Casters_3\Light_Casters_3.vcxproj", "{87D1554E-EFC9-4806-8145-713CACD1C2DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -141,6 +143,14 @@ Global
 		{DF7D5E93-092C-4C21-AFDD-69C5D3AC0B5E}.Release|x64.Build.0 = Release|x64
 		{DF7D5E93-092C-4C21-AFDD-69C5D3AC0B5E}.Release|x86.ActiveCfg = Release|Win32
 		{DF7D5E93-092C-4C21-AFDD-69C5D3AC0B5E}.Release|x86.Build.0 = Release|Win32
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Debug|x64.ActiveCfg = Debug|x64
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Debug|x64.Build.0 = Debug|x64
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Debug|x86.ActiveCfg = Debug|Win32
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Debug|x86.Build.0 = Debug|Win32
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Release|x64.ActiveCfg = Release|x64
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Release|x64.Build.0 = Release|x64
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Release|x86.ActiveCfg = Release|Win32
+		{87D1554E-EFC9-4806-8145-713CACD1C2DF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
