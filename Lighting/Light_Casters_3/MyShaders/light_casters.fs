@@ -10,10 +10,13 @@ struct Material {
   float shininess;
 };
 
-/* Point Light 구조체 선언 */
+/* Spot Light 구조체 선언 */
 // Light 구조체 선언 (조명 위치 및 색상)
 struct Light {
-  vec3 position; // Point Light 광원 위치
+  vec3 position; // Spot Light 광원 위치 (= 카메라 위치)
+  vec3 direction; // Spot Light 방향 벡터 (= 카메라 앞쪽 방향벡터. 이하 SpotDir)
+  float cutOff; // Spot Light 의 Inner Cone 영역의 최대 각도 cos 값
+  float outerCutOff; // Spot Light 의 Outer Cone 영역의 최대 각도 cos 값
 
   vec3 ambient;
   vec3 diffuse;
@@ -51,6 +54,22 @@ void main() {
   vec3 reflectDir = reflect(-lightDir, norm); // 반사 벡터 (조명벡터는 카메라 위치부터 출발하도록 방향을 negate)
   float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); // 뷰 벡터와 반사 벡터의 내적값을 32제곱 > 32는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨. > specular 조도 계산
   vec3 specular = light.specular * (spec * texture2D(material.specular, TexCoords).rgb); // specular 조명색상 * (specular 조도 * 물체가 specular 에 대해 반사하는 색상) 으로 specular 성분값 계산
+
+  /* Spot Light Intensity 계산 (Spot Light 의 경계선을 soft edge 로 렌더링하려는 목적) */
+  float theta = dot(lightDir, normalize(-light.direction)); // SpotDir 방향벡터와 각 프래그먼트까지의 조명벡터 사이의 각도 계산 -> 내적계산이므로 결과값은 cos
+  float epsilon = light.cutOff - light.outerCutOff; // Outer Cone 최대 각도와 Inner Cone 최대 각도의 사잇각 계산 -> 두 각도는 cos 로 받으므로 계산결과는 cos
+  float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0); // Outer Cone 최대 각도와 조명벡터 각도의 사잇각 / epsilon -> Inner Cone 과 Outer Cone 사이에서 부드럽게 보간됨.
+
+  // Spot Light Intensity 를 조명 성분에 적용
+  /*
+    Outer Cone 바깥은 0으로 clamping 되고,
+    Outer Cone 과 Inner Cone 사이는 0 ~ 1 사이로 부드럽게 보간되고,
+    Inner Cone 안쪽은 1로 clamping 됨.
+
+    -> 결과적으로 Spot Light 경계선이 부드럽게 보간되는 효과
+  */
+  diffuse *= intensity;
+  specular *= intensity;
 
   /* attenuation (감쇄) 계산 */
   float distance = length(light.position - FragPos); // Point Light 광원에서 각 프래그먼트 사이의 거리
