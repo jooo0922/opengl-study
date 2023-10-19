@@ -273,7 +273,10 @@ int main()
 
 		/* 빛을 받는 큐브 그리기 */
 		lightingShader.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-		lightingShader.setVec3("light.position", lightPos); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 Point Light 위치값 vec3 전송 > 조명벡터 계산 목적
+		lightingShader.setVec3("light.position", camera.Position); // Light 구조체에 Spot Light 광원 위치 전송
+		lightingShader.setVec3("light.direction", camera.Front); // Light 구조체에 Spot Light 방향벡터 전송
+		lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f))); // Spot Light Inner Cone 최대각을 cos 값으로 전송
+		lightingShader.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f))); // Spot Light Outer Cone 최대각을 cos 값으로 전송
 		lightingShader.setVec3("viewPos", camera.Position); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 카메라 위치 벡터 vec3 전송 > 뷰 벡터 계산 목적
 
 		// 프래그먼트 쉐이더 > Light 구조체 타입의 uniform 변수의 각 멤버에 값 전송 (prefix 로 Light 구조체 변수명만 붙여주면 됨.)
