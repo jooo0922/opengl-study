@@ -191,6 +191,14 @@ int main()
 		glm::vec3(0.0f, 0.0f, -3.0f),
 	};
 
+	// 4개의 point lights 색상이 담긴 glm::vec3 정적배열 (DESERT 배경 전용)
+	glm::vec3 pointLightColors[] = {
+		glm::vec3(1.0f, 0.6f, 0.0f),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(1.0f, 1.0f, 0.0f),
+		glm::vec3(0.2f, 0.2f, 1.0f),
+	};
+
 	// 빛을 받는 큐브에 대한 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 (하단 VAO 관련 필기 참고)
 	unsigned int VBO, cubeVAO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
 	glGenVertexArrays(1, &cubeVAO); // VAO(Vertex Array Object) 객체 생성
@@ -268,7 +276,8 @@ int main()
 
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
 		// 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		//glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.75f, 0.52f, 0.3f, 1.0f); // DESERT 배경색으로 초기화 색상 설정
 
 		// glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. 
 		// glEnable() 로 깊이 테스팅을 활성화한 상태이므로, 이전 프레임에 그렸던 깊이 버퍼도 초기화하도록,
@@ -288,44 +297,44 @@ int main()
 
 		// 프래그먼트 쉐이더 > DirectionalLight 구조체 타입의 uniform 변수의 각 멤버에 값 전송
 		lightingShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-		lightingShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-		lightingShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+		lightingShader.setVec3("dirLight.ambient", 0.3f, 0.24f, 0.14f);
+		lightingShader.setVec3("dirLight.diffuse", 0.7f, 0.42f, 0.26f);
 		lightingShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
 
 		// 프래그먼트 쉐이더 > PointLight 구조체 타입의 정적 배열 uniform 변수의 각 멤버에 값 전송
 		// 정적 배열로 선언된 uniform 변수의 각 멤버에 값을 전달할 때에는, prefix 로 '배열명[index]' 를 붙여주면 됨.
 		// point light 1
 		lightingShader.setVec3("pointLights[0].position", pointLightPositions[0]);
-		lightingShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-		lightingShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-		lightingShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader.setVec3("pointLights[0].ambient", pointLightColors[0].x * 0.1f, pointLightColors[0].y * 0.1f, pointLightColors[0].z * 0.1f);
+		lightingShader.setVec3("pointLights[0].diffuse", pointLightColors[0]);
+		lightingShader.setVec3("pointLights[0].specular", pointLightColors[0]);
 		lightingShader.setFloat("pointLights[0].constant", 1.0f);
 		lightingShader.setFloat("pointLights[0].linear", 0.09f);
 		lightingShader.setFloat("pointLights[0].quadratic", 0.032f);
 
 		// point light 2
 		lightingShader.setVec3("pointLights[1].position", pointLightPositions[1]);
-		lightingShader.setVec3("pointLights[1].ambient", 0.05f, 0.05f, 0.05f);
-		lightingShader.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
-		lightingShader.setVec3("pointLights[1].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader.setVec3("pointLights[1].ambient", pointLightColors[1].x * 0.1f, pointLightColors[1].y * 0.1f, pointLightColors[1].z * 0.1f);
+		lightingShader.setVec3("pointLights[1].diffuse", pointLightColors[1]);
+		lightingShader.setVec3("pointLights[1].specular", pointLightColors[1]);
 		lightingShader.setFloat("pointLights[1].constant", 1.0f);
 		lightingShader.setFloat("pointLights[1].linear", 0.09f);
 		lightingShader.setFloat("pointLights[1].quadratic", 0.032f);
 
 		// point light 3
 		lightingShader.setVec3("pointLights[2].position", pointLightPositions[2]);
-		lightingShader.setVec3("pointLights[2].ambient", 0.05f, 0.05f, 0.05f);
-		lightingShader.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
-		lightingShader.setVec3("pointLights[2].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader.setVec3("pointLights[2].ambient", pointLightColors[2].x * 0.1f, pointLightColors[2].y * 0.1f, pointLightColors[2].z * 0.1f);
+		lightingShader.setVec3("pointLights[2].diffuse", pointLightColors[2]);
+		lightingShader.setVec3("pointLights[2].specular", pointLightColors[2]);
 		lightingShader.setFloat("pointLights[2].constant", 1.0f);
 		lightingShader.setFloat("pointLights[2].linear", 0.09f);
 		lightingShader.setFloat("pointLights[2].quadratic", 0.032f);
 
 		// point light 4
 		lightingShader.setVec3("pointLights[3].position", pointLightPositions[3]);
-		lightingShader.setVec3("pointLights[3].ambient", 0.05f, 0.05f, 0.05f);
-		lightingShader.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
-		lightingShader.setVec3("pointLights[3].specular", 1.0f, 1.0f, 1.0f);
+		lightingShader.setVec3("pointLights[3].ambient", pointLightColors[3].x * 0.1f, pointLightColors[3].y * 0.1f, pointLightColors[3].z * 0.1f);
+		lightingShader.setVec3("pointLights[3].diffuse", pointLightColors[3]);
+		lightingShader.setVec3("pointLights[3].specular", pointLightColors[3]);
 		lightingShader.setFloat("pointLights[3].constant", 1.0f);
 		lightingShader.setFloat("pointLights[3].linear", 0.09f);
 		lightingShader.setFloat("pointLights[3].quadratic", 0.032f);
@@ -334,8 +343,8 @@ int main()
 		lightingShader.setVec3("spotLight.position", camera.Position);
 		lightingShader.setVec3("spotLight.direction", camera.Front);
 		lightingShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-		lightingShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-		lightingShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+		lightingShader.setVec3("spotLight.diffuse", 0.8f, 0.8f, 0.0f);
+		lightingShader.setVec3("spotLight.specular", 0.8f, 0.8f, 0.0f);
 		lightingShader.setFloat("spotLight.constant", 1.0f);
 		lightingShader.setFloat("spotLight.linear", 0.09f);
 		lightingShader.setFloat("spotLight.quadratic", 0.032f);
@@ -395,6 +404,7 @@ int main()
 			model = glm::translate(model, pointLightPositions[i]); // 정적배열에 초기화된 광원 큐브 위치값으로 이동행렬 계산
 			model = glm::scale(model, glm::vec3(0.2f)); // 광원 큐브는 너무 크게 그려지면 안되므로, 크기를 0.2배 줄임 (광원의 위치만 표시하면 되기 때문에...)
 			lightCubeShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+			lightCubeShader.setVec3("lightCubeColor", pointLightColors[i]); // point light 광원 색상을 유니폼 변수로 전송
 			glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
 		}
 
