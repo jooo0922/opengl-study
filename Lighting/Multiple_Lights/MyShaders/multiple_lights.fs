@@ -88,6 +88,10 @@ void main() {
     result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
   }
 
+  /* Spot Light 에 의한 조명값 계산 결과를 최종 아웃풋 color 에 누산 */
+  result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+
+  // 각 light caster 타입별 조명계산 결과가 누산된 색상값 result 를 최종 아웃풋 색상으로 출력
   FragColor = vec4(result, 1.0);
 }
 
@@ -114,7 +118,7 @@ vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
 
 // Point Light 에 의한 조명값 계산 함수 encapsulation
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
-  vec3 lightDir = normalize(light.position - FragPos); // 조명벡터
+  vec3 lightDir = normalize(light.position - fragPos); // 조명벡터
 
   /* diffuse 성분 계산 */
   // 조명계산에 사용되는 모든 방향벡터들은 항상 정규화를 해줄 것! -> 그래야 내적계산 시 정확한 cos 값만 얻을 수 있음!
@@ -125,7 +129,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
   float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); // 뷰 벡터와 반사 벡터의 내적값을 32제곱 > 32는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨. > specular 조도 계산
 
   /* attenuation (감쇄) 계산 */
-  float distance = length(light.position - FragPos); // Point Light 광원에서 각 프래그먼트 사이의 거리
+  float distance = length(light.position - fragPos); // Point Light 광원에서 각 프래그먼트 사이의 거리
   float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance)); // 거리에 따라 지수적으로 감소하는 감쇄값 계산
 
   // 계산해 둔 각 성분값에 입력받은 조명값과 light map 에서 샘플링한 값을 적용
@@ -137,6 +141,49 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
   ambient *= attenuation;
   diffuse *= attenuation;
   specular *= attenuation;
+
+  // 3가지 성분을 모두 component-wise 합으로 계산하여 최종 색상 결정
+  return (ambient + diffuse + specular);
+}
+
+// Spot Light 에 의한 조명값 계산 함수 encapsulation
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
+  vec3 lightDir = normalize(light.position - fragPos); // 조명벡터
+
+  /* diffuse 성분 계산 */
+  // 조명계산에 사용되는 모든 방향벡터들은 항상 정규화를 해줄 것! -> 그래야 내적계산 시 정확한 cos 값만 얻을 수 있음!
+  float diff = max(dot(normal, lightDir), 0.0); // 노멀벡터와 조명벡터 내적 > diffuse 성분의 세기(조도) 계산 (참고로, 음수인 diffuse 값은 조명값 계산을 부정확하게 만들기 때문에, 0.0 으로 clamping 시킴)
+
+  /* specular 성분 계산 */
+  vec3 reflectDir = reflect(-lightDir, normal); // 반사 벡터 (조명벡터는 카메라 위치부터 출발하도록 방향을 negate)
+  float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); // 뷰 벡터와 반사 벡터의 내적값을 32제곱 > 32는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨. > specular 조도 계산
+
+  /* attenuation (감쇄) 계산 */
+  float distance = length(light.position - fragPos); // Point Light 광원에서 각 프래그먼트 사이의 거리
+  float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance)); // 거리에 따라 지수적으로 감소하는 감쇄값 계산
+
+  /* Spot Light Intensity 계산 (Spot Light 의 경계선을 soft edge 로 렌더링하려는 목적) */
+  float theta = dot(lightDir, normalize(-light.direction)); // SpotDir 방향벡터와 각 프래그먼트까지의 조명벡터 사이의 각도 계산 -> 내적계산이므로 결과값은 cos
+  float epsilon = light.cutOff - light.outerCutOff; // Outer Cone 최대 각도와 Inner Cone 최대 각도의 사잇각 계산 -> 두 각도는 cos 로 받으므로 계산결과는 cos
+  float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0); // Outer Cone 최대 각도와 조명벡터 각도의 사잇각 / epsilon -> Inner Cone 과 Outer Cone 사이에서 부드럽게 보간됨.
+
+  // 계산해 둔 각 성분값에 입력받은 조명값과 light map 에서 샘플링한 값을 적용
+  vec3 ambient = light.ambient * texture2D(material.diffsue, TexCoords).rgb; // (ambient 강도 * 물체가 ambient 에 대해 반사하는 색상) 으로 최종 ambient 성분값 계산 (원래는 각 성분마다 색상을 별도 지정할 수 있어야 함.)
+  vec3 diffuse = light.diffuse * (diff * texture2D(material.diffsue, TexCoords).rgb); // diffuse 조명 색상 * (diffuse 조도 * 물체가 diffuse 에 대해 반사하는 색상) 으로 최종 diffuse 성분값 계산
+  vec3 specular = light.specular * (spec * texture2D(material.specular, TexCoords).rgb); // specular 조명색상 * (specular 조도 * 물체가 specular 에 대해 반사하는 색상) 으로 specular 성분값 계산
+
+  // 계산해 둔 조명 성분에 감쇄 적용
+  // + Spot Light Intensity 를 조명 성분에 적용
+  /*
+    Outer Cone 바깥은 0으로 clamping 되고,
+    Outer Cone 과 Inner Cone 사이는 0 ~ 1 사이로 부드럽게 보간되고,
+    Inner Cone 안쪽은 1로 clamping 됨.
+
+    -> 결과적으로 Spot Light 경계선이 부드럽게 보간되는 효과
+  */
+  ambient *= attenuation;
+  diffuse *= attenuation * intensity;
+  specular *= attenuation * intensity;
 
   // 3가지 성분을 모두 component-wise 합으로 계산하여 최종 색상 결정
   return (ambient + diffuse + specular);
