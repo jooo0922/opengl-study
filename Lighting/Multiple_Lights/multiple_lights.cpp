@@ -286,6 +286,12 @@ int main()
 		// 프래그먼트 쉐이더 > Material 구조체 타입의 unfirom 변수의 각 멤버에 값 전송
 		lightingShader.setFloat("material.shininess", 32.0f);
 
+		// 프래그먼트 쉐이더 > DirectionalLight 구조체 타입의 uniform 변수의 각 멤버에 값 전송
+		lightingShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+		lightingShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+		lightingShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+		lightingShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+
 		// 프래그먼트 쉐이더 > PointLight 구조체 타입의 정적 배열 uniform 변수의 각 멤버에 값 전송
 		// 정적 배열로 선언된 uniform 변수의 각 멤버에 값을 전달할 때에는, prefix 로 '배열명[index]' 를 붙여주면 됨.
 		// point light 1
