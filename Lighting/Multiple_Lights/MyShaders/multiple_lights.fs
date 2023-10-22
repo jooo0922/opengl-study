@@ -11,18 +11,18 @@ struct Material {
 };
 
 /* Directional Light 구조체 선언 */
-// struct DirectionalLight {
-//   // vec3 position; // Directional Light 는 광원의 위치를 기준으로 조명벡터를 계산하지 않음!
+struct DirectionalLight {
+  // vec3 position; // Directional Light 는 광원의 위치를 기준으로 조명벡터를 계산하지 않음!
 
-//    // Directional Light 는 광원의 위치와 무관하게 모든 프래그먼트에 평행한 방향으로 입사하는 조명을 계산하므로, 
-//    // 모든 조명벡터에 대해 '동일한 방향벡터'를 사용함.
-//    // 이때, 광원에서 프래그먼트 방향으로 입사되는 방향벡터를 입력받기 때문에, 실제 조명계산 시, negate 해줘야 함!
-//   vec3 direction;
+   // Directional Light 는 광원의 위치와 무관하게 모든 프래그먼트에 평행한 방향으로 입사하는 조명을 계산하므로, 
+   // 모든 조명벡터에 대해 '동일한 방향벡터'를 사용함.
+   // 이때, 광원에서 프래그먼트 방향으로 입사되는 방향벡터를 입력받기 때문에, 실제 조명계산 시, negate 해줘야 함!
+  vec3 direction;
 
-//   vec3 ambient;
-//   vec3 diffuse;
-//   vec3 specular;
-// };
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+};
 
 /* Point Light 구조체 선언 */
 struct PointLight {
@@ -39,21 +39,21 @@ struct PointLight {
 };
 
 /* Spot Light 구조체 선언 */
-// struct SpotLight {
-//   vec3 position; // Spot Light 광원 위치 (= 카메라 위치)
-//   vec3 direction; // Spot Light 방향 벡터 (= 카메라 앞쪽 방향벡터. 이하 SpotDir)
-//   float cutOff; // Spot Light 의 Inner Cone 영역의 최대 각도 cos 값
-//   float outerCutOff; // Spot Light 의 Outer Cone 영역의 최대 각도 cos 값
+struct SpotLight {
+  vec3 position; // Spot Light 광원 위치 (= 카메라 위치)
+  vec3 direction; // Spot Light 방향 벡터 (= 카메라 앞쪽 방향벡터. 이하 SpotDir)
+  float cutOff; // Spot Light 의 Inner Cone 영역의 최대 각도 cos 값
+  float outerCutOff; // Spot Light 의 Outer Cone 영역의 최대 각도 cos 값
 
-//   vec3 ambient;
-//   vec3 diffuse;
-//   vec3 specular;
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
 
-//   // 감쇄 계산에 사용할 상수값 선언
-//   float constant; // Kc
-//   float linear; // Kl (linear term 상수)
-//   float quadratic; // Kq (quadratic term 상수)
-// };
+  // 감쇄 계산에 사용할 상수값 선언
+  float constant; // Kc
+  float linear; // Kl (linear term 상수)
+  float quadratic; // Kq (quadratic term 상수)
+};
 
 // Point Light 개수를 매크로 전처리기로 선언 > 컴파일러가 해당 매크로를 마주치면 4로 치환해 줌.
 #define NR_POINTS_LIGHTS 4
@@ -65,9 +65,9 @@ in vec2 TexCoords; // 보간된 프래그먼트 uv 좌표값
 
 // OpenGL 에서 전송해 줄 uniform 변수들 선언
 uniform vec3 viewPos; // 카메라 위치 > 뷰 벡터 계산에서 사용
-// uniform DirectionalLight dirLight; // DirectionalLight 구조체 변수 선언 (각 멤버변수마다 uniform 값 전송 가능)
+uniform DirectionalLight dirLight; // DirectionalLight 구조체 변수 선언 (각 멤버변수마다 uniform 값 전송 가능)
 uniform PointLight pointLights; // PointLight 구조체 정적 배열 변수 선언 (각 멤버변수마다 uniform 값 전송 가능)
-// uniform SpotLight spotLight; // SpotLight 구조체 변수 선언 (각 멤버변수마다 uniform 값 전송 가능)
+uniform SpotLight spotLight; // SpotLight 구조체 변수 선언 (각 멤버변수마다 uniform 값 전송 가능)
 uniform Material material; // Material 구조체 변수 선언 (각 멤버변수마다 uniform 값 전송 가능)
 
 void main() {
