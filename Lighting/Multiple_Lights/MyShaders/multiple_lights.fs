@@ -81,7 +81,7 @@ void main() {
   vec3 viewDir = normalize(viewPos - FragPos); // 뷰 벡터 (카메라 위치 ~ 프래그먼트 위치)
 
   /* Directional Light 에 의한 조명값 계산 결과를 최종 아웃풋 color 에 누산 */
-  vec3 result;
+  vec3 result = CalcDirLight(dirLight, norm, viewDir);
 
   /* 4개의 PointLight 구조체 배열을 순회하면서 조명값 계산 결과를 최종 아웃풋 color 에 누산 */
   for(int i = 0; i < NR_POINTS_LIGHTS; i++) {
@@ -91,7 +91,28 @@ void main() {
   FragColor = vec4(result, 1.0);
 }
 
-// Point Light 에 의한 조명값 계산 함수 구현
+// Directional Light 에 의한 조명값 계산 함수 encapsulation
+vec3 CalcDirLight(DirectionalLight light, vec3 normal, vec3 viewDir) {
+  vec3 lightDir = normalize(-light.direction); // 조명벡터 (Directional Light 구조체에 정의된 동일한 방향으로 평행하게 입사하는 방향벡터)
+
+  /* diffuse 성분 계산 */
+  // 조명계산에 사용되는 모든 방향벡터들은 항상 정규화를 해줄 것! -> 그래야 내적계산 시 정확한 cos 값만 얻을 수 있음!
+  float diff = max(dot(normal, lightDir), 0.0); // 노멀벡터와 조명벡터 내적 > diffuse 성분의 세기(조도) 계산 (참고로, 음수인 diffuse 값은 조명값 계산을 부정확하게 만들기 때문에, 0.0 으로 clamping 시킴)
+
+  /* specular 성분 계산 */
+  vec3 reflectDir = reflect(-lightDir, normal); // 반사 벡터 (조명벡터는 카메라 위치부터 출발하도록 방향을 negate)
+  float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); // 뷰 벡터와 반사 벡터의 내적값을 32제곱 > 32는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨. > specular 조도 계산
+
+  // 계산해 둔 각 성분값에 입력받은 조명값과 light map 에서 샘플링한 값을 적용
+  vec3 ambient = light.ambient * texture2D(material.diffsue, TexCoords).rgb; // (ambient 강도 * 물체가 ambient 에 대해 반사하는 색상) 으로 최종 ambient 성분값 계산 (원래는 각 성분마다 색상을 별도 지정할 수 있어야 함.)
+  vec3 diffuse = light.diffuse * (diff * texture2D(material.diffsue, TexCoords).rgb); // diffuse 조명 색상 * (diffuse 조도 * 물체가 diffuse 에 대해 반사하는 색상) 으로 최종 diffuse 성분값 계산
+  vec3 specular = light.specular * (spec * texture2D(material.specular, TexCoords).rgb); // specular 조명색상 * (specular 조도 * 물체가 specular 에 대해 반사하는 색상) 으로 specular 성분값 계산
+
+  // 3가지 성분을 모두 component-wise 합으로 계산하여 최종 색상 결정
+  return (ambient + diffuse + specular);
+}
+
+// Point Light 에 의한 조명값 계산 함수 encapsulation
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
   vec3 lightDir = normalize(light.position - FragPos); // 조명벡터
 
@@ -117,7 +138,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
   diffuse *= attenuation;
   specular *= attenuation;
 
-  // 3가지 성분을 모두 더한 조명 색상에 물체 색상을 component-wise 곱으로 계산하여 최종 색상 결정
+  // 3가지 성분을 모두 component-wise 합으로 계산하여 최종 색상 결정
   return (ambient + diffuse + specular);
 }
 
