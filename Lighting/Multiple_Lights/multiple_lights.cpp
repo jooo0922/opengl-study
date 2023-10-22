@@ -183,6 +183,14 @@ int main()
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
+	// 4개의 point lights 위치가 담긴 glm::vec3 정적배열
+	glm::vec3 pointLightPositions[] = {
+		glm::vec3(0.7f, 0.2f, 2.0f),
+		glm::vec3(2.3f, -3.3f, -4.0f),
+		glm::vec3(-4.0f, 2.0f, -12.0f),
+		glm::vec3(0.0f, 0.0f, -3.0f),
+	};
+
 	// 빛을 받는 큐브에 대한 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 (하단 VAO 관련 필기 참고)
 	unsigned int VBO, cubeVAO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
 	glGenVertexArrays(1, &cubeVAO); // VAO(Vertex Array Object) 객체 생성
@@ -333,15 +341,18 @@ int main()
 		lightCubeShader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송 (동일한 투영행렬 재사용)
 		lightCubeShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송 (동일한 뷰 행렬 재사용)
 
-		model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
-		model = glm::translate(model, lightPos); // 전역변수에 선언한 광원 큐브 위치값으로 이동행렬 계산
-		model = glm::scale(model, glm::vec3(0.2f)); // 광원 큐브는 너무 크게 그려지면 안되므로, 크기를 0.2배 줄임 (광원의 위치만 표시하면 되기 때문에...)
-		lightCubeShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
-
 		// indexed drawing 을 하지 않고, 큐브의 36개의 정점 데이터들을 직접 기록해놓은 것을 사용하므로, glDrawArrays() 로 그려줘야겠지!
 		glBindVertexArray(lightCubeVAO); // 빛을 받는 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
 
+		// pointLightPositions 정적배열에 정의해놓은 4개의 위치값으로 점 광원 큐브 그리기
+		for (unsigned int i = 0; i < 4; i++)
+		{
+			model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
+			model = glm::translate(model, pointLightPositions[i]); // 정적배열에 초기화된 광원 큐브 위치값으로 이동행렬 계산
+			model = glm::scale(model, glm::vec3(0.2f)); // 광원 큐브는 너무 크게 그려지면 안되므로, 크기를 0.2배 줄임 (광원의 위치만 표시하면 되기 때문에...)
+			lightCubeShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+			glDrawArrays(GL_TRIANGLES, 0, 36); // 실제 primitive 그리기 명령을 수행하는 함수 
+		}
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
