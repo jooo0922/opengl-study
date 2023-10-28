@@ -145,8 +145,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="mesh.h" />
     <ClInclude Include="MyHeaders\camera.h" />
+    <ClInclude Include="MyHeaders\mesh.h" />
     <ClInclude Include="MyHeaders\shader_s.h" />
     <ClInclude Include="MyHeaders\stb_image.h" />
   </ItemGroup>
