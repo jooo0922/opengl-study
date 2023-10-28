@@ -71,6 +71,64 @@ public:
         setupMesh();
     };
 
+    // 그리기 명령(indexed drawing) 수행하는 멤버 함수
+    // 매개변수로 Shader 인스턴스를 참조변수로 전달받음
+    void Draw(Shader& shader)
+    {
+        /* 각각의 텍스쳐들을 적절한 texture unit 위치에 바인딩 */
+        // 각각의 동일한 타입의 텍스쳐들이 여러 개 사용될 수 있으므로, 텍스쳐 타입별로 구분짓기 위한 번호 counter
+        unsigned int diffuseNr = 1;
+        unsigned int specularNr = 1;
+        unsigned int normalNr = 1;
+        unsigned int heightNr = 1;
+
+        // 반복문을 순회하며 쉐이더에 선언된 sampler uniform 변수들의 이름을 파싱함
+        for (unsigned int i = 0; i < textures.size(); i++)
+        {
+            glActiveTexture(GL_TEXTURE0 + i); // 현재 순회중인 텍스쳐 객체를 바인딩할 texture unit 활성화
+
+            string number; // 현재 순회중인 텍스쳐의 번호를 문자열로 저장할 변수 (타입이 동일한 텍스쳐 간 구분 목적)
+            string name = textures[i].type; // 현재 순회중인 텍스쳐의 타입을 문자열로 저장할 변수
+
+            // 현재 순회중인 텍스쳐 타입과 순서에 따라 현재 텍스쳐의 번호를 저장한 뒤, 
+            // 타입별 텍스쳐 번호 counter 를 누산시킴.
+            if (name == "texture_diffuse")
+            {
+                // 참고로, increment operator(++) 가 postfix 로 붙어있기 때문에,
+                // 현재 ~Nr 변수에 들어있는 unsigned int -> string 으로 먼저 변환한 뒤,
+                // ~Nr 변수의 값을 1 증가시키는 것. 즉, 문자열 변환 먼저, 그 값 증가!
+                number = std::to_string(diffuseNr++);
+            }
+            else if (name == "texture_specular")
+            {
+                number = std::to_string(specularNr++);
+            }
+            else if (name == "texture_normal")
+            {
+                number = std::to_string(normalNr++);
+            }
+            else if (name == "texture_height")
+            {
+                number = std::to_string(heightNr++);
+            }
+
+            // '텍스쳐 타입 + 텍스쳐 번호' 로 파싱한 uniform sampler 변수명을 c-style 문자열로 변환한 뒤,
+            // 쉐이더 프로그램에 해당 sampler 가 가져다 쓸 텍스쳐 객체가 바인딩되어 있는 texture unit 값 전달
+            shader.setInt(("material." + name + number).c_str(), i);
+
+            // 현재 활성화된 texture unit 위치에 현재 순회중인 텍스쳐 객체 바인딩
+            glBindTexture(GL_TEXTURE_2D, textures[i].id);
+        }
+
+        /* 실제 Mesh 그리기 명령 수행 */
+
+        glBindVertexArray(VAO); // VAO 객체를 바인딩하여 이에 저장된 설정대로 그리도록 명령
+        glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, 0); // indexed drawing 명령 수행
+        glBindVertexArray(0); // 그리기 명령을 완료했으므로, 바인딩했던 VAO 객체 해제
+
+        glActiveTexture(0); // 그리기 명령 완료 후, 활성 texture unit 을 다시 기본값으로 초기화함. 
+    }
+
 private:
     // VBO, VAO, EBO 등 정점 버퍼 객체의 참조 ID 를 저장할 멤버 선언
     // 정점 버퍼 데이터는 외부에 노출되어선 안되므로, encapsulation 처리
