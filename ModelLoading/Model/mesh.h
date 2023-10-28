@@ -49,4 +49,38 @@ struct Texture
     string path; // 텍스쳐 이미지 경로를 문자열로 저장할 멤버
 };
 
+// Mesh 클래스 선언
+class Mesh
+{
+public:
+    // public 멤버변수 선언
+    vector<Vertex> vertices; // Mesh 의 정점 데이터를 동적 배열 멤버로 선언
+    vector<unsigned int> indices; // Mesh 의 정점 인덱스를 동적 배열 멤버로 선언
+    vector<Texture> textures; // Mesh 에서 사용할 텍스쳐들을 동적 배열 멤버로 선언
+
+    // 생성자 함수 선언 및 구현
+    Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
+    {
+        // 클래스로부터 파생된 인스턴스 객체 포인터(this)를 통해, 동적 배열 멤버변수들을 초기화함.
+        this->vertices = vertices;
+        this->indices = indices;
+        this->textures = textures;
+
+        // 생성자 매개변수로부터 필요한 정점 데이터들을 전달받아 초기화했으므로,
+        // 정점 데이터 관련 버퍼 객체 생성 및 데이터 해석 방식을 설정해 줌.
+        setupMesh();
+    };
+
+private:
+
+    // VBO, VAO, EBO 등 정점 데이터 관련 버퍼 객체 생성 및 데이터 해석 방식 설정하는 멤버 함수
+    void setupMesh()
+    {
+
+    }
+};
+
 #endif // !MESH_H
+
+// 원래 헤더파일에는 prototype 만 선언해서 정리해두는 게 정석이지만,
+// 위의 Mesh 클래스처럼 코드 정리가 번거로울 경우, 그냥 헤더파일에 구현부까지 다 때려넣는 경우가 더 많음.
