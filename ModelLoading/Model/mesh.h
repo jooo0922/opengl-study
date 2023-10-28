@@ -41,4 +41,12 @@ struct Vertex
     float m_Weights[MAX_BONE_INFLUENCE]; // Bone 의 가중치 정점 배열 (SkinnedMesh 를 고려한 정점 데이터)
 };
 
+// 텍스쳐 구조체 선언
+struct Texture
+{
+    unsigned int id; // glGenTextures() 로 생성한 텍스쳐 객체의 참조 ID 를 저장할 멤버
+    string type; // 텍스쳐 타입을 문자열로 저장할 멤버 (e.g., "texture_diffuse", "texture_specular", ...)
+    string path; // 텍스쳐 이미지 경로를 문자열로 저장할 멤버
+};
+
 #endif // !MESH_H
