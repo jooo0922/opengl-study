@@ -13,7 +13,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 // Mesh 렌더링 시 사용할 texture unit location 전송을 위해 Shader 클래스 포함
-#include "MyHeaders/shader_s.h"
+#include "shader_s.h"
 
 // Shader 클래스를 통해 전송할 sampler uniform 변수명을 파싱하기 위한 std::string 라이브러리 포함
 #include <string>
