@@ -88,11 +88,26 @@ private:
 		// std::string.substr() 는 string 에서 지정된 시작 위치와 마지막 위치 사이의 부분 문자열을 반환함.
 		directory = path.substr(0, path.find_last_of('/'));
 		
-		// Assimp Scene 구조를 따라 재귀적으로 RootNode 를 처리함
+		// Assimp Scene 구조를 따라 재귀적으로 하위 aiNode 들을 처리함
 		processNode(scene->mRootNode, scene);
 	}
 
+	// Assimp Scene 구조에 따라 RootNode 부터 시작해서 재귀적으로 하위 aiNode 들을 처리하는 멤버 함수
 	void processNode(aiNode* node, const aiScene* scene)
+	{
+		// 현재 aiNode 에 포함된 aiMesh 개수만큼 반복문을 돌림
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			// aiNode->mMeshes 에는 각 aiMesh 가 저장된 인덱스만 들어있는 배열이고,
+			// aiScene.mMeshes 에 실제 각 aiMesh 의 주소값들이 저장되어 있으므로, 이 배열에서 aiMesh 의 주소값을 얻어옴.
+			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+			
+			// aiMesh 를 파싱하여 우리가 만든 Mesh 클래스 인스턴스로 반환받고(processMesh()), 동적배열 멤버에 추가
+			meshes.push_back(processMesh(mesh, scene));
+		}
+	}
+
+	Mesh processMesh(aiMesh* mesh, const aiScene* scene)
 	{
 
 	}
