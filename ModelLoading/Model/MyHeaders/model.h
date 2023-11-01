@@ -211,9 +211,49 @@ private:
 		return Mesh(vertices, indices, textures);
 	}
 
+	// aiMaterial 에 저장된 특정 타입의 텍스쳐들을 Texture 구조체 배열로 파싱하여 반환하는 멤버 함수 
 	vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName)
 	{
+		// 특정 타입의 Texture 구조체를 모아둘 동적 배열 선언
+		vector<Texture> textures;
 
+		// aiMaterial 에 저장된 특정 타입의 텍스쳐 개수만큼 반복문 순회
+		for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+		{
+			aiString str; // 텍스쳐 파일 경로를 저장할 Assimp 자체 문자열 타입 변수 선언
+			mat->GetTexture(type, i, &str); // aiMaterial 에 저장된 특정 타입의 i 번째 텍스쳐 파일 경로를 str 에 저장함
+
+			// 지금 생성하려는 Texture 구조체가 이전에 이미 생성되었는지 검사
+			bool skip = false;
+			for (unsigned int j = 0; j < textures_loaded.size(); j++)
+			{
+				// std::strcmp() 함수로 텍스쳐 파일 경로 문자열이 동일한 지 비교 (두 문자열이 동일하면 0을 반환함.)
+				// std::string.data() 는 std::string 타입의 문자열을 char* 타입의 c-style 문자열로 변환해주는 역할
+				if (std::strcmp(textures_loaded[j].path.data(), str.C_Str()) == 0)
+				{
+					// 만약, 이미 생성된 Texture 구조체가 존재한다면, 해당 구조체를 가져와서 textures 배열에 저장
+					textures.push_back(textures_loaded[j]);
+
+					// 새로운 Texture 구조체 파싱 여부를 검사하는 플래그를 true 로 설정하고 반복문 중단
+					skip = true;
+					break;
+				}
+			}
+
+			// Texture 구조체 파싱
+			if (!skip)
+			{
+				Texture texture;
+				texture.id = TextureFromFile(str.C_Str(), directory); // 텍스쳐 객체 생성 후 참조 ID 저장
+				texture.type = typeName; // 텍스쳐 타입 이름 저장
+				texture.path = str.C_Str(); // 텍스쳐 파일 경로를 c-style 문자열로 변환 후 저장 (중복 생성된 텍스쳐가 있는지 파일 경로로 검사하기 위해 추가)
+				textures.push_back(texture); // textures 동적 배열에 파싱한 Texture 구조체 추가
+				textures_loaded.push_back(texture); // Texture 구조체 중복 생성 방지를 위해, 이미 로드된 텍스쳐를 저장하는 동적 배열에도 추가
+			}
+		}
+
+		// 특정 타입의 Textures 구조체 동적 배열 반환
+		return textures;
 	}
 };
 
