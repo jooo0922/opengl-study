@@ -107,7 +107,111 @@ private:
 		}
 	}
 
+	// aiMesh 를 파싱하여 실제 Mesh 클래스 인스턴스로 반환해주는 멤버 함수
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene)
+	{
+		// Mesh 클래스 인스턴스 생성 시, 각 멤버에 채워넣을 동적배열 데이터 선언
+		vector<Vertex> vertices;
+		vector<unsigned int> indices;
+		vector<Texture> textures;
+
+		// aiMesh 에 포함된 버텍스 개수만큼 반복문 순회
+		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+		{
+			/* aiMesh 에 저장된 버텍스 데이터를 Vertex 구조체로 파싱 */
+			Vertex vertex; 
+
+			/* position 데이터 파싱 */
+			// Assimp 는 자체적으로 vector3 타입을 갖고있어, 호환성을 위해 glm::vec3 로 타입을 변환해서 파싱해줘야 함.
+			glm::vec3 vector; 
+			vector.x = mesh->mVertices[i].x;
+			vector.y = mesh->mVertices[i].y;
+			vector.z = mesh->mVertices[i].z;
+			vertex.Position = vector;
+
+			/* normal 데이터 존재 여부 검사 및 파싱 */
+			if (mesh->HasNormals())
+			{
+				vector.x = mesh->mNormals[i].x;
+				vector.y = mesh->mNormals[i].y;
+				vector.z = mesh->mNormals[i].z;
+				vertex.Normal = vector;
+			}
+
+			/* uv 데이터 존재 여부 검사 및 파싱 */
+			// 참고로, Assimp 는 최대 8개까지의 uv 데이터셋을 가질 수 있어, aiMesh->mTextureCoords 멤버가 2차원 배열로 구현되어 있음.
+			// 그러나, 우리는 첫 번째 uv 데이터셋만 사용할 예정이므로, aiMesh->mTextureCoords[0] 번째 데이터셋만 가지고 파싱함.
+			if (mesh->mTextureCoords[0])
+			{
+				glm::vec2 vec;
+				vec.x = mesh->mTextureCoords[0][i].x;
+				vec.y = mesh->mTextureCoords[0][i].y;
+				vertex.TexCoords = vec;
+
+				/* tangent 데이터 파싱 */
+				vector.x = mesh->mTangents[i].x;
+				vector.y = mesh->mTangents[i].y;
+				vector.z = mesh->mTangents[i].z;
+				vertex.Tangent = vector;
+
+				/* bitangent 데이터 파싱 */
+				vector.x = mesh->mBitangents[i].x;
+				vector.y = mesh->mBitangents[i].y;
+				vector.z = mesh->mBitangents[i].z;
+				vertex.Bitangent = vector;
+			}
+			else
+			{
+				vertex.TexCoords = glm::vec2(0.0f, 0.0f);
+			}
+
+			// vertices 동적 배열에 파싱한 Vertex 구조체 추가
+			vertices.push_back(vertex);
+		}
+
+		/* aiMesh 에 저장된 face 데이터를 indices 배열로 파싱 */
+		// aiMesh 의 face 개수만큼 반복 순회
+		for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+		{
+			// face 데이터를 가져옴
+			aiFace face = mesh->mFaces[i];
+
+			// 삼각형 face(aiProcess_Triangulate 옵션에 의해...)를 구성하는 정점 인덱스 정보(aiFace.mIndices)가 
+			// aiFace 에 들어있으므로, 각 aiFace 의 정점 인덱스들을 indices 동적 배열에 순서대로 추가함
+			for (unsigned int j = 0; j < face.mNumIndices; j++)
+			{
+				indices.push_back(face.mIndices[j]);
+			}
+		}
+
+		// 현재 aiMesh 에서 사용할 aiMaterial 데이터 가져오기
+		// aiMaterial 또한 인덱스 값만 aiMesh 에 저장되어 있고, 실제 주소값은 aiScene 이 갖고 있음
+		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+		/* aiMaterial 에 저장된 텍스쳐 경로를 로드하여 Texture 구조체로 파싱 */
+		// uniform sampler 변수명을 '텍스쳐 타입 + 텍스쳐 번호' 형태의 convention 으로 선언할 것이므로,
+		// 동일한 텍스쳐 타입끼리 Texture 구조체 동적 배열을 생성하여 이어붙일 것임 (std::vector.insert() 사용)
+		// 1. diffuse maps
+		vector<Texture> diffuseMap = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffsue");
+		textures.insert(textures.end(), diffuseMap.begin(), diffuseMap.end()); // textures 동적 배열 마지막에 diffuseMap 동적 배열 삽입(이어붙이기)
+
+		// 2. specular maps
+		vector<Texture> specularMap = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+		textures.insert(textures.end(), specularMap.begin(), specularMap.end()); // textures 동적 배열 마지막에 specularMap 동적 배열 삽입(이어붙이기)
+		
+		// 3. normal maps
+		vector<Texture> normalMap = loadMaterialTextures(material, aiTextureType_NORMALS, "texture_normal");
+		textures.insert(textures.end(), normalMap.begin(), normalMap.end()); // textures 동적 배열 마지막에 normalMap 동적 배열 삽입(이어붙이기)
+
+		// 4. height maps
+		vector<Texture> heightMap = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_height");
+		textures.insert(textures.end(), heightMap.begin(), heightMap.end()); // textures 동적 배열 마지막에 heightMap 동적 배열 삽입(이어붙이기)
+
+		// 각 mesh data 를 생성자 매개변수로 넘겨 Mesh 인스턴스 생성 및 반환
+		return Mesh(vertices, indices, textures);
+	}
+
+	vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName)
 	{
 
 	}
