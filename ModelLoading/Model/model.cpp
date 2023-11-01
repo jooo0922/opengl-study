@@ -29,11 +29,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-// TODO : Assimp 라이브러리 테스트용 include 코드. 추후 리팩터링 시 제거할 것.
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-
 #include "MyHeaders/shader_s.h"
 #include "MyHeaders/camera.h"
 
