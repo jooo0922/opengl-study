@@ -27,7 +27,7 @@
     <ClInclude Include="MyHeaders\mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="model.h">
+    <ClInclude Include="MyHeaders\model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
