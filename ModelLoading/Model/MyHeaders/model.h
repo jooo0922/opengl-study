@@ -63,6 +63,37 @@ public:
 private:
 	void loadModel(const string& path)
 	{
+		// Assimp 로 Scene 노드 불러오기 (Assimp 모델 구조 참고)
+		Assimp::Importer importer;
+
+		// 비트플래그 연산을 통해, 3D 모델을 Scene 구조로 불러올 때의 여러 가지 옵션들을 지정함
+		// 비트플래그 및 비트마스킹 연산 관련 https://github.com/jooo0922/cpp-study/blob/main/TBCppStudy/Chapter3_9/Chapter3_9.cpp 참고
+		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+	
+		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+		{
+			/*
+				Scene 구조가 다음 케이스 중 하나로 인해 불완전하게 로드되었을 때 에러를 출력함.
+
+				1. Scene 구조의 포인터가 NULL 일 때
+				2. AI_SCENE_FLAGS_INCOMPLETE 와의 비트마스킹 연산을 통해, 모델이 불완전하게 불러온 것이 확인되었을 때
+				3. Scene 구조의 RootNode 가 존재하지 않을 때 
+			*/
+			cout << "ERROR::ASSIMP::" << importer.GetErrorString() << endl;
+			return;
+		}
+
+		// 3D 모델 파일이 존재하는 디렉토리 경로를 멤버변수에 저장
+		// 참고로, std::string.find_last_of('/')는 string 으로 저장된 문자열 상에서 마지막 '/' 문자가 저장된 위치를 반환함.
+		// std::string.substr() 는 string 에서 지정된 시작 위치와 마지막 위치 사이의 부분 문자열을 반환함.
+		directory = path.substr(0, path.find_last_of('/'));
+		
+		// Assimp Scene 구조를 따라 재귀적으로 RootNode 를 처리함
+		processNode(scene->mRootNode, scene);
+	}
+
+	void processNode(aiNode* node, const aiScene* scene)
+	{
 
 	}
 };
