@@ -22,8 +22,6 @@
 // Draw 그리기 명령 호출 시 전달할 Shader 클래스 포함
 #include "shader_s.h"
 
-// fstream, sstream 은 딱히 사용하는 곳이 없어서 포함 안함...
-
 // std::string 클래스 포함
 #include <string>
 
@@ -37,6 +35,37 @@ using namespace std;
 
 // 텍스쳐 객체 생성 및 참조 ID 반환 함수 전방선언
 unsigned int TextureFromFile(const char* path, const string& directory);
+
+class Model
+{
+public:
+	// model data 관련 public 멤버 선언
+	vector<Texture> textures_loaded; // 텍스쳐 객체 중복 생성 방지를 위해 이미 로드된 텍스쳐 구조체를 동적 배열에 저장해두는 멤버
+	vector<Mesh> meshes; // Model 클래스에 사용되는 Mesh 클래스 인스턴스들을 동적 배열에 저장하는 멤버
+	string directory; // 3D 모델 파일이 위치하는 디렉토리 경로를 저장하는 멤버
+
+	// 생성자 함수 선언 및 구현
+	Model(const string& path)
+	{
+		// 생성자에서 Assimp 로 모델 로드하는 함수 곧바로 호출
+		loadModel(path);
+	}
+
+	// Model 클래스 내에 저장된 모든 Mesh 클래스 인스턴스의 Draw() 명령 호출 멤버 함수
+	void Draw(Shader& shader)
+	{
+		for (unsigned int i = 0; i < meshes.size(); i++)
+		{
+			meshes[i].Draw(shader);
+		}
+	}
+
+private:
+	void loadModel(const string& path)
+	{
+
+	}
+};
 
 // 텍스쳐 객체 생성 및 참조 ID 반환 함수 구현
 // 각 입력 매개변수는 1. 파일 이름, 2. 공통 디렉토리 경로(3D 모델 파일과 동일한 디렉토리)
