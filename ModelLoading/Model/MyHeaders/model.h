@@ -9,6 +9,26 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 // 텍스쳐 이미지 로드를 위한 stb_image 라이브러리 포함
+/*
+	stb_image.h
+
+	주요 이미지 파일 포맷을 로드할 수 있는
+	싱글 헤더 이미지로드 라이브러리.
+
+	#define 매크로 전처리기를 통해
+	특정 매크로를 선언함으로써, 헤더파일 내에서
+	해당 매크로 영역의 코드만 include 할 수 있도록 함.
+
+	실제로 stb_image.h 안에 보면
+
+	#ifdef STB_IMAGE_IMPLEMENTATION
+	~
+	#endif
+
+	요렇게 전처리기가 정의되어 있는 부분이 있음.
+	이 부분의 코드들만 include 하겠다는 것이지!
+*/
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 // 3D 모델 포맷 로딩을 위한 Assimp 라이브러리 포함
@@ -104,6 +124,12 @@ private:
 			
 			// aiMesh 를 파싱하여 우리가 만든 Mesh 클래스 인스턴스로 반환받고(processMesh()), 동적배열 멤버에 추가
 			meshes.push_back(processMesh(mesh, scene));
+		}
+
+		// 현재 aiNode 의 mChildren 멤버에 저장된 자식노드들을 재귀적으로 순회해서 처리함
+		for (unsigned int i = 0; i < node->mNumChildren; i++)
+		{
+			processNode(node->mChildren[i], scene);
 		}
 	}
 
