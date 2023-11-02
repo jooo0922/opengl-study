@@ -114,7 +114,7 @@ public:
 
             // '텍스쳐 타입 + 텍스쳐 번호' 로 파싱한 uniform sampler 변수명을 c-style 문자열로 변환한 뒤,
             // 쉐이더 프로그램에 해당 sampler 가 가져다 쓸 텍스쳐 객체가 바인딩되어 있는 texture unit 값 전달
-            shader.setInt(("material." + name + number).c_str(), i);
+            shader.setInt((name + number).c_str(), i);
 
             // 현재 활성화된 texture unit 위치에 현재 순회중인 텍스쳐 객체 바인딩
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
