@@ -6,9 +6,9 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 /* 각 텍스쳐 타입별 변수명 컨벤션에 따라 uniform sampler2D 선언 */
-uniform sampler2D texture_diffsue1;
+uniform sampler2D texture_diffuse1;
 
 void main() {
   // diffuse 텍스쳐를 샘플링하여 최종 색상으로 출력
-  FragColor = texture2D(texture_diffsue1, TexCoords);
+  FragColor = texture2D(texture_diffuse1, TexCoords);
 }
