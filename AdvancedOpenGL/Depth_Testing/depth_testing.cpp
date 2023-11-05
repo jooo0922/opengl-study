@@ -94,7 +94,8 @@ int main()
 	// depth buffer 에 저장된 깊이값과 현재 프래그먼트의 깊이값을 비교(= 깊이 테스팅)하는 비교 연산 모드를
 	// glDepthFunc() 함수를 사용하여 변경할 수 있음!
 	// 각 깊이값 비교 연산 모드 관련 https://learnopengl.com/Advanced-OpenGL/Depth-testing 참고
-	glDepthFunc(GL_ALWAYS); // GL_ALWAYS 는 모든 프래그먼트 깊이값을 통과시킴 -> 깊이 테스트를 안하는 것과 마찬가지
+	//glDepthFunc(GL_ALWAYS); // GL_ALWAYS 는 모든 프래그먼트 깊이값을 통과시킴 -> 깊이 테스트를 안하는 것과 마찬가지
+	glDepthFunc(GL_LESS); // GL_LESS 는 깊이 테스트 기본 모드. -> 프래그먼트 깊이값이 깊이 버퍼의 깊이값보다 작을 때에만 통과
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/depth_testing.vs", "MyShaders/depth_testing.fs");
