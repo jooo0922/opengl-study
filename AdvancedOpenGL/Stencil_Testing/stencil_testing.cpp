@@ -256,7 +256,7 @@ int main()
 		// ...
 
 
-		shader.use(); // 큐브에 적용할 쉐이더 프로그램 객체 바인딩
+		/* 각 쉐이더 프로그램에 전송할 변환 행렬 계산 */
 
 		// 모델 행렬을 단위행렬로 초기화
 		glm::mat4 model = glm::mat4(1.0f);
@@ -268,10 +268,45 @@ int main()
 		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
 
-		shader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
-		shader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
 
-		shader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+		/* Object outlining 에 적용할 쉐이더 프래그램 객체 바인딩 및 uniform 변수 전송 */
+
+		shaderSingleColor.use();
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
+		shaderSingleColor.setMat4("view", view);
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
+		shaderSingleColor.setMat4("projection", projection);
+
+
+		/* 큐브 및 바닥 평면에 적용할 쉐이더 프로그램 객체 바인딩 및 uniform 변수 전송 */
+		
+		shader.use();
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
+		shader.setMat4("view", view); 
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
+		shader.setMat4("projection", projection); 
+
+
+		/* 바닥 평면 그리기 */
+
+		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(planeVAO);
+
+		// 바닥 평면 텍스쳐 객체도 0번 texture unit 을 공유하므로, 이번엔 0번 위치에 바닥 평면 텍스쳐가 바인딩되도록 활성화
+		glBindTexture(GL_TEXTURE_2D, floorTexture);
+
+		// 바닥 평면 위치로 이동시키는 이동행렬(단위행렬 -> 별다른 이동 x)을 모델 행렬에 적용
+		shader.setMat4("model", glm::mat4(1.0));
+
+		// 바닥 평면 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		// 바닥 평면을 다 그렸으면 바인딩한 VAO 객체 해제
+		glBindVertexArray(0);
 
 
 		/* 첫 번째 큐브 그리기 */
@@ -302,21 +337,6 @@ int main()
 
 		// 두 번째 큐브 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-		/* 바닥 평면 그리기 */
-
-		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(planeVAO);
-
-		// 바닥 평면 텍스쳐 객체도 0번 texture unit 을 공유하므로, 이번엔 0번 위치에 바닥 평면 텍스쳐가 바인딩되도록 활성화
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
-
-		// 바닥 평면 위치로 이동시키는 이동행렬(단위행렬 -> 별다른 이동 x)을 모델 행렬에 적용
-		shader.setMat4("model", glm::mat4(1.0));
-
-		// 바닥 평면 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
