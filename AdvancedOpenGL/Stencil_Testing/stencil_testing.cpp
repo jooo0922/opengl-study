@@ -98,7 +98,7 @@ int main()
 	glDepthFunc(GL_LESS); // GL_LESS 는 깊이 테스트 기본 모드. -> 프래그먼트 깊이값이 깊이 버퍼의 깊이값보다 작을 때에만 통과
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
-	Shader shader("MyShaders/depth_testing.vs", "MyShaders/depth_testing.fs");
+	Shader shader("MyShaders/stencil_testing.vs", "MyShaders/stencil_testing.fs");
 
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
