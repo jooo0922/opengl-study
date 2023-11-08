@@ -248,10 +248,9 @@ int main()
 		// 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-		// glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. 
-		// glEnable() 로 깊이 테스팅을 활성화한 상태이므로, 이전 프레임에 그렸던 깊이 버퍼도 초기화하도록,
-		// 깊이 버퍼 제거를 명시하는 비트 단위 연산을 수행하여 비트 플래그 설정 (state-using)
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// 색상 버퍼, 깊이 버퍼, 스텐실 버퍼 초기화를 명시하는 비트 단위 연산을 수행하여 비트 플래그 설정 (state-using)
+		// 스텐실 버퍼 초기화 값은 glClearStencil() 로 설정할 수 있는데, 기본값은 0 -> 즉, 스텐실 버퍼의 값들을 모두 0으로 초기화함!
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
 		// ...
