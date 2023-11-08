@@ -86,22 +86,37 @@ int main()
 		return -1;
 	}
 
-	// 각 프래그먼트에 대한 깊이 버퍼(z-buffer)를 새로운 프래그먼트의 깊이값과 비교해서
-	// 프래그먼트 값을 덮어쓸 지 말 지를 결정하는 Depth Test(깊이 테스팅) 상태를 활성화함
-	// OpenGL 컨텍스트의 state-setting 함수 중 하나겠지! 
+
+	/* 깊이 테스트 및 스텐실 테스트 관련 OpenGL 상태 설정 */
+
+	// 깊이 테스트 활성화
 	glEnable(GL_DEPTH_TEST);
 
-	// depth buffer 에 저장된 깊이값과 현재 프래그먼트의 깊이값을 비교(= 깊이 테스팅)하는 비교 연산 모드를
-	// glDepthFunc() 함수를 사용하여 변경할 수 있음!
-	// 각 깊이값 비교 연산 모드 관련 https://learnopengl.com/Advanced-OpenGL/Depth-testing 참고
-	//glDepthFunc(GL_ALWAYS); // GL_ALWAYS 는 모든 프래그먼트 깊이값을 통과시킴 -> 깊이 테스트를 안하는 것과 마찬가지
-	glDepthFunc(GL_LESS); // GL_LESS 는 깊이 테스트 기본 모드. -> 프래그먼트 깊이값이 깊이 버퍼의 깊이값보다 작을 때에만 통과
+	// 깊이 버퍼와 현재 프래그먼트의 깊이값 비교 연산 모드를 GL_LESS 로 설정 (기본 모드)
+	glDepthFunc(GL_LESS);
+
+	// 스텐실 테스트 활성화
+	glEnable(GL_STENCIL_TEST);
+
+	// 스텐실 버퍼와 기준값(reference value) 비교 연산 모드를 GL_NOTEQUAL 로 설정
+	// 참고로 세 번째 인자는, 스텐실 버퍼와 기준값을 서로 비교하기 전, 두 값을 bitwise AND 연산(&)으로 비트 연산시킬 값
+	// 참고로, 0xFF 는 이진수로 1111 1111 에 해당하며, 이 이진수와 AND 연산을 하면 항상 자기 자신이 나옴!
+	// https://github.com/jooo0922/cpp-study/blob/main/TBCppStudy/Chapter3_8/Chapter3_8.cpp 참고
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+
+	// 스텐실 버퍼 쓰기(write) 방식 설정
+	// -> 아래 방식은 '모든 테스트를 통과한 프래그먼트의 스텐실 버퍼 값을 glStencilFunc() 에서 설정한 기준값 1 로 덮어씀'
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+
+	/* 쉐이더 프로그램 생성 */
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/stencil_testing.vs", "MyShaders/stencil_testing.fs");
 
 	// object outlining 에 적용할 쉐이더 객체 추가 생성
 	Shader shaderSingleColor("MyShaders/stencil_testing.vs", "MyShaders/stencil_single_color.fs"); 
+
 
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
