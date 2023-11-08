@@ -100,6 +100,9 @@ int main()
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/stencil_testing.vs", "MyShaders/stencil_testing.fs");
 
+	// object outlining 에 적용할 쉐이더 객체 추가 생성
+	Shader shaderSingleColor("MyShaders/stencil_testing.vs", "MyShaders/stencil_single_color.fs"); 
+
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
 		// positions          // texture Coords
