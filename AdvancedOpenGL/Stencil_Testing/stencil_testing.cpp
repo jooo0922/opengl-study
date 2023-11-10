@@ -410,6 +410,9 @@ int main()
 		// 두 번째 Outlining 큐브 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
+		// 모든 큐브들을 다 그렸으면 바인딩한 큐브 VAO 객체 해제
+		glBindVertexArray(0);
+
 
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
