@@ -393,6 +393,24 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
+		/* 두 번째 Outlining 큐브 그리기 */
+
+		// 두 번째 Outlining 큐브에 적용할 모델 행렬에 초기화
+		model = glm::mat4(1.0f);
+
+		// 두 번째 Outlining 큐브 위치로 이동시키는 이동행렬을 모델 행렬에 적용
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+
+		// 두 번째 Outlining 큐브를 확대하는 크기행렬을 모델 행렬에 적용
+		model = glm::scale(model, glm::vec3(scale, scale, scale));
+
+		// 두 번째 Outlining 큐브에 적용할 모델 행렬을 쉐이더 프로그램에 전송
+		shaderSingleColor.setMat4("model", model);
+
+		// 두 번째 Outlining 큐브 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
