@@ -357,25 +357,41 @@ int main()
 
 		// Outlining 큐브를 그릴 때에는, 스텐실 버퍼 값이 기준값 1과 다른 프래그먼트만 통과시키도록 stencil test 함수를 변경
 		// -> 앞서 스텐실 버퍼 값을 1 로 덮어쓴 원본 큐브 영역과 겹치는 영역의 프래그먼트들을 모두 discard 시키려는 것!
-		//glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
 
-		//// 이번에도 스텐실 버퍼를 덮어쓰기 전 값을 0 으로 초기화함. -> 스텐실 버퍼 덮어쓰기 비활성화
-		//// 이게 왜 덮어쓰기 비활성화와 같냐면, 방금 전 변경한 Stencil Test 함수로 인해 스텐실 버퍼 값이 1 인 영역은 어차피 테스트를 통과 못하니 버퍼를 덮어쓸 일이 없고,
-		//// 나머지 테스트를 통과한 영역(스텐실 버퍼 값이 0 인 영역)은 기준값 1로 덮어쓰기 직전에 0x00 과 bitwise AND 연산에 의해 0 으로 초기화되므로, 
-		//// 사실상 기존 스텐실 버퍼 값에서 달라지는 게 없어짐!
-		//glStencilMask(0x00);
+		// 이번에도 스텐실 버퍼를 덮어쓰기 전 값을 0 으로 초기화함. -> 스텐실 버퍼 덮어쓰기 비활성화
+		// 이게 왜 덮어쓰기 비활성화와 같냐면, 방금 전 변경한 Stencil Test 함수로 인해 스텐실 버퍼 값이 1 인 영역은 어차피 테스트를 통과 못하니 버퍼를 덮어쓸 일이 없고,
+		// 나머지 테스트를 통과한 영역(스텐실 버퍼 값이 0 인 영역)은 기준값 1로 덮어쓰기 직전에 0x00 과 bitwise AND 연산에 의해 0 으로 초기화되므로, 
+		// 사실상 기존 스텐실 버퍼 값에서 달라지는 게 없어짐!
+		glStencilMask(0x00);
 
-		//// Outlining 큐브는 외곽선 강조를 위한 UI 이므로, 깊이값과 관계없이 항상 맨 앞에 그려지도록 깊이 테스트 비활성화
-		//glDisable(GL_DEPTH_TEST);
+		// Outlining 큐브는 외곽선 강조를 위한 UI 이므로, 깊이값과 관계없이 항상 맨 앞에 그려지도록 깊이 테스트 비활성화
+		glDisable(GL_DEPTH_TEST);
 
-		//// Outlining 큐브에 적용할 쉐이더 프로그램 바인딩
-		//shaderSingleColor.use();
+		// Outlining 큐브에 적용할 쉐이더 프로그램 바인딩
+		shaderSingleColor.use();
 
-		//// Outlining 큐브는 원본 큐브보다 살짝 크기를 키워야 하므로, 크기 행렬 계산 시 사용할 scale 값을 우선 초기화
-		//float scale = 1.1f;
+		// Outlining 큐브는 원본 큐브보다 살짝 크기를 키워야 하므로, 크기 행렬 계산 시 사용할 scale 값을 우선 초기화
+		float scale = 1.1f;
 
-		//// 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		//glBindVertexArray(cubeVAO);
+		// 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(cubeVAO);
+
+		// 첫 번째 Outlining 큐브에 적용할 모델 행렬에 초기화
+		model = glm::mat4(1.0f);
+
+		// 첫 번째 Outlining 큐브 위치로 이동시키는 이동행렬을 모델 행렬에 적용
+		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+
+		// 첫 번째 Outlining 큐브를 확대하는 크기행렬을 모델 행렬에 적용
+		model = glm::scale(model, glm::vec3(scale, scale, scale));
+
+		// 첫 번째 Outlining 큐브에 적용할 모델 행렬을 쉐이더 프로그램에 전송
+		shaderSingleColor.setMat4("model", model);
+
+		// 첫 번째 Outlining 큐브 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
 
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
