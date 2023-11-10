@@ -414,6 +414,20 @@ int main()
 		glBindVertexArray(0);
 
 
+		/* Stencil Test & Depth Test 관련 설정 초기화 */
+
+		// 스텐실 버퍼 값 덮어쓰기 활성화
+		glStencilMask(0xFF);
+
+		// Stencil Test 함수를 GL_ALWAYS 로 변경하여 모든 프래그먼트가 테스트를 통과하도록 함.
+		// 테스트를 통과한 모든 프래그먼트들은 스텐실 버퍼 값을 기준값인 0 으로 덮어씀 -> glClear(GL_STENCIL_BUFFER_BIT) 과 동일한 역할!
+		// 다음 프레임에서 바닥 평면부터 그리기 시작할 때, 바닥 평면의 모든 프래그먼트들의 스텐실 버퍼 값을 0으로 덮어쓰려 하겠군!
+		// -> 근데 어차피 바닥 평면에 덮어쓸 스텐실 버퍼 값들은 glStencilMask(0x00); 에 의해 0x00 과 bitwise AND 연산하여 0 으로 되어버린다고 했었지? 
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+
+		// Outlining 큐브를 그릴 때 임시로 비활성화 해둔 깊이 테스트를 다시 활성화
+		glEnable(GL_DEPTH_TEST);
+
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
