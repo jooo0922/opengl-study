@@ -91,11 +91,8 @@ int main()
 	// OpenGL 컨텍스트의 state-setting 함수 중 하나겠지! 
 	glEnable(GL_DEPTH_TEST);
 
-	// depth buffer 에 저장된 깊이값과 현재 프래그먼트의 깊이값을 비교(= 깊이 테스팅)하는 비교 연산 모드를
-	// glDepthFunc() 함수를 사용하여 변경할 수 있음!
-	// 각 깊이값 비교 연산 모드 관련 https://learnopengl.com/Advanced-OpenGL/Depth-testing 참고
-	//glDepthFunc(GL_ALWAYS); // GL_ALWAYS 는 모든 프래그먼트 깊이값을 통과시킴 -> 깊이 테스트를 안하는 것과 마찬가지
-	glDepthFunc(GL_LESS); // GL_LESS 는 깊이 테스트 기본 모드. -> 프래그먼트 깊이값이 깊이 버퍼의 깊이값보다 작을 때에만 통과
+	// depth buffer 깊이 테스트하는 비교 연산 모드를 GL_LESS (기본 모드) 로 지정
+	glDepthFunc(GL_LESS);
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/alpha_testing.vs", "MyShaders/alpha_testing.fs");
@@ -158,6 +155,18 @@ int main()
 		 5.0f, -0.5f, -5.0f,  2.0f, 2.0f
 	};
 
+	// grass 텍스쳐를 적용할 QuadMesh 의 정점 데이터 배열 초기화
+	float  transparentVertices[] = {
+		// positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+		0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+		1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+	};
+
 
 	/* 큐브에 대한 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고) */
 
@@ -203,7 +212,29 @@ int main()
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 
-	// planeVAO 객체에 저장해둘 cubeVBO 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
+
+	/* QuadMesh 에 대한 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 */
+
+	unsigned int transparentVAO, transparentVBO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
+	glGenVertexArrays(1, &transparentVAO); // VAO(Vertex Array Object) 객체 생성
+	glGenBuffers(1, &transparentVBO); // VBO(Vertex Buffer Object) 객체 생성
+
+	glBindVertexArray(transparentVAO); // QuadMesh 에 대한 렌더링 정보를 저장하기 위해 VAO 객체를 컨텍스트에 바인딩함.
+
+	glBindBuffer(GL_ARRAY_BUFFER, transparentVBO); // QuadMesh 의 VBO 객체 바인딩.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW); // 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+
+	// VBO 객체 설정
+	// 정점 위치 데이터 해석 방식 설정
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+
+	// 정점 uv 데이터 해석 방식 설정
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+
+
+	// transparentVAO 객체에 저장해둘 transparentVBO 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 	glBindVertexArray(0);
 
 	// 텍스쳐 로드 및 텍스쳐 객체 생성
