@@ -99,6 +99,10 @@ int main()
 	// depth buffer 깊이 테스트하는 비교 연산 모드를 GL_LESS (기본 모드) 로 지정
 	glDepthFunc(GL_LESS);
 
+	// Blending 연산 모드를 (fragment 색상 * fragment alpha) + (color buffer 색상 * (1 - fragment alpha)) 형태로 설정
+	// 해당 블렌딩 함수 모드는 반투명 오브젝트를 그릴 때, 가장 많이 사용되는 연산 모드!
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/blending.vs", "MyShaders/blending.fs");
 
