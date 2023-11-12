@@ -157,7 +157,7 @@ int main()
 		 5.0f, -0.5f, -5.0f,  2.0f, 2.0f
 	};
 
-	// grass 텍스쳐를 적용할 QuadMesh 의 정점 데이터 배열 초기화
+	// blending_transparent_window.png 텍스쳐를 적용할 QuadMesh 의 정점 데이터 배열 초기화
 	float  transparentVertices[] = {
 		// positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
 		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
@@ -244,8 +244,8 @@ int main()
 	unsigned int floorTexture = loadTexture("images/metal.png"); // 바닥 평면에 적용할 텍스쳐 객체의 참조 ID 저장
 	unsigned int transparentTexture = loadTexture("images/blending_transparent_window.png"); // QuadMesh 에 적용할 텍스쳐 객체의 참조 ID 저장
 
-	// 투명 텍스쳐(grass.png)를 적용할 QuadMesh 의 위치값을 동적 배열 vector 에 초기화하여 저장
-	vector<glm::vec3> vegetation
+	// 투명 텍스쳐(blending_transparent_window.png)를 적용할 QuadMesh 의 위치값을 동적 배열 vector 에 초기화하여 저장
+	vector<glm::vec3> windows
 	{
 		glm::vec3(-1.5f, 0.0f, -0.48f),
 		glm::vec3(1.5f, 0.0f, 0.51f),
@@ -355,11 +355,11 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, transparentTexture);
 
 		// vegetation 동적 배열 크기만큼 반복문 순회
-		for (unsigned int i = 0; i < vegetation.size(); i++)
+		for (unsigned int i = 0; i < windows.size(); i++)
 		{
 			// vegetation 동적 배열에 저장된 위치값으로 이동하는 모델 행렬 계산
 			model = glm::mat4(1.0f);
-			model = glm::translate(model, vegetation[i]);
+			model = glm::translate(model, windows[i]);
 
 			// 계산된 각 모델 행렬을 쉐이더 프로그램으로 전송
 			shader.setMat4("model", model);
