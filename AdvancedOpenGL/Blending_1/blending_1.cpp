@@ -15,6 +15,8 @@
 
 #include <iostream>
 
+using namespace std;
+
 // 콜백함수 전방선언
 void framebuffer_size_callback(GLFWwindow* window, int width, int height); // GLFW 윈도우 크기 변경 감지 시, 호출할 콜백함수
 void mouse_callback(GLFWwindow* window, double xpos, double ypos); // GLFW 윈도우에 마우스 입력 감지 시, 호출할 콜백함수
@@ -241,6 +243,16 @@ int main()
 	unsigned int cubeTexture = loadTexture("images/marble.jpg"); // 큐브에 적용할 텍스쳐 객체의 참조 ID 저장
 	unsigned int floorTexture = loadTexture("images/metal.png"); // 바닥 평면에 적용할 텍스쳐 객체의 참조 ID 저장
 	unsigned int transparent = loadTexture("images/grass.png"); // QuadMesh 에 적용할 텍스쳐 객체의 참조 ID 저장
+
+	// 투명 텍스쳐(grass.png)를 적용할 QuadMesh 의 위치값을 동적 배열 vector 에 초기화하여 저장
+	vector<glm::vec3> vegetation
+	{
+		glm::vec3(-1.5f, 0.0f, -0.48f),
+		glm::vec3(1.5f, 0.0f, 0.51f),
+		glm::vec3(0.0f, 0.0f, 0.7f),
+		glm::vec3(-0.3f, 0.0f, -2.3f),
+		glm::vec3(0.5f, 0.0f, -0.6f),
+	};
 
 	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 texture unit 위치값 전송
 	// 이 예제에서는 두 텍스쳐 객체가 하나의 sampler 변수를 공유해서 사용하므로,
