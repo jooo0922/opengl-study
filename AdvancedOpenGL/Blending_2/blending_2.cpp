@@ -97,7 +97,7 @@ int main()
 	glDepthFunc(GL_LESS);
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
-	Shader shader("MyShaders/alpha_testing.vs", "MyShaders/alpha_testing.fs");
+	Shader shader("MyShaders/blending.vs", "MyShaders/blending.fs");
 
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
