@@ -381,12 +381,12 @@ int main()
 		// QuadMesh 텍스쳐 객체도 0번 texture unit 을 공유하므로, 이번엔 0번 위치에 QuadMesh 텍스쳐가 바인딩되도록 활성화
 		glBindTexture(GL_TEXTURE_2D, transparentTexture);
 
-		// vegetation 동적 배열 크기만큼 반복문 순회
-		for (unsigned int i = 0; i < windows.size(); i++)
+		// 카메라로부터의 거리에 따라 오름차순 정렬된 QuadMesh 위치값들을 역순으로 순회 -> 즉, 내림차순 순회! (역순 이터레이터 관련 설명 하단 필기 참고)
+		for (std::map<float, glm::vec3>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
 		{
-			// vegetation 동적 배열에 저장된 위치값으로 이동하는 모델 행렬 계산
+			// std::map 구조의 역순 이터레이터 it 에 저장된 <const key, T> 쌍의 T 값(= 위치값)으로 이동 행렬 계산
 			model = glm::mat4(1.0f);
-			model = glm::translate(model, windows[i]);
+			model = glm::translate(model, it->second);
 
 			// 계산된 각 모델 행렬을 쉐이더 프로그램으로 전송
 			shader.setMat4("model", model);
@@ -704,4 +704,30 @@ unsigned int loadTexture(const char* path)
 
 	이러한 이유로 QuadMesh 의 위치값과 렌더링 순서를
 	카메라로부터의 거리에 따라 정렬해서 정했던 것임!
+*/
+
+/*
+	std::map::reverse_iterator 타입은 뭘까?
+
+
+	이는 std::map 구조에 오름차순으로 저장된 <const key, T> 쌍의
+	데이터들을 역순으로 순회할 수 있게 해주는 이터레이터 라고 보면 됨.
+
+	그래서, 이터레이터의 초기값 it 를 sorted.rbegin() 으로 할당했는데,
+	이는 std::map 구조의 역방향 시작 지점의 요소를 반환하며, (reverse-begin)
+	반대로, 해당 역순 반복 순회를 it 가 sorted.rend() 가 될때까지 반복하도록 설정했는데,
+	이는 std::map 구조의 역방향 종료 지점의 요소를 반환함. (reverse-end)
+
+	또한, 이터레이터 it->second 와 같이 포인터 멤버에 접근하고 있는데,
+	이는 이터레이터가 <const key, T> 형태의 <key, value> 쌍에서
+	T, 즉, value 를 가리키는 포인터 멤버라고 보면 됨.
+
+	그렇다며느 it->first 는
+	key 값에 접근하는 포인터 멤버라고 보면 되겠지?
+
+	
+	이처럼 카메라로부터의 거리값의 오름차순으로 정렬된 데이터를
+	역순으로, 즉, 내림차순으로 순회하며 그리기 명령을 수행했다는 것은,
+
+	카메라로부터 거리가 먼 오브젝트부터 먼저 그리도록 했다는 의미라고 보면 됨!
 */
