@@ -493,8 +493,9 @@ unsigned int loadTexture(const char* path)
 
 		// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
 		// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// * RGBA 포맷에서 Texture Wrapping 설정 관련 하단 필기 참고!
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 
 		// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정 (관련 필기 정리 하단 참고)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -556,4 +557,21 @@ unsigned int loadTexture(const char* path)
 
 	요렇게 전처리기가 정의되어 있는 부분이 있음.
 	이 부분의 코드들만 include 하겠다는 것이지!
+*/
+
+/*
+	RGBA 포맷에서 Texture Wrapping 모드 설정 관련
+	
+
+	이 때, 투명도 값인 Alpha 채널이 존재하는 텍스쳐일 경우,
+
+	Texture Wrapping 모드가 반복 모드일 때,
+	bottom border 에 존재하는 픽셀들이
+
+	완전 투명해야 할 top border 에
+	희끄무레하게 반복되는 현상이 발생할 수 있으므로,
+
+	이를 방지하기 위해, 투명도 값이 존재하는 GL_RGBA 포맷일 경우,
+	Texture Wrapping 모드를 GL_CLAMP_TO_EDGE, 즉,
+	border 의 픽셀을 반복적으로 샘플링하는 방식을 취하도록 함!
 */
