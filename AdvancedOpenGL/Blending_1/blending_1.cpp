@@ -242,7 +242,7 @@ int main()
 	// 텍스쳐 로드 및 텍스쳐 객체 생성
 	unsigned int cubeTexture = loadTexture("images/marble.jpg"); // 큐브에 적용할 텍스쳐 객체의 참조 ID 저장
 	unsigned int floorTexture = loadTexture("images/metal.png"); // 바닥 평면에 적용할 텍스쳐 객체의 참조 ID 저장
-	unsigned int transparent = loadTexture("images/grass.png"); // QuadMesh 에 적용할 텍스쳐 객체의 참조 ID 저장
+	unsigned int transparentTexture = loadTexture("images/grass.png"); // QuadMesh 에 적용할 텍스쳐 객체의 참조 ID 저장
 
 	// 투명 텍스쳐(grass.png)를 적용할 QuadMesh 의 위치값을 동적 배열 vector 에 초기화하여 저장
 	vector<glm::vec3> vegetation
@@ -346,6 +346,29 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
+		/* Alpha Testing 을 적용할 QuadMesh 그리기 */
+
+		// QaudMesh 에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(transparentVAO);
+
+		// QuadMesh 텍스쳐 객체도 0번 texture unit 을 공유하므로, 이번엔 0번 위치에 QuadMesh 텍스쳐가 바인딩되도록 활성화
+		glBindTexture(GL_TEXTURE_2D, transparentTexture);
+
+		// vegetation 동적 배열 크기만큼 반복문 순회
+		for (unsigned int i = 0; i < vegetation.size(); i++)
+		{
+			// vegetation 동적 배열에 저장된 위치값으로 이동하는 모델 행렬 계산
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, vegetation[i]);
+
+			// 계산된 각 모델 행렬을 쉐이더 프로그램으로 전송
+			shader.setMat4("model", model);
+
+			// QuadMesh 그리기 명령
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+
+
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
 	}
@@ -355,8 +378,10 @@ int main()
 	// 렌더링이 끝났다면 더 이상 메모리에 남겨둘 이유가 없음!!
 	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteVertexArrays(1, &planeVAO);
+	glDeleteVertexArrays(1, &transparentVAO);
 	glDeleteBuffers(1, &cubeVBO);
 	glDeleteBuffers(1, &planeVBO);
+	glDeleteBuffers(1, &transparentVBO);
 
 	// while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 	glfwTerminate();
