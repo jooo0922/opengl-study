@@ -242,7 +242,7 @@ int main()
 	// 텍스쳐 로드 및 텍스쳐 객체 생성
 	unsigned int cubeTexture = loadTexture("images/marble.jpg"); // 큐브에 적용할 텍스쳐 객체의 참조 ID 저장
 	unsigned int floorTexture = loadTexture("images/metal.png"); // 바닥 평면에 적용할 텍스쳐 객체의 참조 ID 저장
-	unsigned int transparentTexture = loadTexture("images/grass.png"); // QuadMesh 에 적용할 텍스쳐 객체의 참조 ID 저장
+	unsigned int transparentTexture = loadTexture("images/blending_transparent_window.png"); // QuadMesh 에 적용할 텍스쳐 객체의 참조 ID 저장
 
 	// 투명 텍스쳐(grass.png)를 적용할 QuadMesh 의 위치값을 동적 배열 vector 에 초기화하여 저장
 	vector<glm::vec3> vegetation
