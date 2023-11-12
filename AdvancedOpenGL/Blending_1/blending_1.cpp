@@ -240,6 +240,7 @@ int main()
 	// 텍스쳐 로드 및 텍스쳐 객체 생성
 	unsigned int cubeTexture = loadTexture("images/marble.jpg"); // 큐브에 적용할 텍스쳐 객체의 참조 ID 저장
 	unsigned int floorTexture = loadTexture("images/metal.png"); // 바닥 평면에 적용할 텍스쳐 객체의 참조 ID 저장
+	unsigned int transparent = loadTexture("images/grass.png"); // QuadMesh 에 적용할 텍스쳐 객체의 참조 ID 저장
 
 	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 texture unit 위치값 전송
 	// 이 예제에서는 두 텍스쳐 객체가 하나의 sampler 변수를 공유해서 사용하므로,
