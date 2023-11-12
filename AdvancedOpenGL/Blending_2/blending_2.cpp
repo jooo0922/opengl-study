@@ -93,6 +93,9 @@ int main()
 	// OpenGL 컨텍스트의 state-setting 함수 중 하나겠지! 
 	glEnable(GL_DEPTH_TEST);
 
+	// Blending 활성화
+	glEnable(GL_BLEND);
+
 	// depth buffer 깊이 테스트하는 비교 연산 모드를 GL_LESS (기본 모드) 로 지정
 	glDepthFunc(GL_LESS);
 
