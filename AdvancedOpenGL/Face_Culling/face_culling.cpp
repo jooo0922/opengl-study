@@ -100,7 +100,7 @@ int main()
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/face_culling.vs", "MyShaders/face_culling.fs");
 
-	// 큐브의 정점 데이터 배열 초기화
+	// 큐브의 정점 데이터 배열 초기화 (카메라 시점에서 바라볼 때 반시계 방향(CCW)으로 삼각형이 그려지도록 정점 데이터 순서를 정렬함.)
 	float cubeVertices[] = {
 		// positions          // texture Coords
 		// Back face
