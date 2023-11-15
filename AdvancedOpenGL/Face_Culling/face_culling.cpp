@@ -100,6 +100,20 @@ int main()
 	//glDepthFunc(GL_ALWAYS); // GL_ALWAYS 는 모든 프래그먼트 깊이값을 통과시킴 -> 깊이 테스트를 안하는 것과 마찬가지
 	glDepthFunc(GL_LESS); // GL_LESS 는 깊이 테스트 기본 모드. -> 프래그먼트 깊이값이 깊이 버퍼의 깊이값보다 작을 때에만 통과
 
+
+	/* face culling 관련 상태 설정 */
+
+	// culling(추려낼) 면의 방향을 변경
+	glCullFace(GL_BACK);
+
+	// 삼각형의 앞면을 결정할 winding order 타입 변경
+	// GL_CW 는 카메라 방향에서 시계 방향으로 그려지는 삼각형을 앞면으로 처리함. -> 큐브로 치면 안쪽 면이 앞면이 되는 셈!
+	glFrontFace(GL_CW);
+
+	// 큐브의 안쪽 면만 그리고 싶다면, 아래와 같이 앞면을 추려내도록 설정하는 방법도 존재함.
+	//glCullFace(GL_FRONT);
+
+
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/face_culling.vs", "MyShaders/face_culling.fs");
 
