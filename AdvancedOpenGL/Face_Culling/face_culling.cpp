@@ -91,6 +91,9 @@ int main()
 	// OpenGL 컨텍스트의 state-setting 함수 중 하나겠지! 
 	glEnable(GL_DEPTH_TEST);
 
+	// face culling 상태 활성화
+	glEnable(GL_CULL_FACE);
+
 	// depth buffer 에 저장된 깊이값과 현재 프래그먼트의 깊이값을 비교(= 깊이 테스팅)하는 비교 연산 모드를
 	// glDepthFunc() 함수를 사용하여 변경할 수 있음!
 	// 각 깊이값 비교 연산 모드 관련 https://learnopengl.com/Advanced-OpenGL/Depth-testing 참고
