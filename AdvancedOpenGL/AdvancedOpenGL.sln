@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Blending_2", "Blending_2\Bl
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Face_Culling", "Face_Culling\Face_Culling.vcxproj", "{CD3860DE-B766-4CB0-9E1D-1DB9E6AE91EC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Face_Culling_Exercise_1", "Face_Culling_Exercise_1\Face_Culling_Exercise_1.vcxproj", "{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -61,6 +63,14 @@ Global
 		{CD3860DE-B766-4CB0-9E1D-1DB9E6AE91EC}.Release|x64.Build.0 = Release|x64
 		{CD3860DE-B766-4CB0-9E1D-1DB9E6AE91EC}.Release|x86.ActiveCfg = Release|Win32
 		{CD3860DE-B766-4CB0-9E1D-1DB9E6AE91EC}.Release|x86.Build.0 = Release|Win32
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Debug|x64.ActiveCfg = Debug|x64
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Debug|x64.Build.0 = Debug|x64
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Debug|x86.ActiveCfg = Debug|Win32
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Debug|x86.Build.0 = Debug|Win32
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Release|x64.ActiveCfg = Release|x64
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Release|x64.Build.0 = Release|x64
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Release|x86.ActiveCfg = Release|Win32
+		{0C9740DD-DBAE-4FA4-8C11-A7A63DE2A5B5}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
