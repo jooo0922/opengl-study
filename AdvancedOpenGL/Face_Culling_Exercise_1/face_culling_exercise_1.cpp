@@ -108,7 +108,7 @@ int main()
 
 	// 삼각형의 앞면을 결정할 winding order 타입 변경
 	// GL_CW 는 카메라 방향에서 시계 방향으로 그려지는 삼각형을 앞면으로 처리함. -> 큐브로 치면 안쪽 면이 앞면이 되는 셈!
-	glFrontFace(GL_CW);
+	//glFrontFace(GL_CW);
 
 	// 큐브의 안쪽 면만 그리고 싶다면, 아래와 같이 앞면을 추려내도록 설정하는 방법도 존재함.
 	//glCullFace(GL_FRONT);
@@ -117,54 +117,59 @@ int main()
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader shader("MyShaders/face_culling.vs", "MyShaders/face_culling.fs");
 
-	// 큐브의 정점 데이터 배열 초기화 (카메라 시점에서 바라볼 때 반시계 방향(CCW)으로 삼각형이 그려지도록 정점 데이터 순서를 정렬함.)
+	// 큐브의 정점 데이터 배열 초기화 (이번에는 거꾸로 데이터를 시계방향(GL_CW) 으로 정렬!)
 	float cubeVertices[] = {
 		// positions          // texture Coords
 		// Back face
 		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // Bottom-left
+		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right   
 		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
-		 0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right         
 		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
-		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
+
 		// Front face
 		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
 		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
 		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
-		 0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
-		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
 		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
+
 		// Left face
 		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
 		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-left
 		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
-		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
 		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+
 		// Right face
 		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
-		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
 		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right         
 		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+		 0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
 		 0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left     
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+
 		// Bottom face
 		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
 		 0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
 		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
-		 0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
-		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
 		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+
 		// Top face
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
 		 0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right     
 		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+		 0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,  // bottom-left      
 		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
-		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left        
 	};
 
-	// 바닥 평면의 정점 데이터 배열 초기화
+	// 바닥 평면의 정점 데이터 배열 초기화 (카메라에서 바라봤을 때 시계방향(GL_CW) 으로 그려지도록 정점 데이터 정렬됨)
 	float planeVertices[] = {
 		// positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
 		 5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
