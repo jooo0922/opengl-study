@@ -107,8 +107,8 @@ int main()
 	glCullFace(GL_BACK);
 
 	// 삼각형의 앞면을 결정할 winding order 타입 변경
-	// GL_CW 는 카메라 방향에서 시계 방향으로 그려지는 삼각형을 앞면으로 처리함. -> 큐브로 치면 안쪽 면이 앞면이 되는 셈!
-	//glFrontFace(GL_CW);
+	// GL_CW 는 카메라 방향에서 시계 방향으로 그려지는 삼각형을 앞면으로 처리함.
+	glFrontFace(GL_CW);
 
 	// 큐브의 안쪽 면만 그리고 싶다면, 아래와 같이 앞면을 추려내도록 설정하는 방법도 존재함.
 	//glCullFace(GL_FRONT);
