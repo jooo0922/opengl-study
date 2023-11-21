@@ -97,8 +97,11 @@ int main()
 	//glDepthFunc(GL_ALWAYS); // GL_ALWAYS 는 모든 프래그먼트 깊이값을 통과시킴 -> 깊이 테스트를 안하는 것과 마찬가지
 	glDepthFunc(GL_LESS); // GL_LESS 는 깊이 테스트 기본 모드. -> 프래그먼트 깊이값이 깊이 버퍼의 깊이값보다 작을 때에만 통과
 
-	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
+	// Shader 클래스를 생성함으로써, <쉐이더 객체 / 프로그램 객체> 생성, 컴파일, 링킹
 	Shader shader("MyShaders/framebuffers.vs", "MyShaders/framebuffers.fs");
+
+	// 스크린 평면에 적용할 <쉐이더 객체 / 프로그램 객체> 생성, 컴파일, 링킹
+	Shader screenShader("MyShader/framebuffers_screen.vs", "MyShader/framebuffers_screen.fs");
 
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
@@ -254,6 +257,11 @@ int main()
 	// texture unit 또한 0번 위치를 공유해서 사용할 것임!
 	shader.use(); // 쉐이더 프로그램 바인딩
 	shader.setInt("texture1", 0);
+
+	// 스크린 평면에 적용할 쉐이더 프로그램의 uniform sampler 변수에 texture unit 위치값 전송
+	// 위 쉐이더 객체와 마찬가지로 0번 위치 공유!
+	screenShader.use();
+	screenShader.setInt("screenTexture", 0);
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
