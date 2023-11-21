@@ -324,6 +324,20 @@ int main()
 
 		processInput(window, shader); // 윈도우 창 및 키 입력 감지 밎 이벤트 처리
 
+
+		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
+
+
+
+		/* first pass (off-screen framebuffer 에 렌더링) */
+
+
+		// 전체 scene 을 렌더링할 off-screen framebuffer 객체 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+		// 전체 scene 은 여러 개의 물체들이 렌더링되므로, depth test 활성화
+		glEnable(GL_DEPTH_TEST);
+
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
 		// 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -332,10 +346,6 @@ int main()
 		// glEnable() 로 깊이 테스팅을 활성화한 상태이므로, 이전 프레임에 그렸던 깊이 버퍼도 초기화하도록,
 		// 깊이 버퍼 제거를 명시하는 비트 단위 연산을 수행하여 비트 플래그 설정 (state-using)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
-		// ...
-
 
 		shader.use(); // 큐브에 적용할 쉐이더 프로그램 객체 바인딩
 
@@ -398,6 +408,37 @@ int main()
 
 		// 바닥 평면 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+
+		/* second pass (default framebuffer 에 렌더링) */
+
+
+		// 스크린 평면을 렌더링할 default framebuffer 을 다시 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// default framebuffer 에는 스크린 평면만 렌더링하고, 스크린 평면의 프래그먼트가 폐기되면 안되므로, depth test 를 비활성화
+		glDisable(GL_DEPTH_TEST);
+
+		// 색상 버퍼를 흰색으로 초기화 (사실 스크린 평면이 배경을 가득 채우고 있어서 어차피 눈에 안보임)
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+
+		/* 스크린 평면 그리기 */
+
+		// 스크린 평면에 적용할 쉐이더 프로그램 객체 바인딩
+		screenShader.use();
+
+		// 스크린 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(quadVAO);
+
+		// 스크린 평면 텍스쳐 객체도 0번 texture unit 을 공유하므로, 이번엔 0번 위치에 스크린 평면 텍스쳐(color attachment 텍스쳐)가 바인딩되도록 활성화
+		glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
+
+		// 스크린 평면 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
 
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
