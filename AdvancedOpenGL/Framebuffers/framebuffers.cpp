@@ -19,7 +19,7 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height); // GLFW 윈도우 크기 변경 감지 시, 호출할 콜백함수
 void mouse_callback(GLFWwindow* window, double xpos, double ypos); // GLFW 윈도우에 마우스 입력 감지 시, 호출할 콜백함수
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset); // GLFW 윈도우에 스크롤 입력 감지 시, 호출할 콜백함수
-void processInput(GLFWwindow* window, Shader ourShader); // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
+void processInput(GLFWwindow* window); // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
 unsigned int loadTexture(const char* path); // 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
 
 // 윈도우 창 생성 옵션
@@ -101,7 +101,7 @@ int main()
 	Shader shader("MyShaders/framebuffers.vs", "MyShaders/framebuffers.fs");
 
 	// 스크린 평면에 적용할 <쉐이더 객체 / 프로그램 객체> 생성, 컴파일, 링킹
-	Shader screenShader("MyShader/framebuffers_screen.vs", "MyShader/framebuffers_screen.fs");
+	Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen.fs");
 
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
@@ -214,11 +214,11 @@ int main()
 	// VBO 객체 설정
 	// 정점 위치 데이터 해석 방식 설정
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 
 	// 정점 uv 데이터 해석 방식 설정
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 
 	// planeVAO 객체에 저장해둘 cubeVBO 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 	glBindVertexArray(0);
@@ -238,11 +238,11 @@ int main()
 	// VBO 객체 설정
 	// 정점 위치 데이터 해석 방식 설정
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 
 	// 정점 uv 데이터 해석 방식 설정
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
 	// quadVAO 객체에 저장해둘 cubeVBO 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 	glBindVertexArray(0);
@@ -322,7 +322,7 @@ int main()
 		deltaTime = currentFrame - lastFrame; // 현재 프레임 경과시간 - 마지막 프레임 경과시간 = 두 프레임 사이의 시간 간격
 		lastFrame = currentFrame; // 마지막 프레임 경과시간을 현재 프레임 경과시간으로 업데이트!
 
-		processInput(window, shader); // 윈도우 창 및 키 입력 감지 밎 이벤트 처리
+		processInput(window); // 윈도우 창 및 키 입력 감지 밎 이벤트 처리
 
 
 		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
@@ -509,7 +509,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 }
 
 // GLFWwindow 윈도우 입력 및 키 입력 감지 후 이벤트 처리 함수 (렌더링 루프에서 반복 감지)
-void processInput(GLFWwindow* window, Shader ourShader)
+void processInput(GLFWwindow* window)
 {
 	// 현재 GLFWwindow 에 대하여(활성화 시,) 특정 키(esc 키)가 입력되었는지 여부를 감지
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
