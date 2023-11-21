@@ -314,6 +314,9 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+	// 와이어프레임 모드로 렌더링 -> 스크린 평면만 렌더링되고 있는 default framebuffer 확인용
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
