@@ -263,6 +263,57 @@ int main()
 	screenShader.use();
 	screenShader.setInt("screenTexture", 0);
 
+
+	/* off-screen framebuffer 생성 및 설정 */
+
+	// FBO(FrameBufferObject) 객체 생성 및 바인딩
+	unsigned int framebuffer;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+	// FBO 객체에 attach 할 텍스쳐 객체 생성 및 바인딩
+	unsigned int textureColorBuffer;
+	glGenTextures(1, &textureColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, textureColorBuffer);
+
+	// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
+	// 텍스쳐 객체의 해상도는 스크린 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 '스크린 평면'에 적용할 거니까!
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+	// Texture Filtering(텍셀 필터링(보간)) 모드 설정 -> 스크린 평면은 축소/확대되지 않으므로 별로 중요 x
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+	// off-screen framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함! (attachment 관련 설명 하단 참고)
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorBuffer, 0);
+
+	// FBO 객체에 attach 할 RBO(RenderBufferObject) 객체 생성 및 바인딩 (RBO 관련 설명 하단 참고)
+	unsigned int rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+
+	// RBO 객체 메모리 공간 할당
+	// 단일 Renderbuffer 에 stencil 및 depth 값을 동시에 저장하는 데이터 포맷 지정 -> GL_DEPTH24_STENCIL8 
+	// (프래그먼트당 32 bits 데이터를 저장하되, 이 중에서 24 bits 는 depth 값을 저장하고, 나머지 8 bits 는 stencil 값을 저장하는 데이터 포맷!)
+	// 또한, 텍스쳐 객체와 마찬가지로 스크린 해상도와 Renderbuffer 해상도를 일치시킴 -> 그래야 SCR_WIDTH * SCR_HEIGHT 개수 만큼의 데이터 저장 공간 확보 가능!
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+
+	// FBO 객체에 생성한 RBO 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+	// off-screen framebuffer 에 렌더링 시, RBO 객체에는 stencil 및 depth buffer 를 저장할 것이므로, GL_DEPTH_STENCIL_ATTACHMENT 를 적용함!
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사 (설정 완료 조건은 LearnOpenGL 본문 참고)
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+	}
+
+	// 생성한 FBO 객체 설정 완료 후, 다시 default framebuffer 바인딩하여 원상복구 (참고로, default framebuffer 의 참조 id 가 0임!)
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
@@ -534,4 +585,49 @@ unsigned int loadTexture(const char* path)
 
 	요렇게 전처리기가 정의되어 있는 부분이 있음.
 	이 부분의 코드들만 include 하겠다는 것이지!
+*/
+
+/*
+	Framebuffer Attachment
+
+	모든 Framebuffer 에는 렌더링 결과 데이터들을
+	실제로 저장할 메모리 공간이 필요한데, 이를 'Attachment' 라고 함.
+
+	즉, Framebuffer 의 실제 메모리 버퍼 공간 역할을 하는 것이
+	'Attachment' 임.
+
+	실제 우리가 무의식적으로 사용해오던 default framebuffer 또한 
+	렌더링된 결과물을 저장하는 attachment 들로 이루어져 있음!
+
+	Framebuffer 는 두 가지 타입의 Attachment 에 버퍼 데이터를 저장할 수 있는데,
+	
+	첫 번째는 텍스쳐 객체이고,
+	두 번째는 Renderbuffer Object 라고 함.
+
+	일반적으로, 텍스쳐 객체는 샘플링, 즉 읽기에 최적화되어 있기 때문에
+	Framebuffer 의 버퍼 데이터 중에서 샘플링이 필요한 데이터(주로 color buffer)들은
+	텍스쳐 객체를 Attach 하여 저장한다.
+
+	반면, Renderbuffer Object 는
+	쓰기에 최적화되어 있는 버퍼 공간(write-only)이기 때문에
+	샘플링이 불필요한 depth, stencil buffer 들은
+	Renderbuffer Object 를 Attach 하여 저장한다.
+*/
+
+/*
+	Renderbuffer Object
+
+	Renderbuffer Object 는
+	Framebuffer 에 attach 하여 실제 버퍼 데이터를 저장하는 공간의 한 유형.
+
+	텍스쳐 객체는 렌더링된 결과물 데이터를 다른 포맷(GL_RGB, GL_RGBA 등...)으로 변환하여 저장하는 반면, 
+	Renderbuffer 객체는 그냥 원본 데이터를 그대로 write 하기 때문에,
+	상대적으로 데이터 쓰기 및 복사 성능이 훨씬 뛰어남.
+
+	그러나, 저장된 데이터 읽기를 직접적으로 수행할 수 없다는 특징이 있음!
+
+	이러한 특징으로 인해, 데이터 샘플링이 불필요하지만, 
+	depth test 및 stencil test 같은 test 과정 수행에 필요한 
+	depth buffer 및 stencil buffer 들을 저장하는 데 
+	아주 적합한 attachment 유형이라고 볼 수 있음!
 */
