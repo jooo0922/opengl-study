@@ -450,8 +450,14 @@ int main()
 	// 렌더링이 끝났다면 더 이상 메모리에 남겨둘 이유가 없음!!
 	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteVertexArrays(1, &planeVAO);
+	glDeleteVertexArrays(1, &quadVAO);
 	glDeleteBuffers(1, &cubeVBO);
 	glDeleteBuffers(1, &planeVBO);
+	glDeleteBuffers(1, &quadVBO);
+
+	// off-screen 렌더링을 위해 생성해 둔 FBO, RBO 객체도 메모리 해제
+	glDeleteRenderbuffers(1, &rbo);
+	glDeleteFramebuffers(1, &framebuffer);
 
 	// while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 	glfwTerminate();
