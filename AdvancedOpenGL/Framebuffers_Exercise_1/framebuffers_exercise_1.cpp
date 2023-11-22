@@ -22,6 +22,10 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset); // GLF
 void processInput(GLFWwindow* window); // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
 unsigned int loadTexture(const char* path); // 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
 
+// scene 그리기 함수 전방선언
+void drawScene(Shader& shader, unsigned int cubeVAO, unsigned int cubeTexture, unsigned int planeVAO, unsigned int floorTexture, bool drawBack = false);
+
+
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
@@ -166,13 +170,13 @@ int main()
 	// 또한, 스크린 평면은 원근을 고려할 필요가 없으므로, position z값을 별도로 전달할 필요 없이, 버텍스 쉐이더에서 0.0 으로 통일해서 전달할 것임!
 	float quadVertices[] = {
 		// positions   // texCoords
-		-1.0f,  1.0f,  0.0f, 1.0f,
-		-1.0f, -1.0f,  0.0f, 0.0f,
-		 1.0f, -1.0f,  1.0f, 0.0f,
+		-0.3f,  1.0f,  0.0f, 1.0f,
+		-0.3f,  0.7f,  0.0f, 0.0f,
+		 0.3f,  0.7f,  1.0f, 0.0f,
 
-		-1.0f,  1.0f,  0.0f, 1.0f,
-		 1.0f, -1.0f,  1.0f, 0.0f,
-		 1.0f,  1.0f,  1.0f, 1.0f
+		-0.3f,  1.0f,  0.0f, 1.0f,
+		 0.3f,  0.7f,  1.0f, 0.0f,
+		 0.3f,  1.0f,  1.0f, 1.0f
 	};
 
 
@@ -350,67 +354,8 @@ int main()
 		// 깊이 버퍼 제거를 명시하는 비트 단위 연산을 수행하여 비트 플래그 설정 (state-using)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shader.use(); // 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-
-		// 모델 행렬을 단위행렬로 초기화
-		glm::mat4 model = glm::mat4(1.0f);
-
-		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
-		glm::mat4 view = camera.GetViewMatrix();
-
-		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
-		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
-
-		shader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
-		shader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
-
-		shader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
-
-
-		/* 첫 번째 큐브 그리기 */
-
-		// 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(cubeVAO);
-
-		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, cubeTexture);
-
-		// 첫 번째 큐브 위치로 이동시키는 이동행렬을 모델 행렬에 적용
-		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
-		shader.setMat4("model", model);
-
-		// 첫 번째 큐브 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-		/* 두 번째 큐브 그리기 */
-
-		// 모델행렬을 다시 단위행렬로 초기화
-		model = glm::mat4(1.0f);
-
-		// 두 번째 큐브 위치로 이동시키는 이동행렬을 모델 행렬에 적용
-		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-		shader.setMat4("model", model);
-
-		// 두 번째 큐브 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-		/* 바닥 평면 그리기 */
-
-		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(planeVAO);
-
-		// 바닥 평면 텍스쳐 객체도 0번 texture unit 을 공유하므로, 이번엔 0번 위치에 바닥 평면 텍스쳐가 바인딩되도록 활성화
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
-
-		// 바닥 평면 위치로 이동시키는 이동행렬(단위행렬 -> 별다른 이동 x)을 모델 행렬에 적용
-		shader.setMat4("model", glm::mat4(1.0));
-
-		// 바닥 평면 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// 실제 scene 그리기 -> off-screen framebuffer 에는 거울에 반사된 scene 을 렌더링할 것이므로, 카메라를 180도 회전해서 렌더링
+		drawScene(shader, cubeVAO, cubeTexture, planeVAO, floorTexture, true);
 
 
 
@@ -420,15 +365,18 @@ int main()
 		// 스크린 평면을 렌더링할 default framebuffer 을 다시 바인딩
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// default framebuffer 에는 스크린 평면만 렌더링하고, 스크린 평면의 프래그먼트가 폐기되면 안되므로, depth test 를 비활성화
-		glDisable(GL_DEPTH_TEST);
+		// 색상 버퍼 및 깊이 버퍼 초기화 -> 두 패스 모두에 scene 을 그려야 하므로, first pass 와 렌더링 설정을 모두 동일하게 맞춰줘야 함!
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// 색상 버퍼를 흰색으로 초기화 (사실 스크린 평면이 배경을 가득 채우고 있어서 어차피 눈에 안보임)
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		// 실제 scene 그리기
+		drawScene(shader, cubeVAO, cubeTexture, planeVAO, floorTexture);
 
 
 		/* 스크린 평면 그리기 */
+
+		// 스크린 평면은 가장 앞에 그리도록 depth test 비활성화
+		glDisable(GL_DEPTH_TEST);
 
 		// 스크린 평면에 적용할 쉐이더 프로그램 객체 바인딩
 		screenShader.use();
@@ -466,6 +414,100 @@ int main()
 	glfwTerminate();
 
 	return 0;
+}
+
+void drawScene(Shader& shader, unsigned int cubeVAO, unsigned int cubeTexture, unsigned int planeVAO, unsigned int floorTexture, bool drawBack)
+{
+	shader.use(); // 큐브에 적용할 쉐이더 프로그램 객체 바인딩
+
+	// 모델 행렬을 단위행렬로 초기화
+	glm::mat4 model = glm::mat4(1.0f);
+
+	// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
+	glm::mat4 view = camera.GetViewMatrix();
+
+	// 조건에 따라 카메라 180도 회전
+	if (drawBack)
+	{
+		// 카메라 Yaw 축 각도를 180도 회전
+		//camera.Yaw += 180.0f; 
+
+		// 마우스 이동량(offset)에 따른 카메라 오일러 각 재계산 및 카메라 로컬 축 벡터 업데이트 -> 여기서는 카메라 Yaw 축 벡터 업데이트를 위해 실행
+		// 이때, constrainPitch 를 false 로 설정한 이유는, 카메라 Pitch 축도 180도 뒤집어주기 위해 설정했다고 함.
+		// 그런데, 어차피 Pitch 축 각도를 180도 뒤집어봤자, Pitch 축 각도가 제한된 범위(-90 ~ 90)를 벗어나면 LookAt flip 현상에 의해 정확한 view 행렬이 계산되지 못함.
+		// 실제로 Pitch 축 각도를 180도 뒤집어서 렌더링해보면 매번 정확하게 scene 의 뒷면이 렌더링되지는 않음.
+		// 따라서, 오일러 각의 한계로 인해 Pitch 축 각도를 제한하던 제한하지 않던 정확하게 카메라 방향의 정 반대 뒷쪽 방향을 렌더링하지는 못한다는 뜻!
+		camera.ProcessMouseMovement(0, 0, true);
+
+		// 차라리 카메라의 Front 벡터를 뒤집어서 LookAt 행렬을 구하는 게 우리가 원하는 결과물에 더 근접함!
+		//camera.Front *= -1.0;
+
+		// 180도 회전된 카메라의 뷰 행렬(= LookAt 행렬) 가져오기
+		view = camera.GetViewMatrix();
+
+		// 카메라 Yaw 축 각도 원상복구
+		camera.Yaw -= 180.0f;
+
+		//camera.Front *= -1.0;
+
+		// 마찬가지로 카메라 Yaw 축 벡터 업데이트를 위해 실행
+		camera.ProcessMouseMovement(0, 0, true);
+	}
+
+
+	// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
+	// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
+	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+
+	shader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
+	shader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
+
+	shader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+
+
+	/* 첫 번째 큐브 그리기 */
+
+	// 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+	glBindVertexArray(cubeVAO);
+
+	// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, cubeTexture);
+
+	// 첫 번째 큐브 위치로 이동시키는 이동행렬을 모델 행렬에 적용
+	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+	shader.setMat4("model", model);
+
+	// 첫 번째 큐브 그리기 명령
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+	/* 두 번째 큐브 그리기 */
+
+	// 모델행렬을 다시 단위행렬로 초기화
+	model = glm::mat4(1.0f);
+
+	// 두 번째 큐브 위치로 이동시키는 이동행렬을 모델 행렬에 적용
+	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+	shader.setMat4("model", model);
+
+	// 두 번째 큐브 그리기 명령
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+	/* 바닥 평면 그리기 */
+
+	// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+	glBindVertexArray(planeVAO);
+
+	// 바닥 평면 텍스쳐 객체도 0번 texture unit 을 공유하므로, 이번엔 0번 위치에 바닥 평면 텍스쳐가 바인딩되도록 활성화
+	glBindTexture(GL_TEXTURE_2D, floorTexture);
+
+	// 바닥 평면 위치로 이동시키는 이동행렬(단위행렬 -> 별다른 이동 x)을 모델 행렬에 적용
+	shader.setMat4("model", glm::mat4(1.0));
+
+	// 바닥 평면 그리기 명령
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 // 전방선언된 콜백함수 정의
