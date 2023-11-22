@@ -102,7 +102,8 @@ int main()
 
 	// 스크린 평면에 적용할 <쉐이더 객체 / 프로그램 객체> 생성, 컴파일, 링킹
 	//Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen.fs");
-	Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_inversion.fs");
+	//Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_inversion.fs");
+	Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_grayscale.fs");
 
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
