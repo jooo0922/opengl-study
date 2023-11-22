@@ -105,7 +105,8 @@ int main()
 	//Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_inversion.fs");
 	//Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_grayscale.fs");
 	//Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_kernel_sharpen.fs");
-	Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_kernel_blur.fs");
+	//Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_kernel_blur.fs");
+	Shader screenShader("MyShaders/framebuffers_screen.vs", "MyShaders/framebuffers_screen_kernel_edge_detection.fs");
 
 	// 큐브의 정점 데이터 배열 초기화
 	float cubeVertices[] = {
