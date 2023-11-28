@@ -18,6 +18,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height); // GL
 void mouse_callback(GLFWwindow* window, double xpos, double ypos); // GLFW 윈도우에 마우스 입력 감지 시, 호출할 콜백함수
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset); // GLFW 윈도우에 스크롤 입력 감지 시, 호출할 콜백함수
 void processInput(GLFWwindow* window, Shader ourShader); // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
+unsigned int loadCubemap(std::vector<std::string> faces); // 큐브맵 텍스쳐 로드 함수 선언
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
@@ -167,6 +168,23 @@ int main()
 	glBindVertexArray(0);
 
 
+	/* 큐브맵 텍스쳐 로드 및 생성 */
+
+	// 큐브맵의 각 텍스쳐 이미지 url 을 Texture target Enum 방향 순서에 맞게 동적 배열(vector)에 초기화 
+	std::vector<std::string> faces
+	{
+		"resources/textures/skybox/right.jpg",
+		"resources/textures/skybox/left.jpg",
+		"resources/textures/skybox/top.jpg",
+		"resources/textures/skybox/bottom.jpg",
+		"resources/textures/skybox/front.jpg",
+		"resources/textures/skybox/back.jpg",
+	};
+
+	// 큐브맵 텍스쳐 로드 및 텍스쳐 객체 참조 ID 반환
+	unsigned int cubemapTexture = loadCubemap(faces);
+
+
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
 	while (!glfwWindowShouldClose(window))
@@ -295,3 +313,81 @@ void processInput(GLFWwindow* window, Shader ourShader)
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
 }
+
+// 큐브맵 텍스쳐 로드 함수 (주의할 점 하단 필기 참고)
+unsigned int loadCubemap(std::vector<std::string> faces)
+{
+	// 텍스쳐 객체(object) 참조 id 를 저장할 변수 선언
+	unsigned int textureID; 
+	
+	// 텍스쳐 객체 생성
+	glGenTextures(1, &textureID);
+
+	// 생성한 텍스쳐 객체 바인딩
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	// 로드한 이미지의 width, height, 색상 채널 개수를 저장할 변수 선언
+	int width, height, nrChannels;
+
+	// 반복문을 순회하며 6개의 텍스쳐 이미지 로드
+	for (unsigned int i = 0; i < faces.size(); i++)
+	{
+		// 이미지 데이터 가져와서 char 타입의 bytes 데이터로 저장. 
+		// 이미지 width, height, 색상 채널 변수의 주소값도 넘겨줌으로써, 해당 함수 내부에서 값을 변경. -> 출력변수 역할
+		// std::string 컨테이너를 그대로 전달할 수 없으므로, c-style 문자열(char*) 타입으로 변환하여 url 전달 (.c_str())
+		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+
+		if (data)
+		{
+			// 이미지 데이터 로드 성공 시 처리
+
+			// 로드한 이미지 데이터를 현재 바인딩된 텍스쳐 객체에 덮어쓰기
+			// Texture Target Enum 에 대응되는 정수값을 반복문 index 를 더해가며 순서대로 계산
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		}
+		else
+		{
+			// 이미지 데이터 로드 실패 시 처리
+			std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+		}
+
+		// 텍스쳐 객체에 이미지 데이터를 전달하고, 밉맵까지 생성 완료했다면, 로드한 이미지 데이터는 항상 메모리 해제할 것!
+		stbi_image_free(data);
+	}
+
+	// 현재 GL_TEXTURE_CUBE_MAP 상태에 바인딩된 텍스쳐 객체 설정하기
+	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정 (관련 필기 정리 하단 참고)
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); // 텍스쳐의 3차원 좌표(z값)에 대한 반복 모드 설정(-> 큐브맵 텍스쳐니까!)
+
+	// 텍스쳐 객체 참조 ID 반환
+	return textureID;
+}
+
+/*
+	큐브맵 텍스쳐 로드 함수는
+	일반 텍스쳐 로드 함수와 크게 다르지는 않음.
+
+	다만, 큐브맵 텍스쳐는 6개의 텍스쳐 이미지를
+	반복문을 순회하면서 로드해야 한다는 점.
+
+	또한, 6개 방향의 텍스쳐 이미지의
+	Texture target Enum 순서에 따라 차례대로 로드할 수 있도록
+	이미지 url 가 담긴 vector(동적배열)을 6개 방향의 순서에 따라 정렬하여
+	매개변수로 전달해줘야 한다는 점을 주의해야 한다!
+
+	6개 방향의 Texture target Enum 순서는 아래와 같이 정렬되도록 할 것! 
+	
+	Texture target Enum	    int 
+	+X (right)				0
+	-X (left)				1
+	+Y (top)				2
+	-Y (bottom)				3
+	+Z (front)				4
+	-Z (back)				5
+*/
