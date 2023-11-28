@@ -170,6 +170,8 @@ int main()
 
 	/* 큐브맵 텍스쳐 로드 및 생성 */
 
+	stbi_set_flip_vertically_on_load(false);
+
 	// 큐브맵의 각 텍스쳐 이미지 url 을 Texture target Enum 방향 순서에 맞게 동적 배열(vector)에 초기화 
 	std::vector<std::string> faces
 	{
@@ -258,10 +260,10 @@ int main()
 		view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 
 		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
-		ourShader.setMat4("view", view);
+		skyboxShader.setMat4("view", view);
 
 		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
-		ourShader.setMat4("projection", projection); 
+		skyboxShader.setMat4("projection", projection);
 		
 		// skybox 에 적용할 VAO 객체 바인딩
 		glBindVertexArray(skyboxVAO);
