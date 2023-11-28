@@ -184,6 +184,15 @@ int main()
 	// 큐브맵 텍스쳐 로드 및 텍스쳐 객체 참조 ID 반환
 	unsigned int cubemapTexture = loadCubemap(faces);
 
+	
+	/* skybox 쉐이더 객체 설정 */
+
+	// skybox 쉐이더 프로그램 바인딩
+	skyboxShader.use();
+
+	// skybox 쉐이더에 큐브맵 텍스쳐 객체를 바인딩할 texture unit 위치값 전송
+	skyboxShader.setInt("skybox", 0);
+
 
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
