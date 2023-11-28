@@ -94,11 +94,78 @@ int main()
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader ourShader("MyShaders/cubemaps.vs", "MyShaders/cubemaps.fs"); // 로드한 3D 모델에 텍스쳐를 적용하는 Shader 객체 생성
 
-	// Skybox 에 사용할 Shader 클래스 생성
+	// skybox 에 사용할 Shader 클래스 생성
 	Shader skyboxShader("MyShaders/skybox.vs", "MyShaders/skybox.fs");
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model ourModel("resources/models/backpack/backpack.obj");
+
+	// skybox 정점 데이터를 정적 배열로 선언 및 초기화
+	float skyboxVertices[] = {
+		// positions          
+		-1.0f,  1.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		-1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f, -1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f, -1.0f,
+		 1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f
+	};
+
+
+	/* skybox VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 */
+	
+	unsigned int skyboxVAO, skyboxVBO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
+	glGenVertexArrays(1, &skyboxVAO); // VAO(Vertex Array Object) 객체 생성
+	glGenBuffers(1, &skyboxVBO); // VBO(Vertex Buffer Object) 객체 생성 > VBO 객체를 만들어서 정점 데이터를 GPU 로 전송해야 한 번에 많은 양의 정점 데이터를 전송할 수 있음!
+
+	glBindVertexArray(skyboxVAO);  // VAO 객체 먼저 컨텍스트에 바인딩(연결)함. > 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
+
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO); // VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW); // 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+
+	// VBO 객체 설정
+	// 정점 위치 데이터 해석 방식 설정
+	glEnableVertexAttribArray(0); // 버텍스 쉐이더의 0번 location 변수만 사용하도록 활성화한 것!
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+	// skyboxVAO 객체에 저장해 줄 설정들을 끝마쳤으므로, 컨텍스트에서 바인딩 해제
+	glBindVertexArray(0);
+
 
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
