@@ -170,6 +170,7 @@ int main()
 
 	/* 큐브맵 텍스쳐 로드 및 생성 */
 
+	// 큐브맵 이미지는 y축 방향을 뒤집어서 로드하면 오히려 거꾸로 렌더링됨. -> 이미지 y축 방향을 뒤집지 않도록 설정!
 	stbi_set_flip_vertically_on_load(false);
 
 	// 큐브맵의 각 텍스쳐 이미지 url 을 Texture target Enum 방향 순서에 맞게 동적 배열(vector)에 초기화 
