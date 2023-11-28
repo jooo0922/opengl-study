@@ -94,6 +94,9 @@ int main()
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
 	Shader ourShader("MyShaders/cubemaps.vs", "MyShaders/cubemaps.fs"); // 로드한 3D 모델에 텍스쳐를 적용하는 Shader 객체 생성
 
+	// Skybox 에 사용할 Shader 클래스 생성
+	Shader skyboxShader("MyShaders/skybox.vs", "MyShaders/skybox.fs");
+
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model ourModel("resources/models/backpack/backpack.obj");
 
