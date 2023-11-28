@@ -207,7 +207,7 @@ int main()
 
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
 		// 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
-		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
 		// glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. 
 		// glEnable() 로 깊이 테스팅을 활성화한 상태이므로, 이전 프레임에 그렸던 깊이 버퍼도 초기화하도록,
@@ -241,9 +241,52 @@ int main()
 		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
 		ourModel.Draw(ourShader);
 
+
+		/* skybox 그리기 */
+
+		// skybox 렌더링 최적화를 위해 skybox 그리기 명령은 가장 마지막에 호출한다. (skybox.vs 관련 필기 참고)
+
+		// 깊이테스트 함수 변경 (깊이 테스트 함수 변경 관련 필기 참고)
+		glDepthFunc(GL_LEQUAL);
+
+		// skybox 쉐이더 프로그램 바인딩
+		skyboxShader.use();
+
+		// 카메라 뷰 행렬에서 이동행렬 컴포넌트를 제외한 좌상단 3*3 행렬만 쉐이더로 전달함 
+		// (https://learnopengl.com/Lighting/Basic-Lighting 참고. 노말행렬 계산 시, 모델행렬에서 이동행렬 파트만 제외한 것과 동일한 원리!)
+		// why? 카메라가 '이동'하더라도 skybox 마저도 카메라 반대방향으로 이동하면 안되니까! -> skybox 는 카메라가 움직이더라도 배경이니까 가만히 있어야 함!
+		view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
+		ourShader.setMat4("view", view);
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
+		ourShader.setMat4("projection", projection); 
+		
+		// skybox 에 적용할 VAO 객체 바인딩
+		glBindVertexArray(skyboxVAO);
+
+		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+
+		// skybox 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		// skyboxVAO 객체 바인딩 해제
+		glBindVertexArray(0);
+
+		// 깊이테스트 함수를 기본값으로 원상복구
+		glDepthFunc(GL_LESS);
+
+
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
 	}
+
+	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
+	glDeleteVertexArrays(1, &skyboxVAO);
+	glDeleteBuffers(1, &skyboxVBO);
 
 	glfwTerminate(); // while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 
@@ -399,4 +442,23 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 	-Y (bottom)				3
 	+Z (front)				4
 	-Z (back)				5
+*/
+
+/*
+	skybox 렌더링 시, 깊이 테스트 함수를 GL_LEQUAL 로 설정하는 이유?
+
+
+	skybox.vs 파일에서 관련 필기를 참고해보면,
+	skybox 는 렌더링 최적화를 위해 깊이값이 모두 1 로 계산될 것임.
+	
+	그런데, depth buffer 의 초기값 또한 항상 1 로 설정되기 때문에, 
+	깊이테스트 기본 모드인 GL_LESS 로 수행하면,
+
+	skybox 의 깊이값과 depth buffer 의 초기값이 동일하여
+	skybox 의 모든 프래그먼트들이 discard 되어버리는 문제가 발생함.
+
+	이를 방지하기 위해,
+	깊이 테스트 모드를 GL_LEQUAL 로 설정함으로써,
+	현재 depth buffer 의 값보다 '작거나 같으면'
+	깊이 테스트를 통과할 수 있도록 변경한 것임!
 */
