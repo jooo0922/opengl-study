@@ -93,7 +93,8 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
-	Shader ourShader("MyShaders/cubemaps.vs", "MyShaders/cubemaps.fs"); // 로드한 3D 모델에 텍스쳐를 적용하는 Shader 객체 생성
+	//Shader ourShader("MyShaders/cubemaps.vs", "MyShaders/cubemaps.fs"); // 로드한 3D 모델에 텍스쳐를 적용하는 Shader 객체 생성
+	Shader ourShader("MyShaders/cubemaps.vs", "MyShaders/cubemaps_refraction.fs"); // 큐브맵 굴절 재질을 계산하는 프래그먼트 쉐이더 적용
 
 	// skybox 에 사용할 Shader 클래스 생성
 	Shader skyboxShader("MyShaders/skybox.vs", "MyShaders/skybox.fs");
