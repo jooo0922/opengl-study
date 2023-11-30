@@ -197,6 +197,15 @@ int main()
 	skyboxShader.setInt("skybox", 0);
 
 
+	/* ourShader 쉐이더 객체 설정 */
+
+	// ourShader 쉐이더 프로그램 바인딩
+	ourShader.use();
+
+	// ourShader 쉐이더에 큐브맵 텍스쳐 객체를 바인딩할 texture unit 위치값 전송 (모든 텍스쳐는 0번 unit 사용 통일)
+	ourShader.setInt("skybox", 0);
+
+
 	// while 문으로 렌더링 루프 구현
 	// glfwWindowShouldClose(GLFWwindow* window) 로 현재 루프 시작 전, GLFWwindow 를 종료하라는 명령이 있었는지 검사.
 	while (!glfwWindowShouldClose(window))
@@ -240,6 +249,7 @@ int main()
 		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // 모델을 원점으로 이동시키는 이동행렬 적용
 		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); // 모델의 크기를 조정하는 크기행렬 적용
 		ourShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+		ourShader.setVec3("cameraPos", camera.Position); // 쉐이더 내부에서 뷰 벡터 계산을 위해 카메라 위치 전송
 
 		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
 		ourModel.Draw(ourShader);
