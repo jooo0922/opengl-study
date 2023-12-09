@@ -4,10 +4,10 @@ layout(location = 0) in vec3 aPos;
 
 // 변환 행렬을 전송받는 uniform 변수 선언
 
-// 뷰 행렬과 투영 행렬은 uniform block 으로 선언 
+// 뷰 행렬과 투영 행렬은 uniform block 으로 선언
 layout(std140) uniform Matrices {
-  mat4 view; // 뷰 행렬
   mat4 projection; // 투영 행렬
+  mat4 view; // 뷰 행렬
 };
 
 uniform mat4 model; // 모델 행렬
@@ -15,6 +15,25 @@ uniform mat4 model; // 모델 행렬
 void main() {
   gl_Position = projection * view * model * vec4(aPos, 1.0); // 오브젝트 공간 좌표에 모델 행렬 > 뷰 행렬 > 투영 행렬 순으로 곱해서 좌표계를 변환시킴.
 }
+
+/*
+  uniform block 선언 시 매우 유의할 점!!
+
+  uniform block 내부에 선언된 uniform 변수들의 순서와
+  .cpp 코드에서 glBufferSubData() 함수로 
+  uniform 덮어쓰는 데이터들의 offset 을
+  정확히 같은 순서로 일치시켜야 함!
+
+  예를 들어, 
+  mat4 projection 변수를 
+  uniform block 에서 첫 번째 순서로 선언했다면,
+
+  glBufferSubData() 로 projection 변수의 데이터를
+  덮어쓸 때, offset 값을 무조건 0으로 지정해줘야 한다는 의미!
+
+  이는 곧, glBufferSubData() 함수로 설정한 offset 순서와 다르게
+  uniform block 을 선언해도 안된다는 뜻이기도 함!
+*/
 
 /*
   Uniform block 이란 무엇인가?
