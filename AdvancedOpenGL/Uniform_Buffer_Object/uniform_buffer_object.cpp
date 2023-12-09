@@ -90,8 +90,11 @@ int main()
 	// 프래그먼트 값을 덮어쓸 지 말 지를 결정하는 Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// Shader 클래스를 생성함으로써, 쉐이더 객체 / 프로그램 객체 생성 및 컴파일 / 링킹
+	// 각 큐브마다 서로 다른 색상을 출력하는 4개의 쉐이더 객체 생성
 	Shader shaderRed("MyShaders/uniform_buffer_object.vs", "MyShaders/red.fs");
+	Shader shaderGreen("MyShaders/uniform_buffer_object.vs", "MyShaders/green.fs");
+	Shader shaderBlue("MyShaders/uniform_buffer_object.vs", "MyShaders/blue.fs");
+	Shader shaderYellow("MyShaders/uniform_buffer_object.vs", "MyShaders/yellow.fs");
 
 	// 큐브의 정점 데이터 정적 배열 초기화
 	float cubeVertices[] = {
@@ -173,6 +176,46 @@ int main()
 
 	// 마찬가지로, VAO 객체도 OpenGL 컨텍스트로부터 바인딩 해제 
 	glBindVertexArray(0);
+
+
+	/* Uniform Buffer Object (이하 'UBO') 사용하기 (UBO 관련 하단 필기 참고) */
+
+	/* Uniform block 바인딩 (UBO 와 Uniform blocks 관계 하단 필기 참고) */
+
+	// 각 큐브마다 적용될 쉐이더 객체의 Uniform block index 가져오기
+	unsigned int uniformBlockIndexRed = glGetUniformBlockIndex(shaderRed.ID, "Matrices");
+	unsigned int uniformBlockIndexGreen = glGetUniformBlockIndex(shaderGreen.ID, "Matrices");
+	unsigned int uniformBlockIndexBlue = glGetUniformBlockIndex(shaderBlue.ID, "Matrices");
+	unsigned int uniformBlockIndexYellow = glGetUniformBlockIndex(shaderYellow.ID, "Matrices");
+
+	// 각 쉐이더 프로그램의 Uniform block 들을 모두 0번 binding point 에 연결
+	// 추후 UBO 객체도 0번 binding point 에 바인딩 할 것임!
+	glUniformBlockBinding(shaderRed.ID, uniformBlockIndexRed, 0);
+	glUniformBlockBinding(shaderGreen.ID, uniformBlockIndexGreen, 0);
+	glUniformBlockBinding(shaderBlue.ID, uniformBlockIndexBlue, 0);
+	glUniformBlockBinding(shaderYellow.ID, uniformBlockIndexYellow, 0);
+
+	
+	/* UBO 객체 생성 및 설정 */
+	
+	// UBO 객체 참조 ID 가 저장될 변수 선언
+	unsigned int uboMatrices;
+
+	// UBO 객체 생성
+	glGenBuffers(1, &uboMatrices);
+
+	// GL_UNIFORM_BUFFER 상태에 바인딩
+	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+
+	// 저장할 데이터 크기(mat4 행렬 2개)만큼 UBO 객체에 메모리 할당
+	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+
+	// UBO 객체 바인딩 해제
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	// UBO 객체를 0번 binding point 에 바인딩
+	// -> 0번 offset 부터 mat4 행렬 2개의 byte 크기까지의 범위만큼 (== 그냥 UBO 메모리 전체 사이즈만큼) 바인딩
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(glm::mat4));
 
 
 	// while 문으로 렌더링 루프 구현
@@ -352,4 +395,81 @@ void processInput(GLFWwindow* window, Shader ourShader)
 	필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
 
 	즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
+*/
+
+/*
+	Uniform Buffer Object (이하 'UBO') 란 무엇인가?
+
+
+	사실 UBO 는 LearnOpenGL 본문에서 개념을 가장 잘 설명해주고 있지만,
+	간단하게 정리하면 다음과 같음.
+
+	우리가 쉐이더에 glUniform~() 이런 함수를 사용해서 
+	uniform 변수에 값을 전송하게 되는데,
+	(우리는 shader_s.h 에 클래스로 이 작업을 추상화 했었지?)
+
+	각 쉐이더 프로그램마다 동일한 uniform 값을
+	반복적으로 전송해야 하는 상황이 있음.
+
+	예를 들어, 변환행렬 중 view, projection 행렬은
+	사실 카메라의 움직임 및 투영과 관련된 변환이기 때문에
+	일반적으로 scene 안의 모든 오브젝트들에 동일하게 적용됨.
+
+	따라서, 그 오브젝트들이 바인딩하여 사용하고 있는
+	모든 쉐이더 프로그램들에 매번 똑같은 view, projection 행렬을
+	반복해서 전송해왔었지.
+
+
+	차라리 이렇게 할거면,
+	이러한 반복적으로 사용되는 uniform 데이터들은
+	fixed GPU 메모리 영역에 한 번만 올려두고,
+
+	마치 global(전역변수) 처럼 모든 쉐이더 프로그램들이 
+	해당 global uniform 변수를 가져다가 사용하는 방식이
+	더 효율적이겠지?
+
+	이럴 때, global 하게 사용할 uniform 변수들을
+	저장할 수 있게 해주는 OpenGL 버퍼 객체가 UBO 인 것임!
+*/
+
+/*
+	Uniform Buffer Object(UBO) 와 Uniform block 의 관계
+
+
+	Uniform block 에 대한 설명은
+	버텍스 쉐이더에 정리해놨으니 참고하면 됨.
+
+	일단, 각 Uniform block 들이
+	UBO 에 쓰여진 데이터를 가져다가 쓰려면
+	둘을 서로 연결(linking) 시켜줘야 함.
+
+	
+	이때, OpenGL Context 에서 지원하는
+	'binding point' 라는 개념이 등장함.
+
+	Uniform Buffer Object 를 하나만 사용하지는 않기 때문에
+	여러 개의 UBO 객체를 만들어서 binding 해야하는 상황이 생길 수 있음.
+
+	이럴 경우를 대비해서,
+	GL_UNIFORM_BUFFER 상태에 UBO 객체를 바인딩할 때,
+	"몇 번 위치에 바인딩할 것이냐" 를 설정해서
+	각 UBO 객체들이 바인딩된 위치를 구분할 수 있도록 해준 index 값이
+	'binding point' 라고 보면 됨.
+
+	그렇다면, 이쯤 되면
+	결국 어떤 Uniform block 이 특정 UBO 객체에 
+	쓰여진 데이터를 사용하고자 한다면,
+
+	해당 UBO 객체가 바인딩된 binding point 에
+	Uniform block 도 똑같이 바인딩해주면 된다는 게 감이 오지?
+
+	이때 사용하는 OpenGL 함수가
+	glUniformBlockBinding() 이라고 보면 됨.
+
+	또한, 하나의 쉐이더 프로그램에서도
+	여러 개의 Uniform block 을 선언할 수 있기 때문에,
+	
+	"몇 번째 Uniform block 을 바인딩 할거냐" 를 알려주는 index 값을 
+	glGetUniformBlockIndex() 함수로 얻어와서
+	하나의 쉐이더 안에서 선언된 각 Uniform block 을 구분할 수 있도록 해줌! 
 */
