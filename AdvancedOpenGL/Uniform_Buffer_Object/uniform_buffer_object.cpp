@@ -218,6 +218,25 @@ int main()
 	glBindBufferRange(GL_UNIFORM_BUFFER, 0, uboMatrices, 0, 2 * sizeof(glm::mat4));
 
 
+	/* projection 행렬 데이터를 UBO 객체에 쓰기 */
+	
+	// 사실 projection 행렬도 렌더링 루프 안에서 계산해주는 게 더 좋지만,
+	// 일단 fov 값을 변경하지 않고, zoom-in/out 동작을 사용하지 않는다는 가정하에
+	// 자주 변경될 값은 없으므로, 렌더링 루프 진입 전에 UBO 객체에 저장함!
+	
+	// 투영 행렬 생성
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); 
+
+	// 투영행렬을 덮어쓸 UBO 객체 바인딩
+	glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+
+	// 0번 offset 지점부터 mat4 타입의 byte size 까지 투영행렬 데이터 덮어쓰기 (glm::value_ptr() 함수 설명 하단 참고)
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projection));
+
+	// 투영행렬을 UBO 객체에 덮어쓰기르 완료했다면 객체 바인딩 해제
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
@@ -244,12 +263,10 @@ int main()
 
 		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
 		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+
 
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
-
-		shaderRed.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
 		shaderRed.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
 
 		glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
@@ -472,4 +489,29 @@ void processInput(GLFWwindow* window, Shader ourShader)
 	"몇 번째 Uniform block 을 바인딩 할거냐" 를 알려주는 index 값을 
 	glGetUniformBlockIndex() 함수로 얻어와서
 	하나의 쉐이더 안에서 선언된 각 Uniform block 을 구분할 수 있도록 해줌! 
+*/
+
+/*
+	glm::value_ptr()
+
+
+	glBufferSubData() 로 행렬 데이터를
+	UBO 객체에 덮어쓸 때,
+
+	마지막 인자 전달 시, glm::value_ptr() 함수를 사용했었지?
+	
+	얘는 glm 라이브러리에서 취급하는 
+	데이터 타입을 가리키는 포인터 함수를 반환함.
+
+	예를 들어, glm::value_ptr(glm::mat4 타입의 변수)
+	이런 식으로 glm::mat4 타입의 변수를 매개변수로 넘겨줬다면,
+	glm::mat4 타입 데이터의 첫 번째 요소가 저장된 메모리 공간을
+	가리키는 주소값인 glm::mat4* 를 반환하는 것이지!
+
+	이게 필요한 이유가 뭐냐면,
+	glBufferSubData() 같은 OpenGL 함수들을 통해
+	행렬이나 벡터같은 glm의 수학적 데이터 타입을 전달하려면
+	
+	해당 glm 데이터 타입을 가리키는 포인터 형태로
+	전달해줘야 하기 때문!
 */
