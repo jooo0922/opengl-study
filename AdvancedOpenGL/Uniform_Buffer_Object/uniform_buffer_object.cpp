@@ -257,18 +257,26 @@ int main()
 		// ...
 
 
-		/* 빨간색 큐브 그리기 */
-
-		shaderRed.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-
-		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
-		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
-
+		/* view 행렬 데이터를 UBO 객체에 쓰기(업데이트) */
 
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
-		shaderRed.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
 
+		// 뷰 행렬을 덮어쓸 UBO 객체 바인딩
+		glBindBuffer(GL_UNIFORM_BUFFER, uboMatrices);
+
+		// 첫 번째 mat4 타입의 byte 까지 저장된 (== projection 행렬이 저장된) 지점부터 
+		// mat4 타입의 byte 지점까지 투영행렬 데이터 덮어쓰기
+		// -> 항상 std140 표준 메모리 레이아웃 기준 offset 값은 '저장될 데이터 크기의 배수' 로 지정해줄 것!
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
+
+		// 뷰 행렬을 UBO 객체에 덮어쓰기르 완료했다면 객체 바인딩 해제
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+
+		/* 빨간색 큐브 그리기 */
+
+		shaderRed.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
 		glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
 		shaderRed.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
 
