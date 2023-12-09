@@ -146,20 +146,20 @@ int main()
 	/* 큐브의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고) */ 
 	
 	// VBO, VAO 객체(object) 참조 id 를 저장할 변수
-	unsigned int VBO, cubeVAO; 
+	unsigned int cubeVBO, cubeVAO; 
 
 	// VAO(Vertex Array Object) 객체 생성
 	glGenVertexArrays(1, &cubeVAO); 
 
 	// VBO(Vertex Buffer Object) 객체 생성
-	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &cubeVBO);
 
 	// VAO 객체 먼저 컨텍스트에 바인딩(연결)함. 
 	// -> 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
 	glBindVertexArray(cubeVAO); 
 
 	// VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
 
 	// 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
 	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW); 
@@ -268,7 +268,7 @@ int main()
 		// 첫 번째 mat4 타입의 byte 까지 저장된 (== projection 행렬이 저장된) 지점부터 
 		// mat4 타입의 byte 지점까지 투영행렬 데이터 덮어쓰기
 		// -> 항상 std140 표준 메모리 레이아웃 기준 offset 값은 '저장될 데이터 크기의 배수' 로 지정해줄 것!
-		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(projection));
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
 
 		// 뷰 행렬을 UBO 객체에 덮어쓰기르 완료했다면 객체 바인딩 해제
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -276,15 +276,77 @@ int main()
 
 		/* 빨간색 큐브 그리기 */
 
-		shaderRed.use(); // 빛을 받는 큐브에 적용할 쉐이더 프로그램 객체 바인딩
-		glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
-		shaderRed.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+		// 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(cubeVAO);
 
-		// 빛을 받는 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(cubeVAO); 
+		// 빨간색 큐브에 적용할 쉐이더 프로그램 객체 바인딩
+		shaderRed.use(); 
 
-		// 실제 primitive 그리기 명령을 수행
+		// 모델 행렬을 단위행렬로 초기화
+		glm::mat4 model = glm::mat4(1.0f);
+
+		// 빨간색 큐브에 적용할 모델행렬 계산
+		model = glm::translate(model, glm::vec3(-0.75f, 0.75f, 0.0f));
+
+		// 빨간색 큐브에 적용할 모델행렬을 uniform 변수로 전송 (model 행렬은 큐브마다 다르니 UBO 에 저장해서 쓰기에 부적합)
+		shaderRed.setMat4("model", model);
+
+		// 빨간색 큐브 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 36); 
+
+
+		/* 초록색 큐브 그리기 */
+
+		// 초록색 큐브에 적용할 쉐이더 프로그램 객체 바인딩
+		shaderGreen.use();
+
+		// 모델 행렬을 단위행렬로 초기화
+		model = glm::mat4(1.0f);
+
+		// 초록색 큐브에 적용할 모델행렬 계산
+		model = glm::translate(model, glm::vec3(0.75f, 0.75f, 0.0f));
+
+		// 초록색 큐브에 적용할 모델행렬을 uniform 변수로 전송 (model 행렬은 큐브마다 다르니 UBO 에 저장해서 쓰기에 부적합)
+		shaderGreen.setMat4("model", model);
+
+		// 초록색 큐브 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+		/* 노란색 큐브 그리기 */
+
+		// 노란색 큐브에 적용할 쉐이더 프로그램 객체 바인딩
+		shaderYellow.use();
+
+		// 모델 행렬을 단위행렬로 초기화
+		model = glm::mat4(1.0f);
+
+		// 노란색 큐브에 적용할 모델행렬 계산
+		model = glm::translate(model, glm::vec3(-0.75f, -0.75f, 0.0f));
+
+		// 노란색 큐브에 적용할 모델행렬을 uniform 변수로 전송 (model 행렬은 큐브마다 다르니 UBO 에 저장해서 쓰기에 부적합)
+		shaderYellow.setMat4("model", model);
+
+		// 노란색 큐브 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+		/* 파란색 큐브 그리기 */
+
+		// 파란색 큐브에 적용할 쉐이더 프로그램 객체 바인딩
+		shaderBlue.use();
+
+		// 모델 행렬을 단위행렬로 초기화
+		model = glm::mat4(1.0f);
+
+		// 파란색 큐브에 적용할 모델행렬 계산
+		model = glm::translate(model, glm::vec3(0.75f, -0.75f, 0.0f));
+
+		// 파란색 큐브에 적용할 모델행렬을 uniform 변수로 전송 (model 행렬은 큐브마다 다르니 UBO 에 저장해서 쓰기에 부적합)
+		shaderBlue.setMat4("model", model);
+
+		// 파란색 큐브 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -296,7 +358,7 @@ int main()
 
 	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
 	glDeleteVertexArrays(1, &cubeVAO);
-	glDeleteBuffers(1, &VBO);
+	glDeleteBuffers(1, &cubeVBO);
 
 	// while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 	glfwTerminate(); 
