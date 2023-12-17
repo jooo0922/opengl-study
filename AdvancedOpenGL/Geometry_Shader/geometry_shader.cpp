@@ -91,7 +91,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// Geometry Shader 를 포함하는 쉐이더 객체 생성
-	Shader shader("MyShaders/geometry_shader.vs", "MyShaders/geometry_shader.fs");
+	Shader shader("MyShaders/geometry_shader.vs", "MyShaders/geometry_shader.fs", "MyShaders/geometry_shader.gs");
 
 	// points primitive 로 입력할 정점 데이터 정적 배열 초기화
 	float points[] = {
