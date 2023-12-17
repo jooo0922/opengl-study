@@ -131,6 +131,9 @@ int main()
 	// 정점 위치 데이터(0번 location 입력변수 in vec2 aPos 에 전달할 데이터) 해석 방식 정의
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 
+	// 1번 location 변수 사용 활성화
+	glEnableVertexAttribArray(1);
+
 	// 정점 색상 데이터(1번 location 입력변수 in vec3 aColor 에 전달할 데이터) 해석 방식 정의
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
 
