@@ -32,21 +32,25 @@ public:
 
 	// Shader 클래스 생성자 (shader 파일 읽기 및 compile, linking 등의 작업 담당)
 	// 생성자 인자로 쉐이더 파일 경로 문자열에 대한 참조 (포인터)를 전달받음.
-	Shader(const GLchar* vertexPath, const GLchar* fragmentPath)
+	// (+ geometry shader 파일 경로를 선택적으로 입력받을 수 있도록 매개변수 추가 
+	Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const GLchar* geometryPath = nullptr)
 	{
 		// 쉐이더 코드를 std::string(문자열) 타입으로 파싱하여 저장할 변수 선언 
 		std::string vertexCode;
 		std::string fragmentCode;
+		std::string geometryCode;
 
 		// std::ifstream 은 파일에서 데이터를 읽어오는 작업을 수행하는 입력 파일 스트림(input file stream) 클래스
 		// <fstream> 에 정의된 C++ 표준 라이브러리 클래스
 		std::ifstream vShaderFile;
 		std::ifstream fShaderFile;
+		std::ifstream gShaderFile;
 
 		// 입력 파일 스트림 클래스에서 파일 읽기 작업 도중 failbit 및 badbit 관련 에러가 발생하면,
 		// C++ 예외 처리 기능을 통해 프로그램 흐름을 제어하도록 함. > 파일 읽기 작업의 오류 대응 및 안정성 확보
 		vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+		gShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
 		// 이제 try...catch 문으로 파일 읽기 작업에 대한 예외처리가 가능해 짐!
 		try
@@ -94,6 +98,24 @@ public:
 			// 저장해둔 문자열 스트림을 실제 문자열로 파싱
 			vertexCode = vShaderStream.str();
 			fragmentCode = fShaderStream.str();
+
+			// 만약, geometry shader 파일 경로도 입력받았다면, 
+			// geometry shader 에 대해서도 동일하게 처리해 준다!
+			if (geometryPath != nullptr)
+			{
+				// 파일 열기
+				gShaderFile.open(geometryPath);
+
+				// 스트림 버퍼에서 읽어온 데이터를 문자열 스트림 변수에 흘려보내서 저장
+				std::stringstream gShaderStream;
+				gShaderStream << gShaderFile.rdbuf();
+
+				// 파일 닫기
+				gShaderFile.close();
+
+				//저장해둔 문자열 스트림을 실제 std::string 타입 문자열로 파싱
+				geometryCode = gShaderStream.str();
+			}
 		}
 		catch (std::ifstream::failure e)
 		{
@@ -136,16 +158,43 @@ public:
 		glCompileShader(fragment); // 쉐이더 소스코드 문자열이 연결된 프래그먼트 쉐이더 객체(object)를 런타임에 동적으로 컴파일
 		checkCompileErrors(fragment, "FRAGMENT"); // 쉐이더 컴파일 에러 대응
 
+		// 지오메트리 쉐이더 파일 경로를 입력 받았다면, 동일한 작업을 처리해 줌!
+		unsigned int geometry; // 지오메트리 쉐이더 객체(object)의 참조 id 를 저장할 변수
+		if (geometryPath != nullptr)
+		{
+			// 지오메트리 쉐이더 문자열을 C 스타일 문자열로 변환
+			const char* gShaderCode = geometryCode.c_str();
+
+			// 지오메트리 쉐이더 생성 및 컴파일
+			geometry = glCreateShader(GL_GEOMETRY_SHADER); // OpenGL 쉐이더 객체(object) 생성
+			glShaderSource(geometry, 1, &gShaderCode, NULL); // 생성된 지오메트리 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임
+			glCompileShader(geometry); // 쉐이더 소스코드 문자열이 연결된 지오메트리 쉐이더 객체(object)를 런타임에 동적으로 컴파일
+			checkCompileErrors(geometry, "GEOMETRY"); // 쉐이더 컴파일 에러 대응
+		}
+
 		// 쉐이더 프로그램 객체 생성 및 쉐이더 객체 linking
 		ID = glCreateProgram(); // OpenGL 쉐이더 프로그램 객체(object)의 참조 id를 멤버변수에 저장
 		glAttachShader(ID, vertex); // 그래픽 파이프라인의 입출력 순서에 따라 쉐이더를 프로그램 객체에 붙여줘야 함. (즉, 버텍스 쉐이더 -> 프래그먼트 쉐이더 순!)
 		glAttachShader(ID, fragment);
+
+		// 지오메트리 쉐이더 파일 경로를 입력 받았다면, 동일한 작업을 처리해 줌!
+		if (geometryPath != nullptr)
+		{
+			glAttachShader(ID, geometry);
+		}
+
 		glLinkProgram(ID); // 쉐이더 프로그램에 붙여진 쉐이더 객체를 연결 > 이때 쉐이더 간 입출력 변수들끼리 연결됨!
 		checkCompileErrors(ID, "PROGRAM"); // 쉐이더 프로그램 linking 에러 대응
 
 		// 이미 쉐이더 프로그램 객체에 연결한 쉐이더 객체들은 더 이상 불필요하므로 제거!
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
+
+		// 지오메트리 쉐이더 파일 경로를 입력 받았다면, 동일한 작업을 처리해 줌!
+		if (geometryPath != nullptr)
+		{
+			glDeleteShader(geometry);
+		}
 	}
 
 	// ShaderProgram 객체 활성화(바인딩)
