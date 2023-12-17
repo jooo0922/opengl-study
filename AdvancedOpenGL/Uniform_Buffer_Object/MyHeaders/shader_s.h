@@ -16,8 +16,8 @@
 
 /*
 	Shader 클래스
-	
-	쉐이더 파일 파싱, 컴파일, 컴파일 에러 예외처리, 
+
+	쉐이더 파일 파싱, 컴파일, 컴파일 에러 예외처리,
 	쉐이더 프로그램 생성 및 관리, uniform 변수에 데이터 전송 등
 
 	쉐이더와 관련된 모든 작업들을 관리하는 클래스!
@@ -32,25 +32,21 @@ public:
 
 	// Shader 클래스 생성자 (shader 파일 읽기 및 compile, linking 등의 작업 담당)
 	// 생성자 인자로 쉐이더 파일 경로 문자열에 대한 참조 (포인터)를 전달받음.
-	// (+ geometry shader 파일 경로를 선택적으로 입력받을 수 있도록 매개변수 추가 
-	Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const GLchar* geometryPath = nullptr)
+	Shader(const GLchar* vertexPath, const GLchar* fragmentPath)
 	{
 		// 쉐이더 코드를 std::string(문자열) 타입으로 파싱하여 저장할 변수 선언 
 		std::string vertexCode;
 		std::string fragmentCode;
-		std::string geometryCode;
 
 		// std::ifstream 은 파일에서 데이터를 읽어오는 작업을 수행하는 입력 파일 스트림(input file stream) 클래스
 		// <fstream> 에 정의된 C++ 표준 라이브러리 클래스
 		std::ifstream vShaderFile;
 		std::ifstream fShaderFile;
-		std::ifstream gShaderFile;
 
 		// 입력 파일 스트림 클래스에서 파일 읽기 작업 도중 failbit 및 badbit 관련 에러가 발생하면,
 		// C++ 예외 처리 기능을 통해 프로그램 흐름을 제어하도록 함. > 파일 읽기 작업의 오류 대응 및 안정성 확보
 		vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 		fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-		gShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
 		// 이제 try...catch 문으로 파일 읽기 작업에 대한 예외처리가 가능해 짐!
 		try
@@ -64,7 +60,7 @@ public:
 				stringstream(문자열 스트림)
 
 				문자열 스트림이란,
-				문자열은 아니지만, 문자열을 마치 데이터 스트림(stream) 처럼 
+				문자열은 아니지만, 문자열을 마치 데이터 스트림(stream) 처럼
 				다룰 수 있도록 해주는 클래스를 뜻함.
 
 				여기서 스트림이란,
@@ -76,14 +72,14 @@ public:
 				그래서 std::ifstream 클래스는
 				.rdbuf() 라는 함수를 사용함으로써,
 
-				입출력 장치인 파일의 내용을 스트림 버퍼에서 읽어와서 
+				입출력 장치인 파일의 내용을 스트림 버퍼에서 읽어와서
 				해당 내용을 데이터로 흘려보낸다.
 
 				결국, .rdbuf() 는 스트림 버퍼에서 읽어온 내용을
 				'문자열 스트림' 이라는 데이터 타입으로 반환하다 보니,
 
 				먼저 std::stringstream 타입의 변수에 반환된 문자열 스트림을 저장하고,
-				해당 문자열 스트림을 실제 '문자열'로 파싱해서 사용하도록 
+				해당 문자열 스트림을 실제 '문자열'로 파싱해서 사용하도록
 				코드를 짜게 된 것!
 			*/
 			std::stringstream vShaderStream, fShaderStream;
@@ -98,24 +94,6 @@ public:
 			// 저장해둔 문자열 스트림을 실제 문자열로 파싱
 			vertexCode = vShaderStream.str();
 			fragmentCode = fShaderStream.str();
-
-			// 만약, geometry shader 파일 경로도 입력받았다면, 
-			// geometry shader 에 대해서도 동일하게 처리해 준다!
-			if (geometryPath != nullptr)
-			{
-				// 파일 열기
-				gShaderFile.open(geometryPath);
-
-				// 스트림 버퍼에서 읽어온 데이터를 문자열 스트림 변수에 흘려보내서 저장
-				std::stringstream gShaderStream;
-				gShaderStream << gShaderFile.rdbuf();
-
-				// 파일 닫기
-				gShaderFile.close();
-
-				//저장해둔 문자열 스트림을 실제 std::string 타입 문자열로 파싱
-				geometryCode = gShaderStream.str();
-			}
 		}
 		catch (std::ifstream::failure e)
 		{
@@ -158,43 +136,16 @@ public:
 		glCompileShader(fragment); // 쉐이더 소스코드 문자열이 연결된 프래그먼트 쉐이더 객체(object)를 런타임에 동적으로 컴파일
 		checkCompileErrors(fragment, "FRAGMENT"); // 쉐이더 컴파일 에러 대응
 
-		// 지오메트리 쉐이더 파일 경로를 입력 받았다면, 동일한 작업을 처리해 줌!
-		unsigned int geometry; // 지오메트리 쉐이더 객체(object)의 참조 id 를 저장할 변수
-		if (geometryPath != nullptr)
-		{
-			// 지오메트리 쉐이더 문자열을 C 스타일 문자열로 변환
-			const char* gShaderCode = geometryCode.c_str();
-
-			// 지오메트리 쉐이더 생성 및 컴파일
-			geometry = glCreateShader(GL_GEOMETRY_SHADER); // OpenGL 쉐이더 객체(object) 생성
-			glShaderSource(geometry, 1, &gShaderCode, NULL); // 생성된 지오메트리 쉐이더 객체(object)에 쉐이더 소스코드 문자열 붙임
-			glCompileShader(geometry); // 쉐이더 소스코드 문자열이 연결된 지오메트리 쉐이더 객체(object)를 런타임에 동적으로 컴파일
-			checkCompileErrors(geometry, "GEOMETRY"); // 쉐이더 컴파일 에러 대응
-		}
-
 		// 쉐이더 프로그램 객체 생성 및 쉐이더 객체 linking
 		ID = glCreateProgram(); // OpenGL 쉐이더 프로그램 객체(object)의 참조 id를 멤버변수에 저장
 		glAttachShader(ID, vertex); // 그래픽 파이프라인의 입출력 순서에 따라 쉐이더를 프로그램 객체에 붙여줘야 함. (즉, 버텍스 쉐이더 -> 프래그먼트 쉐이더 순!)
 		glAttachShader(ID, fragment);
-
-		// 지오메트리 쉐이더 파일 경로를 입력 받았다면, 동일한 작업을 처리해 줌!
-		if (geometryPath != nullptr)
-		{
-			glAttachShader(ID, geometry);
-		}
-
 		glLinkProgram(ID); // 쉐이더 프로그램에 붙여진 쉐이더 객체를 연결 > 이때 쉐이더 간 입출력 변수들끼리 연결됨!
 		checkCompileErrors(ID, "PROGRAM"); // 쉐이더 프로그램 linking 에러 대응
 
 		// 이미 쉐이더 프로그램 객체에 연결한 쉐이더 객체들은 더 이상 불필요하므로 제거!
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
-
-		// 지오메트리 쉐이더 파일 경로를 입력 받았다면, 동일한 작업을 처리해 줌!
-		if (geometryPath != nullptr)
-		{
-			glDeleteShader(geometry);
-		}
 	}
 
 	// ShaderProgram 객체 활성화(바인딩)
@@ -210,11 +161,11 @@ public:
 		&name 은 이름 문자열이 담긴 메모리 공간에 대한 참조(주소값)을 뜻함.
 
 		즉, 자동 메모리에 새로운 메모리 공간을 할당하는
-		새로운 매개변수를 만드는 것(매개변수를 const std::string name 으로 선언했다면 이렇게 됬을 것임.) 
+		새로운 매개변수를 만드는 것(매개변수를 const std::string name 으로 선언했다면 이렇게 됬을 것임.)
 		이 아니라,
 
-		인자로 전달한 이름 문자열 변수가 가리키는 
-		동일한 메모리 공간에 저장된 이름 문자열 데이터에 접근하기 위해 
+		인자로 전달한 이름 문자열 변수가 가리키는
+		동일한 메모리 공간에 저장된 이름 문자열 데이터에 접근하기 위해
 		참조 주소값을 넘겨주도록 매개변수를 선언한 것!
 
 		즉, 매개변수로 전달받는 문자열 데이터를
@@ -228,12 +179,12 @@ public:
 		상수 멤버 함수 (const member function)
 
 		함수 선언 맨 뒷쪽에 'const' 키워드가 붙으면,
-		"이 함수는 해당 클래스의 멤버변수를 변경하지 않는 
+		"이 함수는 해당 클래스의 멤버변수를 변경하지 않는
 		'상수 멤버 함수' 입니다~" 라는 뜻임.
 
 		이딴 게 왜 필요하냐?
 
-		예를 들어, 지금 구현된 Shader 클래스를 
+		예를 들어, 지금 구현된 Shader 클래스를
 		인스턴스화해서 어떤 객체를 만든다고 치자.
 
 		호출부에서
@@ -241,7 +192,7 @@ public:
 		이런 식으로 Shader 클래스로 인스턴스화할 객체의 변수에
 		const 키워드를 붙여서 '상수 객체' 로 만들어서 쓰는 경우가 있음.
 
-		'상수 객체'는 
+		'상수 객체'는
 		객체 내부의 데이터(즉, 멤버변수)에 대한 변경이 불가함.
 		그래서, 동일한 클래스로 선언된 객체라고 하더라도,
 		'상수 객체'인 경우, 멤버변수를 변경시키는 메서드(멤버 함수)는
@@ -255,7 +206,7 @@ public:
 		이를 통해 객체 내의 데이터를 보호하고,
 		객체를 불변 상태로 유지시킬 수 있겠지!
 	*/
-	void setBool(const std::string &name, bool value) const
+	void setBool(const std::string& name, bool value) const
 	{
 		// glGetUniformLocation() 함수로 멤버변수 ID 가 가리키는 쉐이더 프로그램 객체에 존재하는
 		// 특정 유니폼 변수의 location 을 가져오고, 
@@ -276,7 +227,7 @@ public:
 	{
 		glUniform1f(glGetUniformLocation(ID, name.c_str()), value);
 	}
-	
+
 	// vec2 타입 데이터를 배열 형태로 전달하는 메서드
 	// 이때, 배열 데이터를 복사해서 새롭게 선언된 매개변수의 새로운 메모리 공간에 복사해서 쓰고 싶지는 않으므로,
 	// value 매개변수를 &(레퍼런스)로 받음으로써, 
@@ -288,13 +239,13 @@ public:
 			glUniform2fv()
 
 			vec2 타입 유니폼 변수에 데이터를 배열 형태로 전송할 때 사용
-			
+
 			각 매개변수는 다음과 같다.
 			1. name 에 해당하는 uniform 변수 location
 			2. 몇 개의 vec2 데이터를 넣어줄 것인가
 			3. vec2 타입의 요소들을 모두 직접 전송하는 것이 아니라, 첫 번째 요소의 메모리 주소값만 전달함.
 
-			즉, glUniform2fv() 는 vec2 타입 데이터를 '배열' 형태로 미리 저장해놨다가 
+			즉, glUniform2fv() 는 vec2 타입 데이터를 '배열' 형태로 미리 저장해놨다가
 			포인터(배열의 첫 번째 요소의 주소값)로 전달하는 구조임.
 		*/
 		glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
@@ -313,7 +264,7 @@ public:
 			2. 직접 전달할 vec2 의 x값
 			3. 직접 전달할 vec2 의 y값
 
-			즉, glUniform2f() 는 vec2 의 요소 x, y 를 
+			즉, glUniform2f() 는 vec2 의 요소 x, y 를
 			실제 float 타입 데이터로 직접 전달하는 구조임.
 		*/
 		glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y);
@@ -348,7 +299,7 @@ public:
 	{
 		/*
 			glUniformMatrix2fv()
-			
+
 			mat2 타입 유니폼 변수에 데이터를 2차원 배열 형태로 전송할 때 사용
 			(c++ 에서 행렬은 보통 2차원 배열로 표현.
 			다차원 배열에 대해서는 https://github.com/jooo0922/cpp-study/blob/main/TBCppStudy/Chapter6_05/Chapter6_05.cpp 참고)
@@ -387,7 +338,7 @@ private:
 	{
 		int success; // 컴파일 또는 링킹 성공여부 저장하는 정수형 변수 선언
 		char infoLog[1024]; // 최대 1024개의 char 타입 문자를 저장할 수 있는 문자열 배열 변수 선언 > 일반적으로는 std::string 클래스로 문자열을 다루는 경우가 더 많음. > 암튼 여기에 컴파일 에러 메시지 저장
-	
+
 		if (type != "PROGRAM")
 		{
 			// 쉐이더 객체 컴파일 에러 대응
