@@ -23,6 +23,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cubemaps", "Cubemaps\Cubema
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Uniform_Buffer_Object", "Uniform_Buffer_Object\Uniform_Buffer_Object.vcxproj", "{FB3D4CA6-8C83-4122-83AB-153E1EF1C905}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Geometry_Shader", "Geometry_Shader\Geometry_Shader.vcxproj", "{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -111,6 +113,14 @@ Global
 		{FB3D4CA6-8C83-4122-83AB-153E1EF1C905}.Release|x64.Build.0 = Release|x64
 		{FB3D4CA6-8C83-4122-83AB-153E1EF1C905}.Release|x86.ActiveCfg = Release|Win32
 		{FB3D4CA6-8C83-4122-83AB-153E1EF1C905}.Release|x86.Build.0 = Release|Win32
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Debug|x64.ActiveCfg = Debug|x64
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Debug|x64.Build.0 = Debug|x64
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Debug|x86.ActiveCfg = Debug|Win32
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Debug|x86.Build.0 = Debug|Win32
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Release|x64.ActiveCfg = Release|x64
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Release|x64.Build.0 = Release|x64
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Release|x86.ActiveCfg = Release|Win32
+		{C1BA5A85-2B9F-44F7-8C86-91AC2EFF6362}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
