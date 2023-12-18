@@ -15,7 +15,7 @@ in VS_OUT {
 } gs_in[]; // geometry shader 에서는 항상 interface block 을 배열로 선언해줘야 한댔지?
 
 // 노멀벡터를 시각화할 line_strip 길이를 제한할 상수
-const float MAGNITUDE = 0.4;
+const float MAGNITUDE = 0.2;
 
 // 투영행렬을 전송받을 uniform 변수 선언
 uniform mat4 projection;
