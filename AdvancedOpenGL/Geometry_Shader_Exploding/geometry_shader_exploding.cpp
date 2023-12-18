@@ -90,7 +90,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// Shader 클래스를 생성 -> geometry shader 포함!
-	Shader ourShader("MyShaders/geometry_shader_exploding.vs", "MyShaders/geometry_shader_exploding.fs"); 
+	Shader ourShader("MyShaders/geometry_shader_exploding.vs", "MyShaders/geometry_shader_exploding.fs", "MyShaders/geometry_shader_exploding.gs");
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model ourModel("resources/models/backpack/backpack.obj");
