@@ -139,6 +139,9 @@ int main()
 		// 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
 		ourShader.setMat4("model", model); 
 
+		// 경과시간을 지오메트리 쉐이더 uniform 변수로 전송
+		ourShader.setFloat("time", static_cast<float>(glfwGetTime()));
+
 		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
 		ourModel.Draw(ourShader);
 
