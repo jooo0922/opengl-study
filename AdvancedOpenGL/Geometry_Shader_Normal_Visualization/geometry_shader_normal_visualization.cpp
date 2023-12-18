@@ -89,8 +89,8 @@ int main()
 	// 각 프래그먼트에 대한 Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// Shader 클래스를 생성 -> geometry shader 포함!
-	Shader ourShader("MyShaders/geometry_shader_exploding.vs", "MyShaders/geometry_shader_exploding.fs", "MyShaders/geometry_shader_exploding.gs");
+	// 기본 모델만 렌더링할 때 적용할 Shader 클래스 생성
+	Shader ourShader("MyShaders/default.vs", "MyShaders/default.fs");
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model ourModel("resources/models/backpack/backpack.obj");
@@ -138,9 +138,6 @@ int main()
 
 		// 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
 		ourShader.setMat4("model", model);
-
-		// 경과시간을 지오메트리 쉐이더 uniform 변수로 전송
-		ourShader.setFloat("time", static_cast<float>(glfwGetTime()));
 
 		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
 		ourModel.Draw(ourShader);
