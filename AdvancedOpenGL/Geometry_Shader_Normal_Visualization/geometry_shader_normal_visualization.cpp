@@ -92,6 +92,9 @@ int main()
 	// 기본 모델만 렌더링할 때 적용할 Shader 클래스 생성
 	Shader ourShader("MyShaders/default.vs", "MyShaders/default.fs");
 
+	// 노멀벡터 시각화를 렌더링할 때 적용할 Shader 클래스 생성
+	Shader normalShader("MyShaders/normal_visualization.vs", "MyShaders/normal_visualization.fs", "MyShaders/normal_visualization.gs");
+
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model ourModel("resources/models/backpack/backpack.obj");
 
@@ -141,6 +144,24 @@ int main()
 
 		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
 		ourModel.Draw(ourShader);
+
+
+		/* 업로드한 3D 모델의 노멀벡터 시각화 그리기 */
+
+		// 노멀벡터 시각화에 적용할 쉐이더 프로그램 객체 바인딩
+		normalShader.use();
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
+		normalShader.setMat4("projection", projection);
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
+		normalShader.setMat4("view", view);
+
+		// 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+		normalShader.setMat4("model", model);
+
+		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
+		ourModel.Draw(normalShader);
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
