@@ -7,6 +7,7 @@ layout(location = 1) in vec3 aNormal;
 
 // geometry shader 단계로 출력할 interface block 선언
 out VS_OUT {
+  // Assimp 에서 가져온 각 정점의 노멀벡터를 interface block 을 통해 geometry shader 로 전송
   vec3 normal;
 } vs_out;
 
