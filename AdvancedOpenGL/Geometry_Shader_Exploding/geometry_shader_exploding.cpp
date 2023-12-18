@@ -90,7 +90,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// Shader 클래스를 생성 -> geometry shader 포함!
-	Shader ourShader("MyShaders/model_loading.vs", "MyShaders/model_loading.fs"); 
+	Shader ourShader("MyShaders/geometry_shader_exploding.vs", "MyShaders/geometry_shader_exploding.fs"); 
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model ourModel("resources/models/backpack/backpack.obj");
@@ -106,13 +106,10 @@ int main()
 		// 윈도우 창 및 키 입력 감지 밎 이벤트 처리
 		processInput(window); 
 
-		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
 		// 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
 		// glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼를 초기화함. 
-		// glEnable() 로 깊이 테스팅을 활성화한 상태이므로, 이전 프레임에 그렸던 깊이 버퍼도 초기화하도록,
-		// 깊이 버퍼 제거를 명시하는 비트 단위 연산을 수행하여 비트 플래그 설정 (state-using)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함.
@@ -124,9 +121,8 @@ int main()
 		// Assimp 로 업로드한 3D 모델에 적용할 쉐이더 프로그램 객체 바인딩
 		ourShader.use();
 
-		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
-		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+		// 카메라 줌 효과를 구현하기 위해 fov 값으로 계산되는 투영행렬 생성
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); 
 
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
