@@ -17,5 +17,5 @@ void main() {
   // per vertex 단위로 업데이트되는 Quad 의 각 정점 좌표(aPos)에
   // per instance 단위로 업데이트되는 각 Quad 의 position offset(aOffset) 을 더해서
   // 최종적인 NDC 좌표계 기준 위치값 계산
-  gl_Position = vec4(aPos + aOffset, 0.0, 0.0);
+  gl_Position = vec4(aPos + aOffset, 0.0, 1.0);
 }
