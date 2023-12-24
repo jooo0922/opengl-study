@@ -202,6 +202,18 @@ int main()
 
 		/* Quad 객체를 Instancing 하여 100 개 그리기 */
 
+		// Quad 에 적용할 쉐이더 프로그램 객체 바인딩
+		shader.use();
+
+		// Quad 에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(quadVAO);
+
+		// Quad 를 Instancing 으로 100 개 그리기 명령 (하단 관련 필기 참고)
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 6, 100);
+
+		// Quad 그리기에 사용했던 VAO 객체 바인딩 해제
+		glBindVertexArray(0);
+
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
@@ -286,4 +298,28 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	0 일 경우, per vertex update 로 설정되고,
 	1 일 경우, per instance update 로 설정됨.
 	또한, 2일 경우, every 2 instances update 로 설정됨.
+
+	이걸 사용해서 attribute 변수의 업데이트 단위를 바꿔주지 않으면,
+	Instanced array 로 사용하기 위해 만든 vertex attribute 라고 하더라도,
+	일반적인 vertex attribute 와 아무런 차이가 없게 됨.
+*/
+
+/*
+	glDrawArraysInstanced(..., GLsizei primcount)
+
+
+	Instancing 이란 LearnOpenGL 본문에서도 말했듯,
+	정점 데이터를 1번만 전송해서 GPU 메모리에 올려둔 뒤,
+	그 데이터를 가지고 동일한 object 를 여러 번 그려내는 기법을 말함.
+
+	그래서 데이터를 1번만 전송해도 되기 때문에
+	draw call 또한 1번만 수행할 수 있게 됨.
+
+	이를 가능하게 만들어주는 것이
+	glDrawArraysInstanced() 라는 함수임.
+
+	glDrawArrays() 와 거의 차이가 없는데,
+	마지막에 primcount 라는 매개변수를 추가로 전달받는데,
+
+	이는 Instancing 으로 그려낼 object 의 갯수를 의미함!
 */
