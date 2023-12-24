@@ -1,81 +1,21 @@
 #version 330 core
 
-layout(location = 0) in vec3 aPos;
+// per vertex update 가 적용될 일반적인 vertex attribute 변수들
+layout(location = 0) in vec2 aPos; // NDC 좌표계 기준으로 정의된 위치값
+layout(location = 1) in vec3 aColor;
 
-// 변환 행렬을 전송받는 uniform 변수 선언
+// per instance update 가 적용될 instanced array (로 사용할 vertex attribute)
+layout(location = 2) in vec2 aOffset;
 
-// 뷰 행렬과 투영 행렬은 uniform block 으로 선언
-layout(std140) uniform Matrices {
-  mat4 projection; // 투영 행렬
-  mat4 view; // 뷰 행렬
-};
-
-uniform mat4 model; // 모델 행렬
+// 프래그먼트 쉐이더 단계로 보간하여 전송할 색상값 출력 변수
+out vec3 fColor;
 
 void main() {
-  gl_Position = projection * view * model * vec4(aPos, 1.0); // 오브젝트 공간 좌표에 모델 행렬 > 뷰 행렬 > 투영 행렬 순으로 곱해서 좌표계를 변환시킴.
+  // vertex attribute 변수로 전송받은 색상값을 프래그먼트 쉐이더로 보간하여 전송
+  fColor = aColor;
+
+  // per vertex 단위로 업데이트되는 Quad 의 각 정점 좌표(aPos)에
+  // per instance 단위로 업데이트되는 각 Quad 의 position offset(aOffset) 을 더해서
+  // 최종적인 NDC 좌표계 기준 위치값 계산
+  gl_Position = vec4(aPos + aOffset, 0.0, 0.0);
 }
-
-/*
-  uniform block 선언 시 매우 유의할 점!!
-
-  uniform block 내부에 선언된 uniform 변수들의 순서와
-  .cpp 코드에서 glBufferSubData() 함수로 
-  uniform 덮어쓰는 데이터들의 offset 을
-  정확히 같은 순서로 일치시켜야 함!
-
-  예를 들어, 
-  mat4 projection 변수를 
-  uniform block 에서 첫 번째 순서로 선언했다면,
-
-  glBufferSubData() 로 projection 변수의 데이터를
-  덮어쓸 때, offset 값을 무조건 0으로 지정해줘야 한다는 의미!
-
-  이는 곧, glBufferSubData() 함수로 설정한 offset 순서와 다르게
-  uniform block 을 선언해도 안된다는 뜻이기도 함!
-*/
-
-/*
-  Uniform block 이란 무엇인가?
-
-
-  Uniform Buffer Object(이하 'UBO') 를 가져다가 사용할 쉐이더 프로그램이라면
-  반드시 선언해줘야 하는 독특한 구조의 uniform 변수를 의미함.
-
-  즉, 어떤 쉐이더 코드가 
-  UBO 에 저장된 데이터들을 가져다가 쓰고 싶다면,
-  해당 쉐이더에 UBO 에서 사용할 uniform 변수의 값들을
-  위와 같이 Uniform block 에 선언해줘야 함.
-
-
-  Uniform Buffer Object 와 Uniform block 의 관계에 대한 설명은
-  .cpp 본문 필기를 참조하면 될 것 같고,
-
-  여기서는 'std140' 이라고 하는
-  표준 메모리 레이아웃을 정의하는 키워드만 알아보면 될 것임.
-
-
-  저 메모리 레이아웃은 'shared layout' 이라고 하는
-  또 다른 형태의 레이아웃을 대체하기 위한 시도로 도입됨.
-
-  'shared layout' 은 메모리 공간을 절약하는
-  훌륭한 최적화 레이아웃이긴 하지만, 하드웨어마다 데이터 타입별로 사용하는
-  메모리 offset 값이 다 달라서 OpenGL 에게 특정 함수로 쿼리를 날려서
-  하드웨어에 정의된 offset 값을 매번 얻어와야 한다는 불편함이 있음.
-
-  이러한 번거로운 작업을 생략하기 위해
-  하드웨어에 독립적인 '표준 메모리 레이아웃', 
-  즉 std140 레이아웃을 사용함으로써, 별도의 쿼리 작업 없이 
-  
-  std140 에서 정의하는 set of rules(규칙)에 따라
-  UBO 버퍼 객체에 데이터를 할당해놓으면,
-
-  std140 레이아웃으로 정의된 Uniform block 은
-  std140 의 규칙에 따라 데이터들이 저장되었다고 가정하고,
-  그 규칙들을 기준으로 UBO 의 데이터를 읽어들임.
-
-  
-  std140 표준에서 정의하고 있는
-  데이터 타입별 메모리 저장 규칙은
-  LearnOpenGL 본문 테이블 참고!
-*/
