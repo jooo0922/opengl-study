@@ -113,7 +113,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// 로드한 3D 모델에 텍스쳐를 적용하는 Shader 객체 생성
-	Shader ourShader("MyShaders/model_loading.vs", "MyShaders/model_loading.fs"); 
+	Shader ourShader("MyShaders/planet.vs", "MyShaders/planet.fs"); 
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model ourModel("resources/models/planet/planet.obj");
