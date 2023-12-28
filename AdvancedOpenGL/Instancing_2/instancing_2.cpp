@@ -38,7 +38,7 @@ const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 /* 카메라 클래스 생성 */
 
 // 카메라 위치값만 매개변수로 전달
-Camera camera(glm::vec3(0.0f, 0.0f, 15.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 155.0f));
 
 
 /* 마우스 입력 관련 전역변수 선언 */
@@ -112,11 +112,17 @@ int main()
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// 로드한 3D 모델에 텍스쳐를 적용하는 Shader 객체 생성
-	Shader ourShader("MyShaders/planet.vs", "MyShaders/planet.fs"); 
+
+	/* Shader 객체 생성 */
+
+	// planet 에 적용할 쉐이더 객체 생성
+	Shader planetShader("MyShaders/planet.vs", "MyShaders/planet.fs"); 
+
+
+	/* Model 객체 생성 */
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
-	Model ourModel("resources/models/planet/planet.obj");
+	Model planet("resources/models/planet/planet.obj");
 
 
 	/* while 문으로 렌더링 루프 구현 */
@@ -136,13 +142,13 @@ int main()
 
 
 		/* 윈도우 창 및 키 입력 감지 밎 이벤트 처리 */
-		processInput(window, ourShader); 
+		processInput(window, planetShader); 
 
 
 		/* 버퍼 초기화 */
 
 		// 어떤 색상으로 색상 버퍼를 초기화할 지 결정함. (state-setting)
-		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
 		// glClearColor() 에서 설정한 상태값(색상)으로 색상 버퍼 및 깊이 버퍼 초기화
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -152,28 +158,39 @@ int main()
 		// ...
 
 
-		/* Assimp 로 업로드한 3D 모델 그리기 */
+		/* 공통 변환행렬(projection, view) 계산 */
 
-		// Assimp 로 업로드한 3D 모델에 적용할 쉐이더 프로그램 객체 바인딩
-		ourShader.use();
-
-		// 카메라 줌 효과를 구현하기 위해 fov 값을 실시간으로 변경해야 하므로,
-		// fov 값으로 계산되는 투영행렬을 런타임에 매번 다시 계산해서 쉐이더 프로그램으로 전송해줘야 함. > 게임 루프에서 계산 및 전송
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f); // 투영 행렬 생성
+		// 투영행렬 계산 (fov 는 45도로 고정 -> zoom 값도 고정)
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
 
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
 
-		ourShader.setMat4("projection", projection); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
-		ourShader.setMat4("view", view); // 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
 
-		glm::mat4 model = glm::mat4(1.0f); // 모델 행렬을 단위행렬로 초기화
-		//model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // 모델을 원점으로 이동시키는 이동행렬 적용
-		//model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); // 모델의 크기를 조정하는 크기행렬 적용
-		ourShader.setMat4("model", model); // 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+		/* planet 그리기 */
+
+		// Assimp 로 업로드한 3D 모델에 적용할 쉐이더 프로그램 객체 바인딩
+		planetShader.use();
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
+		planetShader.setMat4("projection", projection);
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
+		planetShader.setMat4("view", view); 
+
+		// planet 에 적용할 모델행렬 계산
+
+		// 모델 행렬을 단위행렬로 초기화
+		glm::mat4 model = glm::mat4(1.0f); 
+		model = glm::translate(model, glm::vec3(0.0f, -3.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(4.0f, 4.0f, 4.0f));
+
+		// 최종 계산된 모델 행렬을 바인딩된 쉐이더 프로그램의 유니폼 변수로 전송
+		planetShader.setMat4("model", model);
 
 		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
-		ourModel.Draw(ourShader);
+		planet.Draw(planetShader);
+
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwPollEvents(); // 키보드, 마우스 입력 이벤트 발생 검사 후 등록된 콜백함수 호출 + 이벤트 발생에 따른 GLFWwindow 상태 업데이트
