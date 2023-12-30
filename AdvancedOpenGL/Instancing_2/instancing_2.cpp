@@ -1,6 +1,7 @@
 #include <glad/glad.h> // 운영체제(플랫폼)별 OpenGL 함수를 함수 포인터에 저장 및 초기화 (OpenGL 을 사용하는 다른 라이브러리(GLFW)보다 먼저 include 할 것.)
 #include <GLFW/glfw3.h> // OpenGL 컨텍스트 생성, 윈도우 생성, 사용자 입력 처리 관련 OpenGL 라이브러리
 #include <algorithm> // std::min(), std::max() 를 사용하기 위해 포함한 라이브러리
+#include <cstdlib> // std::rand(), std::srand() 등의 랜덤값 생성 함수 사용 가능
 
 // 행렬 및 벡터 계산에서 사용할 Header Only 라이브러리 include
 #include <glm/glm.hpp>
@@ -123,6 +124,71 @@ int main()
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	Model planet("resources/models/planet/planet.obj");
+
+
+	/* 각 asteroid 에 적용할 모델행렬 계산 */
+
+	// 전체 asteroid 개수
+	unsigned int amount = 100000;
+
+	// 각 모델행렬을 캐싱해 둘 동적 할당 배열 변수 선언
+	glm::mat4* modelMatrices;
+
+	// 정적배열 변수에 힙 메모리 동적 할당
+	modelMatrices = new glm::mat4[amount];
+
+	// 난수생성 함수 rand() 가 내부적으로 사용할 seed 값을 현재 경과시간으로 지정
+	// 시간값을 정적 캐스팅하여 난수 생성 함수의 seed 값으로 생성하는 기법 https://github.com/jooo0922/cpp-study/blob/main/TBCppStudy/Chapter5_09/Chapter5_09.cpp 참고
+	srand(static_cast<unsigned int>(glfwGetTime()));
+
+	// planet 에서 asteroid ring 가운데 지점까지의 반경
+	float radius = 150.0f;
+
+	// asteroid ring 중점에서 안쪽 및 바깥쪽까지의 폭(간격, offset)
+	float offset = 25.0f;
+
+	// 반복문에서 asteroid 개수만큼 모델행렬 계산하여 정적배열에 캐싱
+	for (unsigned int i = 0; i < amount; i++)
+	{
+		// 현재 asteroid 의 모델행렬을 단위행렬로 초기화
+		glm::mat4 model = glm::mat4(1.0f);
+
+		// xz 평면(== asteroid ring) 상에서 asteroid 가 위치할 원의 각도 계산
+		float angle = (float)i / (float)amount * 360.f;
+
+		// asteroid ring 의 가운데 지점으로부터 각 asteroid 를 떨어트릴 간격의 변위값(displacement) 계산
+		// -> [-25.0f, 25.0f] 사이의 랜덤값으로 계산됨 (즉, [-offset, offset] 사이의 랜덤값)
+		float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+
+		// 원의 좌표 공식(sinθ * 원의 반지름)에 랜덤한 변위값을 더해 asteroid x좌표값 계산
+		float x = sin(angle) * radius + displacement;
+		
+		// y좌표값 계산을 위해 랜덤한 변위값 재계산
+		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+
+		// y좌표값(== asteroid ring 높이값)은 항상 변위값(== asteroid ring 폭)의 40% 정도로 설정
+		float y = displacement * 0.4f;
+
+		// z좌표값 계산을 위해 랜덤한 변위값 재계산
+		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+
+		// 원의 좌표 공식(cosθ * 원의 반지름)에 랜덤한 변위값을 더해 asteroid z좌표값 계산
+		float z = cos(angle) * radius + displacement;
+
+		// 랜덤하게 계산된 x, y, z 좌표값으로 이동행렬 계산
+		model = glm::translate(model, glm::vec3(x, y, z));
+
+		// [0.05f, 0.25f] 사이의 랜덤한 scale 값을 구해 크기행렬 계산
+		float scale = (rand() % 20) / 100.0f + 0.05f;
+
+		// 회전축 glm::vec3(0.4f, 0.6f, 0.8f) 을 기준으로 [0, 360] 도 사이의 랜덤한 회전각만큼 회전시킴
+		// 회전행렬 계산 관련 https://github.com/jooo0922/opengl-study/blob/main/GettingStarted/Coordinate_Systems/coordinate_systems.cpp 참고
+		float rotAngle = (rand() % 360);
+		model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+		// 계산이 완료된 모델행렬을 동적 할당 배열에 순서대로 캐싱
+		modelMatrices[i] = model;
+	}
 
 
 	/* while 문으로 렌더링 루프 구현 */
