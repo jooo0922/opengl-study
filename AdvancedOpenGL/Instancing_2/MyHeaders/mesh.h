@@ -57,6 +57,7 @@ public:
     vector<Vertex> vertices; // Mesh 의 정점 데이터를 동적 배열 멤버로 선언
     vector<unsigned int> indices; // Mesh 의 정점 인덱스를 동적 배열 멤버로 선언
     vector<Texture> textures; // Mesh 에서 사용할 텍스쳐들을 동적 배열 멤버로 선언
+    unsigned int VAO; // 이 모델을 렌더링할 때 사용할 VAO 객체에 외부 접근 및 수정을 위해 예외적으로 encapsulation 해제
 
     // 생성자 함수 선언 및 구현
     Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
@@ -132,7 +133,7 @@ public:
 private:
     // VBO, VAO, EBO 등 정점 버퍼 객체의 참조 ID 를 저장할 멤버 선언
     // 정점 버퍼 데이터는 외부에 노출되어선 안되므로, encapsulation 처리
-    unsigned int VAO, VBO, EBO;
+    unsigned int VBO, EBO;
 
     // VBO, VAO, EBO 등 정점 데이터 관련 버퍼 객체 생성 및 데이터 해석 방식 설정하는 멤버 함수
     void setupMesh()
