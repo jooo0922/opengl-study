@@ -116,6 +116,9 @@ int main()
 
 	/* Shader 객체 생성 */
 
+	// asteroid 에 적용할 쉐이더 객체 생성
+	Shader asteroidShader("MyShaders/asteroid.vs", "MyShaders/asteroid.fs");
+
 	// planet 에 적용할 쉐이더 객체 생성
 	Shader planetShader("MyShaders/planet.vs", "MyShaders/planet.fs"); 
 
@@ -123,6 +126,11 @@ int main()
 	/* Model 객체 생성 */
 
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
+	
+	// rock 모델 로딩
+	Model rock("resources/models/planet/rock.obj");
+	
+	// planet 모델 로딩
 	Model planet("resources/models/planet/planet.obj");
 
 
@@ -188,6 +196,76 @@ int main()
 
 		// 계산이 완료된 모델행렬을 동적 할당 배열에 순서대로 캐싱
 		modelMatrices[i] = model;
+	}
+
+
+	/* Instanced Array 로 전송할 모델행렬 데이터를 덮어쓸 VBO 객체 생성 */
+	
+	// VBO 객체 참조 id 를 저장할 변수
+	unsigned int buffer;
+
+	// VBO(Vertex Buffer Object) 객체 생성
+	glGenBuffers(1, &buffer);
+
+	// VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
+	glBindBuffer(GL_ARRAY_BUFFER, buffer);
+
+	// Instanced Array 에 전송할 데이터를 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+	// (참고로, 정적 배열을 전송할 때에는, 동적 할당 배열의 첫 번째 요소의 주소값만 전달하면 됨! why? 이 자체가 배열의 주소값과 같으니까!)
+	glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+
+	/* Instance 단위로 업데이트할 attribute(== 모델행렬 데이터)의 해석 방식 설정 */
+
+	// mat4 타입 attribute 변수 데이터 해석 방식 관련 하단 필기 참고!
+	
+	// Mesh 클래스 > VAO 참조변수 encapsulation 해제 관련 하단 필기 참고!
+
+	// rock Model 클래스가 포함하고 있는 모든 mesh 객체들을 순회하며 VAO 객체에 접근 및 설정
+	for (unsigned int i = 0; i < rock.meshes.size(); i++)
+	{
+		// 원래는 캡슐화되어 있던 Mesh 의 VAO 참조변수에 임시 접근
+		unsigned int VAO = rock.meshes[i].VAO;
+
+		// 해당 VAO 객체 바인딩
+		glBindVertexArray(VAO);
+
+		// 3번 location 변수(aInstanceMatrix)를 사용하도록 활성화 
+		// (== mat4 타입 instanced array 변수가 4개의 vec4 로 쪼개졌을 때, 첫 번째 vec4 attribute 변수)
+		glEnableVertexAttribArray(3);
+
+		// 인스턴스 단위로 각 정점에 적용할 모델행렬 데이터(쪼개진 4개의 vec4 중, 첫 번째 vec4) 해석 방식 정의
+		glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+
+		// 4번 location 변수(aInstanceMatrix)를 사용하도록 활성화 
+		// (== mat4 타입 instanced array 변수가 4개의 vec4 로 쪼개졌을 때, 두 번째 vec4 attribute 변수)
+		glEnableVertexAttribArray(4);
+
+		// 인스턴스 단위로 각 정점에 적용할 모델행렬 데이터(쪼개진 4개의 vec4 중, 두 번째 vec4) 해석 방식 정의
+		glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+
+		// 5번 location 변수(aInstanceMatrix)를 사용하도록 활성화 
+		// (== mat4 타입 instanced array 변수가 4개의 vec4 로 쪼개졌을 때, 세 번째 vec4 attribute 변수)
+		glEnableVertexAttribArray(5);
+
+		// 인스턴스 단위로 각 정점에 적용할 모델행렬 데이터(쪼개진 4개의 vec4 중, 세 번째 vec4) 해석 방식 정의
+		glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+
+		// 6번 location 변수(aInstanceMatrix)를 사용하도록 활성화 
+		// (== mat4 타입 instanced array 변수가 4개의 vec4 로 쪼개졌을 때, 네 번째 vec4 attribute 변수)
+		glEnableVertexAttribArray(6);
+
+		// 인스턴스 단위로 각 정점에 적용할 모델행렬 데이터(쪼개진 4개의 vec4 중, 네 번째 vec4) 해석 방식 정의
+		glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+
+		// instanced array 로 사용될 쪼개진 4개의 3, 4, 5, 6번 location 변수의 업데이트 단위를 vertex -> instance 로 변경
+		glVertexAttribDivisor(3, 1);
+		glVertexAttribDivisor(4, 1);
+		glVertexAttribDivisor(5, 1);
+		glVertexAttribDivisor(6, 1);
+
+		// 데이터 해석 방식 설정 완료 후, VAO 객체도 OpenGL 컨텍스트로부터 바인딩 해제 
+		glBindVertexArray(0);
 	}
 
 
@@ -340,3 +418,48 @@ void processInput(GLFWwindow* window, Shader ourShader)
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
 }
+
+/*
+	mat4 타입으로 선언된 attribute 변수는
+	다른 타입의 attribute 변수와 처리 방식이 다름.
+
+	버텍스 쉐이더에 선언된 attribute 변수에
+	데이터를 저장할 수 있는 최대치가 vec4 타입의 크기와 같으므로,
+
+	mat4 타입의 attribute 변수는
+	vec4 타입의 attribute 변수를 4개 할당한 것으로 보면 됨.
+
+	따라서, mat4 타입의 attribute 변수에 전송되는 데이터의 해석 방식을 설정할 때에도,
+	vec4 타입의 데이터를 4번씩 나눠서 해석 방식을 지정해줘야 함.
+
+	why? 위에서 말했던 것처럼, mat4 타입의 attribute 변수는
+	vec4 타입의 attribute 변수 4개로 쪼개져서 저장되어 있는 형태니까!
+
+	그래서, glVertexAttribPointer() 로 데이터 해석 방식을 정의할 때,
+	만약 mat4 attribute 변수가 3번 location 에 지정되어 있다면,
+
+	3번부터 시작해서 3, 4, 5, 6번 location 에 4개의 vec4 타입 크기만큼
+	attribute 변수가 쪼개져있는 형태로 저장되어 있다고 생각하고,
+	
+	4개의 location 변수들에 대해 각각 데이터 해석 방식을 나눠서 정의해줘야 함!
+
+	단, 주의할 점이,
+	glVertexAttribPointer() 의 5번째 매개변수인 stride (== 정점 데이터 간격) 의 경우,
+	여전히 mat4 타입의 크기만큼이 한 묶음의 정점 데이터인 것으로 인식될 수 있도록,
+	sizeof(glm::vec4) 가 아닌, 'sizeof(glm::mat4)' 로 지정해줘야 함!
+*/
+
+/*
+	원래 assimp 로 업로드한 모델의 경우,
+	VAO, VBO 객체들을 추상화된 Mesh 클래스에서 캡슐화하여 관리하지만,
+
+	instanced array 에 전송할
+	mat4 타입 모델행렬 데이터들의 VBO 정보 및 해석 방식을
+	해당 모델의 VAO 객체에 설정해야 하기 때문에
+
+	임시로 VAO 참조변수만 encapsulation 을 해제한 뒤,
+	외부에서 접근할 수 있도록 허용한 것. -> 일종의 cheating
+
+	사실 가장 좋은 것은 Mesh 클래스 내부에
+	Instanced array 를 처리하는 코드까지 추상화 해주는 게 맞겠지
+*/
