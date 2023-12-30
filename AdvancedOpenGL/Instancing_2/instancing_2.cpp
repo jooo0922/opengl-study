@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h> // OpenGL 컨텍스트 생성, 윈도우 생성, 사용자 입력 처리 관련 OpenGL 라이브러리
 #include <algorithm> // std::min(), std::max() 를 사용하기 위해 포함한 라이브러리
 #include <cstdlib> // std::rand(), std::srand() 등의 랜덤값 생성 함수 사용 가능
+#include <cmath> // std::sin(), std::cos() 등의 삼각함수 사용 라이브러리
 
 // 행렬 및 벡터 계산에서 사용할 Header Only 라이브러리 include
 #include <glm/glm.hpp>
@@ -39,7 +40,7 @@ const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 /* 카메라 클래스 생성 */
 
 // 카메라 위치값만 매개변수로 전달
-Camera camera(glm::vec3(0.0f, 0.0f, 155.0f));
+Camera camera(glm::vec3(0.0f, 23.0f, 225.0f));
 
 
 /* 마우스 입력 관련 전역변수 선언 */
@@ -128,7 +129,7 @@ int main()
 	// Model 클래스를 생성함으로써, 생성자 함수에서 Assimp 라이브러리로 즉시 3D 모델을 불러옴
 	
 	// rock 모델 로딩
-	Model rock("resources/models/planet/rock.obj");
+	Model rock("resources/models/rock/rock.obj");
 	
 	// planet 모델 로딩
 	Model planet("resources/models/planet/planet.obj");
@@ -147,7 +148,7 @@ int main()
 
 	// 난수생성 함수 rand() 가 내부적으로 사용할 seed 값을 현재 경과시간으로 지정
 	// 시간값을 정적 캐스팅하여 난수 생성 함수의 seed 값으로 생성하는 기법 https://github.com/jooo0922/cpp-study/blob/main/TBCppStudy/Chapter5_09/Chapter5_09.cpp 참고
-	srand(static_cast<unsigned int>(glfwGetTime()));
+	std::srand(static_cast<unsigned int>(glfwGetTime()));
 
 	// planet 에서 asteroid ring 가운데 지점까지의 반경
 	float radius = 150.0f;
@@ -166,32 +167,33 @@ int main()
 
 		// asteroid ring 의 가운데 지점으로부터 각 asteroid 를 떨어트릴 간격의 변위값(displacement) 계산
 		// -> [-25.0f, 25.0f] 사이의 랜덤값으로 계산됨 (즉, [-offset, offset] 사이의 랜덤값)
-		float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+		float displacement = (std::rand() % (int)(2 * offset * 100)) / 100.0f - offset;
 
 		// 원의 좌표 공식(sinθ * 원의 반지름)에 랜덤한 변위값을 더해 asteroid x좌표값 계산
-		float x = sin(angle) * radius + displacement;
+		float x = std::sin(angle) * radius + displacement;
 		
 		// y좌표값 계산을 위해 랜덤한 변위값 재계산
-		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+		displacement = (std::rand() % (int)(2 * offset * 100)) / 100.0f - offset;
 
 		// y좌표값(== asteroid ring 높이값)은 항상 변위값(== asteroid ring 폭)의 40% 정도로 설정
 		float y = displacement * 0.4f;
 
 		// z좌표값 계산을 위해 랜덤한 변위값 재계산
-		displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+		displacement = (std::rand() % (int)(2 * offset * 100)) / 100.0f - offset;
 
 		// 원의 좌표 공식(cosθ * 원의 반지름)에 랜덤한 변위값을 더해 asteroid z좌표값 계산
-		float z = cos(angle) * radius + displacement;
+		float z = std::cos(angle) * radius + displacement;
 
 		// 랜덤하게 계산된 x, y, z 좌표값으로 이동행렬 계산
 		model = glm::translate(model, glm::vec3(x, y, z));
 
 		// [0.05f, 0.25f] 사이의 랜덤한 scale 값을 구해 크기행렬 계산
-		float scale = (rand() % 20) / 100.0f + 0.05f;
+		float scale = (std::rand() % 20) / 100.0f + 0.05f;
+		model = glm::scale(model, glm::vec3(scale));
 
 		// 회전축 glm::vec3(0.4f, 0.6f, 0.8f) 을 기준으로 [0, 360] 도 사이의 랜덤한 회전각만큼 회전시킴
 		// 회전행렬 계산 관련 https://github.com/jooo0922/opengl-study/blob/main/GettingStarted/Coordinate_Systems/coordinate_systems.cpp 참고
-		float rotAngle = (rand() % 360);
+		float rotAngle = (std::rand() % 360);
 		model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
 
 		// 계산이 완료된 모델행렬을 동적 할당 배열에 순서대로 캐싱
@@ -334,6 +336,44 @@ int main()
 
 		// Model 클래스의 Draw 멤버함수 호출 > 해당 Model 에 포함된 모든 Mesh 인스턴스의 Draw 멤버함수를 호출함
 		planet.Draw(planetShader);
+
+
+		/* asteroid 그리기 */
+
+		// 현재 Model 클래스는 Instancing 기능을 지원하지 않기 때문에,
+		// 추상화된 .Draw() 멤버함수를 사용하지 않고, 외부에서 직접 그리기 명령을 실행해야 함.
+
+		// Assimp 로 업로드한 3D 모델에 적용할 쉐이더 프로그램 객체 바인딩
+		asteroidShader.use();
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 투영 행렬 전송
+		asteroidShader.setMat4("projection", projection);
+
+		// 현재 바인딩된 쉐이더 프로그램의 uniform 변수에 mat4 뷰 행렬 전송
+		asteroidShader.setMat4("view", view);
+
+		// asteroid 쉐이더에 텍스쳐 객체가 바인딩되어 있는 texture unit 값 전달
+		asteroidShader.setInt("texture_diffuse1", 0);
+
+		// 쉐이더에 전달한 0번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// 현재 활성화된 0번 texture unit 위치에 사용할 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, rock.textures_loaded[0].id);
+
+		// rock 모델에 포함된 각 Mesh 객체들을 순회하며 Instanced drawing 실행
+		for (unsigned int i = 0; i < rock.meshes.size(); i++)
+		{
+			// 현재 Mesh 의 VAO 참조 id 를 접근하여 바인딩
+			glBindVertexArray(rock.meshes[i].VAO);
+
+			// 현재 Mesh 를 Instancing 으로 100000 개 그리기 명령
+			// rock 모델에 포함된 각 Mesh 들을 100000 개 씩 그리면, 결국 rock 모델을 100000 개 그리는 것과 마찬가지겠지!
+			glDrawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(rock.meshes[i].indices.size()), GL_UNSIGNED_INT, 0, amount);
+
+			// 현재 Mesh 그리기에 사용했던 VAO 객체 바인딩 해제
+			glBindVertexArray(0);
+		}
 
 
 		glfwSwapBuffers(window); // Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
