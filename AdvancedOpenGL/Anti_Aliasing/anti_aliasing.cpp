@@ -56,6 +56,7 @@ int main()
 	// GLFW 초기화
 	glfwInit();
 
+
 	/* GLFW 윈도우(창) 설정 구성 */ 
 	
 	// GLFW 에게 OpenGL 3.3 버전 사용 명시
@@ -64,6 +65,12 @@ int main()
 
 	// GLFW 에게 core-profile 버전 사용 명시 (Core-profile vs Immediate mode 비교글 참고)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); 
+
+	// GLFW 에게 MSAA 알고리즘 사용을 위해, 
+	// 각 픽셀 당 4개의 subsample 을 저장할 수 있는 multisample buffer 를 생성하도록, 
+	// 버퍼의 픽셀 당 sample 수를 4개로 명시
+	glfwWindowHint(GLFW_SAMPLES, 4);
+
 
 	// macos 를 지칭하는 매크로 __APPLE__ 전처리기 존재 여부를 통해 
 	// 현재 운영체제가 macos 일 경우, 미래 버전의 OpenGL 을 사용해서 GLFW 창을 생성하도록 함. (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE)
@@ -78,7 +85,11 @@ int main()
 	{
 		// GLFW 윈도우 생성 실패(null 체크) 시 예외 처리
 		std::cout << "Failed to create GLFW window" << std::endl;
-		glfwTerminate(); // 현재 남아있는 glfw 윈도우 제거, 리소스 메모리 해제, 라이브러리 초기화 이전 상태로 되돌림. (glfwInit() 과 반대 역할!))
+
+		// 현재 남아있는 glfw 윈도우 제거, 리소스 메모리 해제, 라이브러리 초기화 이전 상태로 되돌림. 
+		// glfwInit() 과 반대 역할!
+		glfwTerminate();
+
 		return -1;
 	}
 
@@ -112,6 +123,9 @@ int main()
 
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
+
+	// OpenGL 드라이버에 내장된 MSAA(Multi Sampling Anti Aliasing) 알고리즘 활성화 (MSAA 관련 필기 하단 참고)
+	glEnable(GL_MULTISAMPLE);
 
 	// 큐브 렌더링 시 적용할 쉐이더 객체 생성
 	Shader shader("MyShaders/anti_aliasing.vs", "MyShaders/anti_aliasing.fs");
@@ -389,4 +403,36 @@ void processInput(GLFWwindow* window)
 	필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
 
 	즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
+*/
+
+/*
+	MSAA(Multi Sampling Anti Aliasing)
+
+
+	MSAA 알고리즘은 aliasing 현상을 해결하기 위해
+	그래픽 카드들의 OpenGL 드라이버에 구현되어 있는
+	Multi sampling 알고리즘이라고 보면 됨.
+
+	기본적으로, screen 의 각 픽셀 당 sample point 를
+	여러 개, 여러 위치에 둠으로써(== subsamples), 
+
+	rasterization 과정에서 삼각형 같은 primitive 영역 내에
+	각 픽셀의 subsample 이 몇 개 포함되는지에 따라
+	해당 픽셀에서 실행된 프래그먼트 쉐이더의 결과값(== 색상값)을
+	얼마만큼 반영할 것인지 결정하는 알고리즘으로 보면 됨.
+
+	자세한 내용은 LearnOpenGL 본문에 다 나와있으니 참고하면 되고...
+
+	여기서 주의할 점은,
+	MSAA 알고리즘은 기본적으로 대부분의 그래픽 카드에 구현된
+	OpenGL 드라이버에서 기본으로 활성화되어 있는 상태임.
+
+	그러나, MSAA 알고리즘은 subsample 개수가 늘어나면, 
+	그에 비례해서 프레임 버퍼 및 각종 버퍼들의 메모리 사이즈가 늘어나는
+	성능 상의 단점이 있기 때문에, 어떤 드라이버에서는 해당 알고리즘을 비활성화 시켜놓음.
+
+	따라서, 기본값이 활성화 상태인 드라이버 상에서는
+	glEnable(GL_MULTISAMPLE); 라는 코드가 중복 활성화로도 볼 수 있지만,
+	몇몇의 비활성화된 상태의 드라이버들까지 고려하면,
+	MSAA 를 확실하게 활성화한다는 의미에서 해당 활성화 코드를 명시하는 게 좋음!
 */
