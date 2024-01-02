@@ -35,6 +35,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Instancing_2", "Instancing_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Anti_Aliasing", "Anti_Aliasing\Anti_Aliasing.vcxproj", "{0DFE97D5-B2EF-4012-BFEF-43C1201BA235}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Anti_Aliasing_2", "Anti_Aliasing_2\Anti_Aliasing_2.vcxproj", "{3002B918-16E0-480E-AF68-7793629B7000}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -171,6 +173,14 @@ Global
 		{0DFE97D5-B2EF-4012-BFEF-43C1201BA235}.Release|x64.Build.0 = Release|x64
 		{0DFE97D5-B2EF-4012-BFEF-43C1201BA235}.Release|x86.ActiveCfg = Release|Win32
 		{0DFE97D5-B2EF-4012-BFEF-43C1201BA235}.Release|x86.Build.0 = Release|Win32
+		{3002B918-16E0-480E-AF68-7793629B7000}.Debug|x64.ActiveCfg = Debug|x64
+		{3002B918-16E0-480E-AF68-7793629B7000}.Debug|x64.Build.0 = Debug|x64
+		{3002B918-16E0-480E-AF68-7793629B7000}.Debug|x86.ActiveCfg = Debug|Win32
+		{3002B918-16E0-480E-AF68-7793629B7000}.Debug|x86.Build.0 = Debug|Win32
+		{3002B918-16E0-480E-AF68-7793629B7000}.Release|x64.ActiveCfg = Release|x64
+		{3002B918-16E0-480E-AF68-7793629B7000}.Release|x64.Build.0 = Release|x64
+		{3002B918-16E0-480E-AF68-7793629B7000}.Release|x86.ActiveCfg = Release|Win32
+		{3002B918-16E0-480E-AF68-7793629B7000}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
