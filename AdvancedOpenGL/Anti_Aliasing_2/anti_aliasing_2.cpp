@@ -308,6 +308,41 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+	/* Blitting 을 위한 off-screen non-multisampled framebuffer 생성 및 설정 (관련 내용 하단 필기 참고) */
+
+	// FBO(FrameBufferObject) 객체 생성 및 바인딩
+	unsigned int intermediateFBO;
+	glGenFramebuffers(1, &intermediateFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, intermediateFBO);
+
+	// FBO 객체에 attach 할 텍스쳐 객체 생성 및 바인딩
+	// 참고로, Blitting 은 색상 버퍼에만 적용할 것이므로, 이를 attach 할 텍스쳐 객체만 생성해주면 됨.
+	unsigned int screenTexture;
+	glGenTextures(1, &screenTexture);
+	glBindTexture(GL_TEXTURE_2D, screenTexture);
+
+	// 텍스쳐 객체 메모리 공간 할당
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+	// Texture Filtering(텍셀 필터링(보간)) 모드 설정 -> 스크린 평면은 축소/확대되지 않으므로 별로 중요 x
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+	// off-screen framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용 
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTexture, 0);
+
+	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사 (설정 완료 조건은 LearnOpenGL 본문 참고)
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+	}
+
+	// 생성한 FBO 객체 설정 완료 후, 다시 default framebuffer 바인딩하여 원상복구
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
@@ -531,4 +566,42 @@ void processInput(GLFWwindow* window)
 	glEnable(GL_MULTISAMPLE); 라는 코드가 중복 활성화로도 볼 수 있지만,
 	몇몇의 비활성화된 상태의 드라이버들까지 고려하면,
 	MSAA 를 확실하게 활성화한다는 의미에서 해당 활성화 코드를 명시하는 게 좋음!
+*/
+
+/*
+	Blitting multisampled buffer
+
+
+	여러 개의 subsample 이 있는 multisampled buffer 는 
+	한 픽셀에 대해 여러 개의 색상 값을 가지고 있음. 
+
+	이는 일반적인 off-screen framebuffer 와는 다른 특성이며,
+	이러한 특성으로 인해 multisampled buffer 는 
+	shader 내에서의 텍스쳐 샘플링같은 작업에 직접적으로 사용되지는 못함.
+
+	이를 해결하기 위해, multisampled buffer 를
+	일반적인 off-screen framebuffer 로 변환하는 작업이 필요한데,
+	이를 'Blitting' 이라고 함.
+
+
+	'Blitting'은 "Block Image Transfer"의 줄임말로, 
+	이미지나 버퍼와 같은 데이터 블록을 다른 위치로 전송하는 과정을 뜻함.
+
+	'Blitting' 과정을 자세히 설명하자면,
+	먼저 'resolve' 라는 과정을 거쳐야 함.
+
+	각 subsample 에서 계산된 색상 값들을 적절한 방법으로 결합하거나 처리하여 
+	최종적으로 하나의 픽셀에 대한 색상 값을 얻게 되는데, 
+	이 과정을 LearnOpenGL 본문에서는 "resolve"라고 부름. 
+	
+	이후 별도의 non-multisampled 색상 버퍼(== 일반적인 off-screen framebuffer)로 
+	그 값을 복사하는 것이 일반적임.
+
+
+	OpenGL에서 glBlitFramebuffer() 함수는
+	framebuffer 의 특정 영역을 다른 framebuffeer 로 블릿(blit)하는 데 사용됨.
+
+	이 함수를 통해 multisampled buffer 에서 일반(non-multisampled) framebuffer 로
+	이미지를 복사하면서 동시에 multisampled 데이터를 
+	'resolve' 하는 것으로 보면 됨.
 */
