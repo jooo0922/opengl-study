@@ -130,6 +130,9 @@ int main()
 	// 큐브 렌더링 시 적용할 쉐이더 객체 생성
 	Shader shader("MyShaders/anti_aliasing.vs", "MyShaders/anti_aliasing.fs");
 
+	// 스크린 평면 렌더링 시 적용할 쉐이더 객체 생성
+	Shader screenShader("MyShaders/off_screen.vs", "MyShaders/off_screen_grayscale.fs");
+
 	// 큐브의 정점 데이터 정적 배열 초기화
 	float cubeVertices[] = {
 		// positions  
@@ -176,6 +179,20 @@ int main()
 		-0.5f,  0.5f, -0.5f,
 	};
 
+	// default framebuffer 에 렌더링할 스크린 평면 (off-screen rendering 을 텍스쳐로 적용하는 평면)의 정점 데이터 배열 초기화
+	// 스크린 평면은 좌표계 변환을 수행하지 않아도 되므로, position 좌표값을 NDC 좌표계를 바로 전달해버림.
+	// 또한, 스크린 평면은 원근을 고려할 필요가 없으므로, position z값을 별도로 전달할 필요 없이, 버텍스 쉐이더에서 0.0 으로 통일해서 전달할 것임!
+	float quadVertices[] = {
+		// positions   // texCoords
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		-1.0f, -1.0f,  0.0f, 0.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f
+	};
+
 
 	/* 큐브의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고) */
 
@@ -209,6 +226,30 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// 마찬가지로, VAO 객체도 OpenGL 컨텍스트로부터 바인딩 해제 
+	glBindVertexArray(0);
+
+
+	/* 스크린 평면에 대한 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고) */
+
+	unsigned int quadVAO, quadVBO; // VBO, VAO 객체(object) 참조 id 를 저장할 변수
+	glGenVertexArrays(1, &quadVAO); // VAO(Vertex Array Object) 객체 생성
+	glGenBuffers(1, &quadVBO); // VBO(Vertex Buffer Object) 객체 생성
+
+	glBindVertexArray(quadVAO); // 스크린 평면에 대한 렌더링 정보를 저장하기 위해 VAO 객체를 컨텍스트에 바인딩함.
+
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO); // 정점 데이터를 덮어쓸 VBO 객체 바인딩
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW); // 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+
+	// VBO 객체 설정
+	// 정점 위치 데이터 해석 방식 설정
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+
+	// 정점 uv 데이터 해석 방식 설정
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+	// quadVAO 객체에 저장해둘 cubeVBO 설정도 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제 
 	glBindVertexArray(0);
 
 
