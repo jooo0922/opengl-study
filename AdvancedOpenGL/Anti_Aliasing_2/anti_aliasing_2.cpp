@@ -422,6 +422,37 @@ int main()
 		glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 
+		/* second pass (default framebuffer 에 렌더링) */
+
+		// 스크린 평면을 렌더링할 default framebuffer 을 다시 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// default framebuffer 에는 스크린 평면만 렌더링하고, 스크린 평면의 프래그먼트가 폐기되면 안되므로, depth test 를 비활성화
+		glDisable(GL_DEPTH_TEST);
+
+		// 색상 버퍼를 흰색으로 초기화 (사실 스크린 평면이 배경을 가득 채우고 있어서 어차피 눈에 안보임)
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+
+		/* 스크린 평면 그리기 */
+
+		// 스크린 평면에 적용할 쉐이더 프로그램 객체 바인딩
+		screenShader.use();
+
+		// 스크린 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(quadVAO);
+
+		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// 스크린 평면 텍스쳐 객체도 0번 texture unit 을 사용하므로, 0번 위치에 해당 텍스쳐(color attachment 텍스쳐) 바인딩
+		glBindTexture(GL_TEXTURE_2D, screenTexture);
+
+		// 스크린 평면 그리기 명령
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
@@ -661,7 +692,7 @@ void processInput(GLFWwindow* window)
 
 
 	반대로, 어떤 함수는 '읽기 전용 프레임버퍼'와 '쓰기 전용 프레임버퍼'를
-	동시에 필요로하는 케이스도 있는데, 그 대표적인 케이스가 바로 glBlitFramebuffer() 라고 보면 됨.
+	각각 필요로하는 케이스도 있는데, 그 대표적인 케이스가 바로 glBlitFramebuffer() 라고 보면 됨.
 
 	glBlitFramebuffer() 함수를 호출하면,
 	해당 함수를 호출한 시점에
