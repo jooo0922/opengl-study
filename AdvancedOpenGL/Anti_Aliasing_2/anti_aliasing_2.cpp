@@ -253,6 +253,61 @@ int main()
 	glBindVertexArray(0);
 
 
+	/* off-screen MSAA 지원 framebuffer 생성 및 설정 */
+
+	// FBO(FrameBufferObject) 객체 생성 및 바인딩
+	unsigned int framebuffer;
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+	// FBO 객체에 attach 할 텍스쳐 객체 생성 및 바인딩
+	// multisampled buffer 를 지원하는 텍스쳐 객체일 경우, GL_TEXTURE_2D_MULTISAMPLE 상태에 바인딩함.
+	unsigned int textureColorBufferMultiSampled;
+	glGenTextures(1, &textureColorBufferMultiSampled);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled);
+
+	// 텍스쳐 객체 메모리 공간 할당 (할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
+	// 텍스쳐 객체의 해상도는 스크린 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 '스크린 평면'에 적용할 거니까!
+	// multisampled buffer 를 지원하는 텍스쳐 객체일 경우, glTexImage2DMultisample() 함수를 이용해서 텍스쳐 메모리 할당
+	// 두 번째 매개변수는 multisampled buffer 에서 사용할 subsample 개수를 전달함.
+	glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, GL_RGB, SCR_WIDTH, SCR_HEIGHT, GL_TRUE);
+
+	// GL_TEXTURE_2D_MULTISAMPLE 상태에 바인딩한 텍스쳐 객체 메모리 할당이 끝났으면 바인딩 해제
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+
+	// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+	// off-screen framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용!
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, textureColorBufferMultiSampled, 0);
+
+	// FBO 객체에 attach 할 RBO(RenderBufferObject) 객체 생성 및 바인딩
+	unsigned int rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+
+	// RBO 객체 메모리 공간 할당
+	// 단일 Renderbuffer 에 stencil 및 depth 값을 동시에 저장하는 데이터 포맷 지정 -> GL_DEPTH24_STENCIL8 
+	// multisampled buffer 를 지원하는 Renderbuffer 의 경우, glRenderbufferStorageMultisample() 함수를 이용해서 메모리 할당
+	// 또한, 텍스쳐 객체와 마찬가지로 스크린 해상도와 Renderbuffer 해상도를 일치시킴
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+
+	// Renderbuffer 메모리 할당이 끝났으면 바인딩 해제
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	// FBO 객체에 생성한 RBO 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+	// off-screen framebuffer 에 렌더링 시, RBO 객체에는 stencil 및 depth buffer 를 저장할 것이므로, GL_DEPTH_STENCIL_ATTACHMENT 를 적용함!
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사 (설정 완료 조건은 LearnOpenGL 본문 참고)
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+	}
+
+	// 생성한 FBO 객체 설정 완료 후, 다시 default framebuffer 바인딩하여 원상복구
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
