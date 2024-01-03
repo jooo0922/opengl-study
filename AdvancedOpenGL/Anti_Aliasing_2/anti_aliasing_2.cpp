@@ -343,6 +343,11 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+	// 스크린 평면에 적용할 쉐이더 프로그램의 uniform sampler 변수에 0번 texture unit 위치값 전송
+	screenShader.use();
+	screenShader.setInt("screenTexture", 0);
+
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
@@ -360,6 +365,9 @@ int main()
 
 		// 윈도우 창 및 키 입력 감지 밎 이벤트 처리
 		processInput(window);
+
+		// off-screen MSAA 지원 framebuffer 바인딩하여, 이후의 렌더링 결과를 해당 multisampled buffer 에 저장
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -399,6 +407,19 @@ int main()
 
 		// 큐브 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+		/* off-screen MSAA 지원 framebuffer(frameBuffer) -> non-multisampled framebuffer(intermediateFBO) 로 Blitting */
+
+		// Blitting source framebuffer 는 GL_READ_FRAMEBUFFER 상태에 바인딩한다. (관련 필기 하단 참고)
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+
+		// Blitting target framebuffer 는 GL_READ_FRAMEBUFFER 상태에 바인딩한다.
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, intermediateFBO);
+
+		// Blitting 을 수행함으로써, multisampled buffer 에 저장된 색상 버퍼가 
+		// screenTexture 텍스쳐 객체(color attachment) 로 저장됨.
+		glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -604,4 +625,50 @@ void processInput(GLFWwindow* window)
 	이 함수를 통해 multisampled buffer 에서 일반(non-multisampled) framebuffer 로
 	이미지를 복사하면서 동시에 multisampled 데이터를 
 	'resolve' 하는 것으로 보면 됨.
+*/
+
+/*
+	framebuffer 바인딩 시, 
+	GL_FRAMEBUFFER vs GL_READ_FRAMEBUFFER vs GL_DRAW_FRAMEBUFFER
+
+
+	OpenGL 에서 glBindFramebuffer() 함수를 사용해서
+	프레임버퍼 객체를 바인딩할 때, 위와 같이 3개의 상태값에 바인딩할 수 있음.
+
+	첫 번째 상태값인 GL_FRAMEBUFFER 에 프레임버퍼를 바인딩하면,
+	해당 프레임버퍼는 GL_READ_FRAMEBUFFER 와 GL_DRAW_FRAMEBUFFER 모두에
+	바인딩된 것과 동일하게 작동함.
+
+	이는 바인딩된 해당 프레임버퍼가
+	'프레임버퍼 읽기 관련 연산'과 '프레임버퍼 쓰기 관련 연산' 모두에
+	영향을 받게 됨을 의미함.
+
+	두 번째 상태값인 GL_READ_FRAMEBUFFER 에 프레임버퍼를 바인딩하면,
+	해당 프레인버퍼는 '프레임버퍼 읽기 관련 연산에만' 영향을 받게 됨.
+
+	세 번째 상태값인 GL_DRAW_FRAMEBUFFER 에 프레임버퍼를 바인딩하면,
+	해당 프레인버퍼는 '프레임버퍼 쓰기 관련 연산에만' 영향을 받게 됨.
+
+
+	ex> 
+	glReadPixels() 같은 함수는 '프레임버퍼 읽기 관련 연산'에 해당하므로,
+	GL_READ_FRAMEBUFFER 상태에 바인딩되어 있는 프레임버퍼 또는
+	GL_FRAMEBUFFER 상태에 바인딩되어 있는 프레임버퍼로부터 pixel 값을 읽어올 것임!
+
+	반면, glClear() 같은 함수는 '프레임버퍼 쓰기 관련 연산'에 해당하므로,
+	GL_DRAW_FRAMEBUFFER 상태에 바인딩되어 있는 프레임버퍼 또는
+	GL_FRAMEBUFFER 상태에 바인딩되어 있는 프레임버퍼를 초기화할 것임!
+
+
+	반대로, 어떤 함수는 '읽기 전용 프레임버퍼'와 '쓰기 전용 프레임버퍼'를
+	동시에 필요로하는 케이스도 있는데, 그 대표적인 케이스가 바로 glBlitFramebuffer() 라고 보면 됨.
+
+	glBlitFramebuffer() 함수를 호출하면,
+	해당 함수를 호출한 시점에
+
+	GL_READ_FRAMEBUFFER 상태에 바인딩되어 있는 프레임버퍼는 
+	Blitting 과정에서 데이터를 읽어올 source framebuffer 로 인식하며,
+
+	GL_DRAW_FRAMEBUFFER 상태에 바인딩되어 있는 프레임버퍼는
+	Blitting 과정에서 읽어온 데이터를 복사할 target framebuffer 로 인식함.
 */
