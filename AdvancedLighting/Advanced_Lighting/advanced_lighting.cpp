@@ -31,6 +31,9 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
 void processInput(GLFWwindow* window);
 
+// 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
+unsigned int loadTexture(const char* path); 
+
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
@@ -180,6 +183,15 @@ int main()
 	// 마찬가지로, VAO 객체도 OpenGL 컨텍스트로부터 바인딩 해제 
 	glBindVertexArray(0);
 
+	
+	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
+
+	// 텍스쳐 객체 생성
+	unsigned int floorTexture = loadTexture("resources/textures/wood.png");
+
+	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 0번 texture unit 위치값 전송
+	shader.use();
+	shader.setInt("texture1", 0);
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
@@ -215,7 +227,7 @@ int main()
 		shader.use();
 
 		// 카메라의 zoom 값으로부터 투영 행렬 계산
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
@@ -226,8 +238,7 @@ int main()
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
 		shader.setMat4("view", view);
 
-		// 단위행렬로 초기화된 모델행렬을 쉐이더 프로그램에 전송 -> 큐브를 변환하지 않음!
-		shader.setMat4("model", glm::mat4(1.0f));
+		// 모델행렬 전송 생략 -> 큐브를 변환하지 않음!
 
 
 		/* 바닥 평면 그리기 */
@@ -235,8 +246,12 @@ int main()
 		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
 		glBindVertexArray(planeVAO);
 
+		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, floorTexture);
+
 		// 바닥 평면 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -328,6 +343,58 @@ void processInput(GLFWwindow* window)
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
 }
+
+// 텍스쳐 이미지 로드 및 객체 생성 함수 구현부 (텍스쳐 객체 참조 id 반환)
+unsigned int loadTexture(const char* path)
+{
+	unsigned int textureID; // 텍스쳐 객체(object) 참조 id 를 저장할 변수 선언
+	glGenTextures(1, &textureID); // 텍스쳐 객체 생성
+
+	int width, height, nrComponents; // 로드한 이미지의 width, height, 색상 채널 개수를 저장할 변수 선언
+
+	// 이미지 데이터 가져와서 char 타입의 bytes 데이터로 저장. 
+	// 이미지 width, height, 색상 채널 변수의 주소값도 넘겨줌으로써, 해당 함수 내부에서 값을 변경. -> 출력변수 역할
+	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+	if (data)
+	{
+		// 이미지 데이터 로드 성공 시 처리
+
+		// 이미지 데이터의 색상 채널 개수에 따라 glTexImage2D() 에 넘겨줄 픽셀 데이터 포맷의 ENUM 값을 결정
+		GLenum format;
+		if (nrComponents == 1)
+			format = GL_RED;
+		else if (nrComponents == 3)
+			format = GL_RGB;
+		else if (nrComponents == 4)
+			format = GL_RGBA;
+
+		// 텍스쳐 객체 바인딩 및 로드한 이미지 데이터 쓰기
+		glBindTexture(GL_TEXTURE_2D, textureID); // GL_TEXTURE_2D 타입의 상태에 텍스쳐 객체 바인딩 > 이후 텍스쳐 객체 설정 명령은 바인딩된 텍스쳐 객체에 적용.
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data); // 로드한 이미지 데이터를 현재 바인딩된 텍스쳐 객체에 덮어쓰기
+		glGenerateMipmap(GL_TEXTURE_2D); // 현재 바인딩된 텍스쳐 객체에 필요한 모든 단계의 Mipmap 을 자동 생성함. 
+
+		// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
+		// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정 (관련 필기 정리 하단 참고)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+	else
+	{
+		// 이미지 데이터 로드 실패 시 처리
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+	}
+
+	// 텍스쳐 객체에 이미지 데이터를 전달하고, 밉맵까지 생성 완료했다면, 로드한 이미지 데이터는 항상 메모리 해제할 것!
+	stbi_image_free(data);
+
+	// 텍스쳐 객체 참조 ID 반환
+	return textureID;
+}
+
 
 /*
 	stb_image.h
