@@ -40,6 +40,10 @@ unsigned int loadTexture(const char* path);
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
+// blinn-phong 조명모델 전환 상태값을 false 로 초기화
+bool blinn = false;
+bool blinnKeyPressed = false;
+
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -193,6 +197,10 @@ int main()
 	shader.use();
 	shader.setInt("texture1", 0);
 
+
+	// 광원 위치값 초기화
+	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
@@ -239,6 +247,18 @@ int main()
 		shader.setMat4("view", view);
 
 		// 모델행렬 전송 생략 -> 큐브를 변환하지 않음!
+
+
+		/* 기타 uniform 변수들 쉐이더 객체에 전송 */
+
+		// 카메라 위치값 쉐이더 프로그램에 전송
+		shader.setVec3("viewPos", camera.Position);
+
+		// 광원 위치값 쉐이더 프로그램에 전송
+		shader.setVec3("lightPos", lightPos);
+
+		// blinn-phong 조명모델 적용 여부 쉐이더 프로그램에 전송
+		shader.setInt("blinn", blinn);
 
 
 		/* 바닥 평면 그리기 */
