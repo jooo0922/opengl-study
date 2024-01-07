@@ -119,82 +119,60 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// 큐브 렌더링 시 적용할 쉐이더 객체 생성
-	Shader shader("MyShaders/anti_aliasing.vs", "MyShaders/anti_aliasing.fs");
+	Shader shader("MyShaders/advanced_lighting.vs", "MyShaders/advanced_lighting.fs");
 
-	// 큐브의 정점 데이터 정적 배열 초기화
-	float cubeVertices[] = {
-		// positions  
-		-0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f,  0.5f, -0.5f,
-		 0.5f,  0.5f, -0.5f,
-		-0.5f,  0.5f, -0.5f,
-		-0.5f, -0.5f, -0.5f,
+	// 바닥 평면의 정점 데이터 정적 배열 초기화
+	float planeVertices[] = {
+		// positions            // normals         // texcoords
+		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+		-10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
 
-		-0.5f, -0.5f,  0.5f,
-		 0.5f, -0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f,  0.5f,
-		-0.5f, -0.5f,  0.5f,
-
-		-0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f, -0.5f,
-		-0.5f, -0.5f, -0.5f,
-		-0.5f, -0.5f, -0.5f,
-		-0.5f, -0.5f,  0.5f,
-		-0.5f,  0.5f,  0.5f,
-
-		 0.5f,  0.5f,  0.5f,
-		 0.5f,  0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-
-		-0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f, -0.5f,
-		 0.5f, -0.5f,  0.5f,
-		 0.5f, -0.5f,  0.5f,
-		-0.5f, -0.5f,  0.5f,
-		-0.5f, -0.5f, -0.5f,
-
-		-0.5f,  0.5f, -0.5f,
-		 0.5f,  0.5f, -0.5f,
-		 0.5f,  0.5f,  0.5f,
-		 0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f,  0.5f,
-		-0.5f,  0.5f, -0.5f,
+		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+		 10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
 	};
 
 
-	/* 큐브의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고) */
+	/* 바닥 평면의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고) */
 
 	// VBO, VAO 객체(object) 참조 id 를 저장할 변수
-	unsigned int cubeVBO, cubeVAO;
+	unsigned int planeVBO, planeVAO;
 
 	// VAO(Vertex Array Object) 객체 생성
-	glGenVertexArrays(1, &cubeVAO);
+	glGenVertexArrays(1, &planeVAO);
 
 	// VBO(Vertex Buffer Object) 객체 생성
-	glGenBuffers(1, &cubeVBO);
+	glGenBuffers(1, &planeVBO);
 
 	// VAO 객체 먼저 컨텍스트에 바인딩(연결)함. 
 	// -> 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
-	glBindVertexArray(cubeVAO);
+	glBindVertexArray(planeVAO);
 
 	// VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
 
 	// 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
 
 	// 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. 
-	// -> 그 중에서 0번 location 변수만 사용하도록 활성화한 것!
+	// -> 그 중에서 0번 location 변수를 사용하도록 활성화
 	glEnableVertexAttribArray(0);
 
 	// 정점 위치 데이터(0번 location 입력변수 in vec3 aPos 에 전달할 데이터) 해석 방식 정의
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+
+	// 1번 location 변수를 사용하도록 활성화
+	glEnableVertexAttribArray(1);
+
+	// 정점 노멀 데이터(1번 location 입력변수 in vec3 aNormal 에 전달할 데이터) 해석 방식 정의
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+
+	// 2번 location 변수를 사용하도록 활성화
+	glEnableVertexAttribArray(2);
+
+	// 정점 UV 데이터(2번 location 입력변수 in vec2 aTexCoords 에 전달할 데이터) 해석 방식 정의
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 
 	// VBO 객체 설정을 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -252,12 +230,12 @@ int main()
 		shader.setMat4("model", glm::mat4(1.0f));
 
 
-		/* 큐브 그리기 */
+		/* 바닥 평면 그리기 */
 
-		// 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(cubeVAO);
+		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+		glBindVertexArray(planeVAO);
 
-		// 큐브 그리기 명령
+		// 바닥 평면 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
@@ -269,8 +247,8 @@ int main()
 	}
 
 	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
-	glDeleteVertexArrays(1, &cubeVAO);
-	glDeleteBuffers(1, &cubeVBO);
+	glDeleteVertexArrays(1, &planeVAO);
+	glDeleteBuffers(1, &planeVBO);
 
 	// while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 	glfwTerminate();
