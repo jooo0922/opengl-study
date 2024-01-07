@@ -274,6 +274,10 @@ int main()
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
+		// 현재 Blinn-Phong 조명 모델 적용 상태를 콘솔에 출력
+		std::cout << (blinn ? "Blinn-Phong" : "Phong") << std::endl;
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
@@ -361,6 +365,19 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
+	{
+		// B 키 입력 및 현재 blinnKey(== B 키)가 눌리지 않은 상태일 때 처리
+		blinn = !blinn;
+		blinnKeyPressed = true;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
+	{
+		// B 키를 눌렀다가 떼었을 때의 처리
+		blinnKeyPressed = false;
 	}
 }
 
