@@ -194,8 +194,21 @@ int main()
 	shader.setInt("texture1", 0);
 
 
-	// 광원 위치값 초기화
-	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+	// 4개의 광원 위치값을 정적 배열로 선언 및 초기화
+	glm::vec3 lightPositions[] = {
+		glm::vec3(-3.0f, 0.0f, 0.0f),
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(3.0f, 0.0f, 0.0f)
+	};
+
+	// 4개의 조명 색상값을 정적 배열로 선언 및 초기화
+	glm::vec3 lightColors[] = {
+		glm::vec3(0.25),
+		glm::vec3(0.50),
+		glm::vec3(0.75),
+		glm::vec3(1.00)
+	};
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
@@ -245,13 +258,19 @@ int main()
 		// 모델행렬 전송 생략 -> 큐브를 변환하지 않음!
 
 
+		/* 조명 관련 정적 배열들을 쉐이더 객체에 전송 */
+
+		// 4개의 조명 위치값을 쉐이더 객체에 전송 (정적 배열을 uniform 변수에 전송하는 방법 관련 하단 필기 참고)
+		glUniform3fv(glGetUniformLocation(shader.ID, "lightPositions"), 4, &lightPositions[0][0]);
+
+		// 4개의 조명 색상값을 쉐이더 객체에 전송
+		glUniform3fv(glGetUniformLocation(shader.ID, "lightColors"), 4, &lightColors[0][0]);
+
+
 		/* 기타 uniform 변수들 쉐이더 객체에 전송 */
 
 		// 카메라 위치값 쉐이더 프로그램에 전송
 		shader.setVec3("viewPos", camera.Position);
-
-		// 광원 위치값 쉐이더 프로그램에 전송
-		shader.setVec3("lightPos", lightPos);
 
 
 		/* 바닥 평면 그리기 */
@@ -452,4 +471,29 @@ unsigned int loadTexture(const char* path)
 	필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
 
 	즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
+*/
+
+/*
+	정적 배열을 uniform 변수에 전송하기
+
+
+	glUniform3fv(glGetUniformLocation(ShaderProgram 참조 ID, "uniform 변수명"), count, value(주소값));
+
+	vec3 타입의 변수들이 담긴 정적 배열을
+	uniform 변수에 전송한다고 가정하면, 위의 코드대로 작성하면 됨.
+
+	각각의 매개변수에 대해 설명하자면,
+	
+	1. glGetUniformLocation 은 쉐이더 코드 상에서 
+	uniform 변수의 위치값을 의미한다는 것은 알 것이고,
+
+	2. count 는 몇 개의 요소들을 정적 배열에 담아 보낼 것인지 의미함.
+	예를 들어, glUniform3fv 라는 것은 vec3(float, float, float) 타입의 요소를 
+	uniform 변수에 전송할 때 사용하는데, 이 타입의 요소가 몇 개 담긴 정적 배열을
+	uniform 변수에 전송할 것인지 명시할 때, 그 정적 배열의 개수를 count 에 전달하면 됨.
+
+	3. value 는 당연히 정적 배열의 시작 위치의 주소값을 의미하는 거겠지?
+	배열은 시작 요소로부터 연속적으로 메모리 상에 저장되어 있기 때문에, 
+	대부분의 c-style 메서드들은 배열을 매개변수로 전달할 때, 
+	항상 배열의 시작 위치 주소값을 전달하는 방식으로 되어 있음.
 */
