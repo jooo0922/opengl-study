@@ -40,6 +40,10 @@ unsigned int loadTexture(const char* path, bool gammaCorrection);
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
+// gamma correction 상태값을 나타내는 전역 변수 선언
+bool gammaEnabled = false;
+bool gammaKeyPressed = false;
+
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -283,10 +287,16 @@ int main()
 
 		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
+
+		// 현재 gamma correction 활성화 여부에 따라, gamma correction 중복 처리가 보정된 텍스쳐 객체를 바인딩할 지 결정
+		glBindTexture(GL_TEXTURE_2D, gammaEnabled ? floorTextureGammaCorrected : floorTexture);
 
 		// 바닥 평면 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+		// 현재 gamma correction 활성화 상태 출력
+		std::cout << (gammaEnabled ? "Gamma enabled" : "Gamma disabled") << std::endl;
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -376,6 +386,18 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !gammaKeyPressed)
+	{
+		// space 키 입력 시, gamma correction 상태값 변경
+		gammaEnabled = !gammaEnabled;
+		gammaKeyPressed = true;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+	{
+		gammaKeyPressed = false;
 	}
 }
 
