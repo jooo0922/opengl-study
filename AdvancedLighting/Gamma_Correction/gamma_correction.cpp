@@ -279,6 +279,9 @@ int main()
 		// 카메라 위치값 쉐이더 프로그램에 전송
 		shader.setVec3("viewPos", camera.Position);
 
+		// gamma correction 활성화 상태를 쉐이더 프로그램에 전송
+		shader.setBool("gamma", gammaEnabled);
+
 
 		/* 바닥 평면 그리기 */
 
