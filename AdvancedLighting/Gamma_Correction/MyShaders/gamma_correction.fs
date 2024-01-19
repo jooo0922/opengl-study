@@ -2,63 +2,108 @@
 
 out vec4 FragColor;
 
-// vertex shader 단계에서 전달받는 입력 interface block 선언
+/* vertex shader 단계에서 전달받는 입력 interface block 선언 */
 in VS_OUT {
   vec3 FragPos;
   vec3 Normal;
   vec2 TexCoords;
 } fs_in;
 
-// OpenGL 에서 전송해 줄 uniform 변수들 선언
-uniform sampler2D floorTexture; // 바닥 평면 텍스쳐 (0번 texture unit 에 바인딩된 텍스쳐 객체 샘플링)
-uniform vec3 lightPos; // 광원 위치 > 조명벡터 계산에서 사용
-uniform vec3 viewPos; // 카메라 위치 > 뷰 벡터 계산에서 사용
-uniform bool blinn; // blinn-phong 반사 모델 적용 모드 상태값
+/* 
+  OpenGL 에서 전송해 줄 uniform 변수들 선언 
+*/
+
+// 바닥 평면 텍스쳐 (0번 texture unit 에 바인딩된 텍스쳐 객체 샘플링)
+uniform sampler2D floorTexture;
+
+// 4개의 광원 위치를 전송받는 정적 배열 선언
+uniform vec3 lightPositions[4];
+
+// 4개의 조명 색상을 전송받는 정적 배열 선언
+uniform vec3 lightColors[4];
+
+// 카메라 위치 > 뷰 벡터 계산에서 사용
+uniform vec3 viewPos;
+
+/*
+  BlinnPhong 계산 함수 별도 추출
+*/
+vec3 BlinnPhong(vec3 normal, vec3 fragPos, vec3 lightPos, vec3 lightColor) {
+  /* 
+    diffuse 성분 계산 
+  */
+
+  // 조명계산에 사용되는 모든 방향벡터들은 항상 정규화를 해줄 것! -> 그래야 내적계산 시 정확한 cos 값만 얻을 수 있음!
+
+  // 조명벡터 (프래그먼트 위치 ~ 광원 위치)
+  vec3 lightDir = normalize(lightPos - fs_in.FragPos);
+
+  // 노멀벡터와 조명벡터 내적 > diffuse 성분의 세기(조도) 계산 (참고로, 음수인 diffuse 값은 조명값 계산을 부정확하게 만들기 때문에, 0.0 으로 clamping 시킴)
+  float diff = max(dot(lightDir, normal), 0.0);
+
+  // diffuse 조도에 조명 색상 곱해서 최종 diffuse 성분값 계산
+  vec3 diffuse = diff * lightColor; 
+
+  /* 
+    specular 성분 계산 (blinn-phong 반사 모델 적용) 
+  */
+
+  // 뷰 벡터 (카메라 위치 ~ 프래그먼트 위치)
+  vec3 viewDir = normalize(viewPos - fs_in.FragPos);
+
+  // specular 조도 선언 및 초기화
+  float spec = 0.0; 
+
+  // 뷰 벡터와 조명벡터 사이의 halfway 벡터 계산 (두 벡터의 합 -> 두 벡터 사이를 가로지르는 하프 벡터 (<셰이더 코딩 입문> p.222 참고))
+  vec3 halfwayDir = normalize(lightDir + viewDir);
+
+  // specular 성분의 조도 계산
+  // 프래그먼트 지점의 normal 벡터와 halfway 벡터를 clamping 내적함
+  // 내적값을 64제곱 > 64는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨.
+  // Blinn-Phong 모델에서는 동일한 조건 하에 기본 Phong 모델에 비해 내적값이 더 작게 계산되기 때문에,
+  // 일반적인 관례상 기본 Phong 모델보다 2~4배 큰 shininess(광택값)을 사용한다.
+  spec = pow(max(dot(normal, halfwayDir), 0.0), 64);
+
+  // specular 조도에 조명색상을 곱해 specular 성분값 계산
+  vec3 specular = spec * lightColor;
+
+  /* 
+    Point(?) Light 감쇄 계산 
+  */
+
+  // 광원에서 각 프래그먼트 사이의 거리
+  float distance = length(lightPos - fragPos);
+
+  // 물리적으로 정확한 계산을 위해, 거리 제곱의 반비례로 감쇄 계산
+  float attenuation = 1.0 / distance * distance;
+
+  /*
+    각 조명 성분에 감쇄 적용
+  */
+  diffuse *= attenuation;
+  specular *= attenuation;
+
+  // 각 조명 성분을 더해서 최종 BlinnPhong 조명값 계산하여 반환
+  return diffuse + specular;
+}
 
 void main() {
+  // diffuse 텍스쳐 샘플링
   vec3 color = texture2D(floorTexture, fs_in.TexCoords).rgb;
 
-  /* ambient 성분 계산 */
-  float ambientStrength = 0.05; // ambient 강도
-  vec3 ambient = ambientStrength * color; // ambient 강도에 텍스쳐 색상 곱해서 최종 ambient 성분값 계산
+  // 누산할 조명값 초기화
+  vec3 lighting = vec3(0.0);
 
-  /* diffuse 성분 계산 */
-  // 조명계산에 사용되는 모든 방향벡터들은 항상 정규화를 해줄 것! -> 그래야 내적계산 시 정확한 cos 값만 얻을 수 있음!
-  vec3 lightDir = normalize(lightPos - fs_in.FragPos); // 조명벡터 (프래그먼트 위치 ~ 광원 위치)
-  vec3 normal = normalize(fs_in.Normal); // 프래그먼트에 수직인 노멀벡터
-  float diff = max(dot(lightDir, normal), 0.0); // 노멀벡터와 조명벡터 내적 > diffuse 성분의 세기(조도) 계산 (참고로, 음수인 diffuse 값은 조명값 계산을 부정확하게 만들기 때문에, 0.0 으로 clamping 시킴)
-  vec3 diffuse = diff * color; // diffuse 조도에 텍스쳐 색상 곱해서 최종 diffuse 성분값 계산
-
-  /* specular 성분 계산 */
-  vec3 viewDir = normalize(viewPos - fs_in.FragPos); // 뷰 벡터 (카메라 위치 ~ 프래그먼트 위치)
-  float spec = 0.0; // specular 조도 선언 및 초기화
-
-  if(blinn) {
-    /* blinn-phong 반사 모델 적용 시 spec 계산 */
-
-    // 뷰 벡터와 조명벡터 사이의 halfway 벡터 계산 (두 벡터의 합 -> 두 벡터 사이를 가로지르는 하프 벡터 (<셰이더 코딩 입문> p.222 참고))
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-
-    // specular 성분의 조도 계산
-    // 프래그먼트 지점의 normal 벡터와 halfway 벡터를 clamping 내적함
-    // 내적값을 32제곱 > 32는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨.
-    // Blinn-Phong 모델에서는 동일한 조건 하에 기본 Phong 모델에 비해 내적값이 더 작게 계산되기 때문에,
-    // 일반적인 관례상 기본 Phong 모델보다 2~4배 큰 shininess(광택값)을 사용한다.
-    spec = pow(max(dot(normal, halfwayDir), 0.0), 32);
-  } else {
-    /* 기본 phong 반사 모델 적용 시 spec 계산 */
-
-    // 반사 벡터 (조명벡터는 카메라 위치부터 출발하도록 방향을 negate) 계산
-    vec3 reflectDir = reflect(-lightDir, normal); 
-
-    // specular 성분의 조도 계산
-    // 뷰 벡터와 반사 벡터를 clamping 내적함
-    spec = pow(max(dot(viewDir, reflectDir), 0.0), 8);
+  // 광원 개수만큼 반복문을 순회하여 BlinnPhong 조명값 누산
+  for(int i = 0; i < 4; i++) {
+    lighting += BlinnPhong(normalize(fs_in.Normal), fs_in.FragPos, lightPositions[i], lightColors[i]);
   }
-  vec3 specular = spec * vec3(0.3); // specular 조도에 조명색상(약간 밝은 흰색)을 곱해 specular 성분값 계산
+
+  // 텍스쳐 색상에 누산된 조명값을 곱해 최종 색상 계산
+  color *= lighting;
 
   // 3가지 성분을 모두 더하여 최종 색상 결정
-  FragColor = vec4(ambient + diffuse + specular, 1.0);
+  FragColor = vec4(color, 1.0);
 }
 
 /*
