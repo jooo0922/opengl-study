@@ -78,7 +78,35 @@ vec3 BlinnPhong(vec3 normal, vec3 fragPos, vec3 lightPos, vec3 lightColor) {
   float distance = length(lightPos - fragPos);
 
   // 물리적으로 정확한 계산을 위해, 거리 제곱의 반비례로 감쇄 계산
-  float attenuation = 1.0 / distance * distance;
+  /*
+    gamma correction 활성화 여부에 따라
+    감쇄 계산 시, '거리 제곱에' 반비례하게 계산할 지,
+    '거리에' 반비례하게 계산할 지 결정함.
+
+    이렇게 하는 이유는,
+
+    어차피 CRT 모니터에 의해서
+    최종 색상 출력 시 2.2 제곱이 적용될 것이고,
+
+    1. gamma correction 이 활성화되면,
+    프래그먼트 쉐이더에서 최종 색상에는 1 / 2.2 제곱이 적용되기 때문에,
+    사실상 두 거듭제곱 값이 상쇄되어 버림.
+
+    따라서, 감쇄가 거리 제곱에 반비례하도록 계산하려면
+    거리값을 거듭제곱 해줘야 하는 것이고,
+
+    2. 반대로 gamma correction 이 비활성화되면,
+    프래그먼트 쉐이더에서 최종 색상에 거듭제곱하지 않기 때문에,
+    
+    감쇄 계산 시, 무작정 거리값을 2 제곱해버리면
+    CRT 모니터에 의해 2.2 제곱이 중복 적용되어
+    최종적으로 감쇄에서 거리값에 4.4 제곱이 적용되어 버림.
+
+    이러한 거듭제곱 중복을 방지하기 위해,
+    CRT 모니터의 2.2 제곱을 거리 제곱으로 역이용 해버리도록
+    감쇄 계산 시점에는 거리 제곱을 생략한 것임!
+  */
+  float attenuation = 1.0 / (gamma ? distance * distance : distance);
 
   /*
     각 조명 성분에 감쇄 적용
