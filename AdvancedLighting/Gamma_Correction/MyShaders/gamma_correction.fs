@@ -25,6 +25,9 @@ uniform vec3 lightColors[4];
 // 카메라 위치 > 뷰 벡터 계산에서 사용
 uniform vec3 viewPos;
 
+// gamma correction 활성화 여부
+uniform bool gamma;
+
 /*
   BlinnPhong 계산 함수 별도 추출
 */
@@ -101,6 +104,25 @@ void main() {
 
   // 텍스쳐 색상에 누산된 조명값을 곱해 최종 색상 계산
   color *= lighting;
+
+  if(gamma) {
+    /*
+      gamma correction 상태값 활성화 시,
+      
+      CRT 모니터의 gamma 값 2.2 의 역수인 1.0 / 2.2 만큼으로 거듭제곱 함으로써,
+      최종 출력 색상을 미리 밝게 보정해 줌.
+      
+      이렇게 하면, 
+      모니터 출력 시, 2.2 거듭제곱으로 다시 gamma correction 이 적용됨으로써,
+      미리 프래그먼트 쉐이더에서 gamma correction 되어 밝아진 색상이 다시 어두워짐으로써,
+
+      원래의 의도한 linear space 색 공간을
+      모니터에 그대로 출력할 수 있게 됨.
+
+      -> 이것이 바로 'gamma correction'
+    */
+    color = pow(color, vec3(1.0 / 2.2));
+  }
 
   // 3가지 성분을 모두 더하여 최종 색상 결정
   FragColor = vec4(color, 1.0);
