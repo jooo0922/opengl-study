@@ -300,6 +300,68 @@ int main()
 /* 전방선언된 콜백함수 정의 */
 
 
+/* shadow map 에 깊이 버퍼를 저장할 씬을 렌더링하는 함수 선언 */
+void renderScene(const Shader& shader)
+{
+	/* 바닥 평면 그리기 */
+
+	// 바닥 평면에 적용할 모델행렬 초기화 (단위행렬 사용 -> 변환 x)
+	glm::mat4 model = glm::mat4(1.0f);
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+	glBindVertexArray(planeVAO);
+
+	// 바닥 평면 그리기 명령
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+	/* 첫 번째 큐브 그리기 */
+
+	// 첫 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
+	model = glm::scale(model, glm::vec3(0.5f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+
+
+	/* 두 번째 큐브 그리기 */
+
+	// 두 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
+	model = glm::scale(model, glm::vec3(0.5f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+
+
+	/* 세 번째 큐브 그리기 */
+
+	// 세 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0f));
+	model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f)));
+	model = glm::scale(model, glm::vec3(0.25f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+}
+
+
 /* 씬에 큐브를 렌더링하는 함수 구현 */
 
 // Cube VBO, VAO 객체(object) 참조 id 를 저장할 변수 전역 선언 (why? 다른 함수들에서도 참조)
