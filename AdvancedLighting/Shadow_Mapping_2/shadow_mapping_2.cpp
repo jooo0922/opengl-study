@@ -139,6 +139,9 @@ int main()
 	// shadow map 을 시각화할 QuadMesh 에 적용할 쉐이더 객체 생성
 	Shader debugDepthQuad("MyShaders/debug_quad.vs", "MyShaders/debug_quad.fs");
 
+	// second pass 를 렌더링할 때 적용할 쉐이더 객체 생성
+	Shader shader("MyShaders/shadow_mapping.vs", "MyShaders/shadow_mapping.fs");
+
 	// 바닥 평면의 정점 데이터 정적 배열 초기화
 	float planeVertices[] = {
 		// positions            // normals         // texcoords
@@ -248,6 +251,11 @@ int main()
 	// 생성한 FBO 객체 설정 완료 후, 다시 default framebuffer 바인딩하여 원상복구 (참고로, default framebuffer 의 참조 id 가 0임!)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+	// second pass 프래그먼트 쉐이더에 선언된 uniform sampler 변수(diffuse map, shadow map) 각각에 0번, 1번 texture unit 위치값 전송
+	shader.use();
+	shader.setInt("diffuseTexture", 0);
+	shader.setInt("shadowMap", 1);
 
 	// QuadMesh 프래그먼트 쉐이더에 선언된 uniform sampler 변수(shadow map)에 0번 texture unit 위치값 전송
 	debugDepthQuad.use();
