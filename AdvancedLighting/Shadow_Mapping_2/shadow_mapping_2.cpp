@@ -398,23 +398,23 @@ int main()
 		renderScene(shader);
 
 
-		/* Third Pass (shadow map 을 QuadMesh 에 시각화) */
+		/* Third Pass (shadow map 을 QuadMesh 에 시각화) -> shadow map 디버깅 안할 시 주석 처리 */
 
-		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
-		debugDepthQuad.use();
+		//// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
+		//debugDepthQuad.use();
 
-		// QuadMesh 에 적용할 쉐이더에 uniform 변수 전송
-		debugDepthQuad.setFloat("near_plane", near_plane);
-		debugDepthQuad.setFloat("far_plane", far_plane);
+		//// QuadMesh 에 적용할 쉐이더에 uniform 변수 전송
+		//debugDepthQuad.setFloat("near_plane", near_plane);
+		//debugDepthQuad.setFloat("far_plane", far_plane);
 
-		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
-		glActiveTexture(GL_TEXTURE0);
+		//// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		//glActiveTexture(GL_TEXTURE0);
 
-		// shadow map 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, depthMap);
+		//// shadow map 텍스쳐 객체 바인딩
+		//glBindTexture(GL_TEXTURE_2D, depthMap);
 
-		// QuadMesh 렌더링
-		renderQuad();
+		//// QuadMesh 렌더링
+		//renderQuad();
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
