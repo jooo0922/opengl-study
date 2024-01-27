@@ -315,6 +315,30 @@ int main()
 		simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 
+		/* First Pass (shadow map 에 깊이버퍼 기록) */
+
+		// GLFWwindow 상에 렌더링될 뷰포트 영역을 shadow map 해상도에 맞게 resize
+		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+
+		// shadow map 텍스쳐 객체가 attach 된 framebuffer 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+
+		// 현재 바인딩된 프레임버퍼의 깊이버퍼 초기화
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// shadow map 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, woodTexture);
+
+		// shadow map 에 깊이버퍼를 기록할 씬 렌더링
+		renderScene(simpleDepthShader);
+
+		// default framebuffer 로 바인딩 복구
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
