@@ -347,13 +347,58 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		/* Second Pass (shadow map 을 QuadMesh 에 시각화) */
+		/* 이후 Pass 부터는 실제 스크린에 렌더링하므로, 뷰포트 영역 사이즈 복구 */
 
 		// GLFWwindow 상에 렌더링될 뷰포트 영역을 스크린 해상도로 복구
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
 		// 현재 바인딩된 default framebuffer 의 깊이 버퍼 및 색상 버퍼 초기화
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+		/* Second Pass (생성된 shadow map 으로 실제 화면에 씬을 렌더링) */
+
+		// 실제 씬 렌더링에 사용할 쉐이더 객체 바인딩
+		shader.use();
+
+		// 카메라의 zoom 값으로부터 원근 투영행렬 계산
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
+		glm::mat4 view = camera.GetViewMatrix();
+
+		// 계산된 투영행렬을 쉐이더 객체에 전송
+		shader.setMat4("projection", projection);
+
+		// 계산된 뷰 행렬을 쉐이더 객체에 전송
+		shader.setMat4("view", view);
+
+		// 카메라 위치값 쉐이더 객체에 전송
+		shader.setVec3("viewPos", camera.Position);
+
+		// 광원 위치값 쉐이더 객체에 전송
+		shader.setVec3("lightPos", lightPos);
+
+		// First Pass 렌더링 시 계산해뒀던 lightSpaceMatrix 를 쉐이더 프로그램에 전송
+		shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+		// diffuse map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// diffuse map 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, woodTexture);
+
+		// shadow map 텍스쳐 객체를 바인딩할 1번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE1);
+
+		// shadow map 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+
+		// 실제 화면에 보여줄 씬 렌더링
+		renderScene(shader);
+
+
+		/* Third Pass (shadow map 을 QuadMesh 에 시각화) */
 
 		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
 		debugDepthQuad.use();
