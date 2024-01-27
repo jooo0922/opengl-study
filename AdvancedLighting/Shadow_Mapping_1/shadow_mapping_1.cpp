@@ -142,13 +142,13 @@ int main()
 	// 바닥 평면의 정점 데이터 정적 배열 초기화
 	float planeVertices[] = {
 		// positions            // normals         // texcoords
-		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-		-10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+		-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
 
-		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-		 10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+		 25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
 	};
 
 
@@ -323,20 +323,45 @@ int main()
 		// shadow map 텍스쳐 객체가 attach 된 framebuffer 바인딩
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 
-		// 현재 바인딩된 프레임버퍼의 깊이버퍼 초기화
+		// 현재 바인딩된 framebuffer 의 깊이 버퍼 초기화
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
 
-		// shadow map 텍스쳐 객체 바인딩
+		// 씬 안의 큐브와 바닥평면에 적용할 woodTexture 텍스쳐 객체 바인딩
 		glBindTexture(GL_TEXTURE_2D, woodTexture);
 
-		// shadow map 에 깊이버퍼를 기록할 씬 렌더링
+		// shadow map 에 깊이 버퍼를 기록할 씬 렌더링
 		renderScene(simpleDepthShader);
 
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+		/* Second Pass (shadow map 을 QuadMesh 에 시각화) */
+
+		// GLFWwindow 상에 렌더링될 뷰포트 영역을 스크린 해상도로 복구
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+
+		// 현재 바인딩된 default framebuffer 의 깊이 버퍼 및 색상 버퍼 초기화
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
+		debugDepthQuad.use();
+
+		// QuadMesh 에 적용할 쉐이더에 uniform 변수 전송
+		debugDepthQuad.setFloat("near_plane", near_plane);
+		debugDepthQuad.setFloat("far_plane", far_plane);
+
+		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// shadow map 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+
+		// QuadMesh 렌더링
+		renderQuad();
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -530,7 +555,7 @@ void renderCube()
 	glBindVertexArray(cubeVAO);
 
 	// 큐브 그리기 명령
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
 
 	// 그리기 명령 종료 후, VAO 객체 바인딩 해제
 	glBindVertexArray(0);
