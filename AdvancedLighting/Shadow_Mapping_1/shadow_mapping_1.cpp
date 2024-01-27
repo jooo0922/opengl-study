@@ -133,8 +133,11 @@ int main()
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// 큐브 렌더링 시 적용할 쉐이더 객체 생성
-	Shader shader("MyShaders/shadow_mapping_depth.vs", "MyShaders/shadow_mapping_depth.fs");
+	// light space 렌더링 시 적용할 쉐이더 객체 생성 -> shadow map 에 실제 기록될 깊이 버퍼를 렌더링
+	Shader simpleDepthShader("MyShaders/shadow_mapping_depth.vs", "MyShaders/shadow_mapping_depth.fs");
+
+	// shadow map 을 시각화할 QuadMesh 에 적용할 쉐이더 객체 생성
+	Shader debugDepthQuad("MyShaders/debug_quad.vs", "MyShaders/debug_quad.fs");
 
 	// 바닥 평면의 정점 데이터 정적 배열 초기화
 	float planeVertices[] = {
@@ -246,13 +249,13 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 0번 texture unit 위치값 전송
-	shader.use();
-	shader.setInt("texture1", 0);
+	// QuadMesh 프래그먼트 쉐이더에 선언된 uniform sampler 변수(shadow map)에 0번 texture unit 위치값 전송
+	debugDepthQuad.use();
+	debugDepthQuad.setInt("depthMap", 0);
 
 
 	// 광원 위치값 초기화
-	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+	glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
@@ -282,46 +285,34 @@ int main()
 		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
 
 
-		/* 변환행렬 계산 및 쉐이더 객체에 전송 */
+		/* shadow map 에 기록할 씬에 적용할 변환행렬 계산 및 쉐이더 객체에 전송 */
 
-		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
-		shader.use();
+		// light space 좌표계로 변환 시 적용할 투영 행렬과 뷰 행렬 변수 초기화
+		glm::mat4 lightProjection, lightView;
 
-		// 카메라의 zoom 값으로부터 투영 행렬 계산
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		// light space 좌표계로 변환 시 적용할 lightSpaceMatrix 변수 초기화
+		glm::mat4 lightSpaceMatrix;
 
-		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
-		glm::mat4 view = camera.GetViewMatrix();
+		// 투영행렬 계산에 사용할 near 값 초기화
+		float near_plane = 1.0f;
 
-		// 계산된 투영행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("projection", projection);
+		// 투영행렬 계산에 사용할 far 값 초기화
+		float far_plane = 7.5f;
 
-		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("view", view);
+		// directional light 가 적용된 shadow map 을 구하려면, '직교 투영행렬'을 사용할 것! (하단 필기 참고)
+		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
 
-		// 모델행렬 전송 생략 -> 큐브를 변환하지 않음!
+		// '광원의 위치가 원점이고, 방향은 '월드공간 원점'을 바라보는' light space 좌표계로 변환하는 뷰 행렬(= LookAt 행렬) 계산
+		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
+		// 쉐이더로 변환행렬을 전송하기 전, cpp 단계에서 lightProjection 과 lightView 를 미리 한 번에 곱해둠
+		lightSpaceMatrix = lightProjection * lightView;
 
-		/* 기타 uniform 변수들 쉐이더 객체에 전송 */
+		// 변환행렬을 전송할 QuadMesh 쉐이더 프로그램 바인딩
+		simpleDepthShader.use();
 
-		// 카메라 위치값 쉐이더 프로그램에 전송
-		shader.setVec3("viewPos", camera.Position);
-
-		// 광원 위치값 쉐이더 프로그램에 전송
-		shader.setVec3("lightPos", lightPos);
-
-
-		/* 바닥 평면 그리기 */
-
-		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(planeVAO);
-
-		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, woodTexture);
-
-		// 바닥 평면 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// 계산된 lightSpaceMatrix 를 쉐이더 프로그램에 전송
+		simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -763,4 +754,35 @@ unsigned int loadTexture(const char* path)
 	필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
 
 	즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
+*/
+
+/*
+	light space 로 변환할 때의 투영행렬
+
+
+	어떤 씬의 오브젝트들을
+	world space -> light space 로 변환할 때,
+
+	실제로 렌더링할 씬이
+	어떤 light type 을 사용하고 있는지에 따라
+	light space 변환 시 사용할 투영행렬이 달라짐.
+
+
+	예를 들어, directional light 인 경우,
+	'동일한 방향'의 light ray 들이 평행하게 내리쬐는
+	light casting 을 모델링한 것이기 때문에, 
+	'방향'만 존재할 뿐, '광원의 위치'가 존재하지 않음.
+
+	이처럼, 
+	'평행한 방향값만 존재하는' light casting 타입을
+	기준으로 하는 좌표계로 변환하려면,
+
+	'직교 투영행렬(orthographic projection)' 이 적절할 것임.
+
+
+	반대로, spot light 나 point light 처럼,
+	명확한 '광원의 위치'가 존재하는 
+	light casting 타입을 기준으로 하는 좌표계로 변환하려면,
+
+	'원근 투영행렬(perspective projection)' 이 적절하겠지.
 */
