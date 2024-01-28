@@ -44,6 +44,12 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
   // shadow testing 시, 현재 프래그먼트의 깊이값에 bias 값만큼 빼서 깊이값이 광원에 더 가까워지도록 보정
   float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
 
+  // 현재 프래그먼트의 깊이값(projCoords.z)이 NDC 좌표계 상의 far plane 의 깊이값(1.0)을 넘어서면,
+  // 무조건 그림자 영역이 아닌 것으로 판정하도록 함으로써, Over sampling 이슈 해결 (관련 필기 하단 참고)
+  if(projCoords.z > 1.0) {
+    shadow = 0.0;
+  }
+
   return shadow;
 }
 
@@ -238,4 +244,39 @@ void main() {
   이 현상이 발생하지 않으려면,
   shadow bias 를 계산할 때, 
   일정 범위 내에서 clamping 되도록 범위를 지정해줘야 함. 
+*/
+
+/*
+  Over sampling
+
+
+  Over sampling 에 대한 기본적인 설명은
+  shadow_mapping_2.cpp 에 정리해놨으니 참고하면 됨.
+
+
+  그러나, Wrapping mode 를 변경하는 것만으로
+  모든 Over sampling 이슈를 해결하기는 어려운 경우가 존재하는데,
+  
+  그건 바로 현재 프래그먼트의 깊이값(projCoords.z)이
+  NDC 좌표계 기준 far plane 의 깊이값(1.0)을 넘어서는 경우임.
+
+
+  projCoords.xy 값이 [0, 1] 범위를 넘어섰다는 사실은
+  NDC 좌표계 상의 Frustum 에서 x 축 및 y 축과 교차하는 면들,
+  즉, left, top, bottom, right 을 넘어서는 지점을 샘플링하려고 한다는
+  사실은 알 수 있으나,
+
+  near, far 처럼 z 축과 교차하는 면들을
+  넘어섰는지 여부는 판단할 수 없음.
+
+
+  따라서, far plane 에 대한 Over sampling 여부를 판단하려면, 
+  현재 프래그먼트의 깊이값(projCoords.z) 과 
+  NDC 좌표 기준 far plane 의 깊이값(1.0) 을 비교하면 되겠지.
+
+  이 비교 결과를 통해, 
+  far plane 에 대해 Over sampling 되었음이 판정될 경우,
+  그림자 영역 안에 없는 현재 프래그먼트들이 
+  억울하게 그림자 영역 안에 있는 것으로 판정되지 않도록,
+  무조건 그림자 영역 밖에 있다고 판정해버릴 수 있겠지!
 */
