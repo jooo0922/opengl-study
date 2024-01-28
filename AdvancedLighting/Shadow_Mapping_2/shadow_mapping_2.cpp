@@ -231,9 +231,15 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	// Texture Wrapping 모드 설정
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// Over Sampling 이슈를 방지하기 위해, Texture Wrapping 모드를 clamp to border 로 설정 (관련 내용 하단 필기 참고)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+	// clamp to border 로 샘플링할 색상을 흰색으로 설정
+	// -> [0, 1] 범위를 벗어난 uv 좌표값으로 shadow map 을 샘플링하면, 항상 이 색상으로 샘플링 될 것임.
+	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
 
 	// 생성했던 FBO 객체 바인딩
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
@@ -887,4 +893,58 @@ unsigned int loadTexture(const char* path)
 	light casting 타입을 기준으로 하는 좌표계로 변환하려면,
 
 	'원근 투영행렬(perspective projection)' 이 적절하겠지.
+*/
+
+/*
+	Over sampling
+
+
+	프래그먼트 쉐이더 단계에서
+	shadow map 을 샘플링하여 깊이값을 비교하다보면,
+
+	현재 프래그먼트가 사용하는 uv좌표값(즉, shadow_mapping.fs > projCoords.xy)이
+	[0, 1] 범위를 넘어서는 경우가 발생하게 됨.
+
+
+	uv 좌표값이라면서 어떻게 [0, 1] 범위를 벗어나나 싶겠지만,
+	애초에 projCoords 값 자체가 무슨 gl_Position 에 할당되어
+	자동으로 clipping 처리된 좌표값 같은 게 아니고,
+
+	원래 프래그먼트의 world space 좌표값이었던 것을
+	프로그래머가 직접 원근분할 및 맵핑 처리를 해서
+	uv 좌표값처럼 사용할 수 있게 계산된 좌표에 불과하기 때문에,
+
+	얼마든지 [0, 1] 범위를 넘어서는 값이
+	projCoords.xy 에 들어올 수 있는 것임.
+
+
+	문제는, [0, 1] 범위를 넘어서는 uv 좌표값으로 샘플링하다 보면,
+	shadow map 을 생성할 때 설정한 Wrapping mode 에 따라서
+	부정확한 깊이값이 샘플링될 확률이 매우매우 높아진다는 것!
+
+
+	그러다 보면, 결국 그림자가 없어도 되는 영역임에도
+	shadow map 으로부터 부정확하게 샘플링된 깊이값에 의해
+	그림자 영역 내에 존재하는 프래그먼트인 것으로 잘못 testing 될 수 있겠지!
+
+
+	이를 방지하기 위해서는,
+	애초부터 [0, 1] 범위를 넘어서는 uv 좌표값으로
+	shadow map 을 샘플링할 경우, 가장 멀리있는 깊이값인 1.0 이 샘플링되도록 하면,
+
+	어떤 프래그먼트의 깊이값(shadow_mapping.fs > currentDepth) 과 비교하더라도,
+	억울하게 그림자 영역으로 판정될 일은 없을 것임.
+
+
+	이를 위해, 텍스쳐 Wrapping mode 를
+	GL_CLAMP_TO_BORDER 로 설정함으로써,
+
+	uv 좌표값이 [0, 1] 범위를 넘어서게 되면,
+	프로그래머가 임의로 지정한 색상값(GL_TEXTURE_BORDER_COLOR)으로만
+	샘플링될 수 있도록 하면 되겠지!
+
+
+	물론, shadow map 의 깊이값이 1.0 으로 샘플링되려면,
+	GL_TEXTURE_BORDER_COLOR 를 흰색({ 1.0, 1.0, 1.0, 1.0 })으로
+	설정하면 되겠지?
 */
