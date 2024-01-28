@@ -41,8 +41,42 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
   // bias 계산 시, [0.005, 0.05] 범위 내의 값으로 계산되도록 clamping 내적
   float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
 
-  // shadow testing 시, 현재 프래그먼트의 깊이값에 bias 값만큼 빼서 깊이값이 광원에 더 가까워지도록 보정
-  float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+  /* PCF 알고리즘 적용 (자세한 설명 하단 참고) */
+
+  // 누산할 shadow 값 초기화
+  float shadow = 0.0;
+
+  // shadow map 텍스쳐의 단위 texel 당 크기 계산 (-> 주변 texel 을 샘플링할 때 uv 좌표값에 더해줄 offset 으로 사용할 예정)
+  // 참고로, textureSize() built-in 함수는 특정 LOD 레벨(여기서는 0) 상에서의 텍스쳐 width, height 값을 vec2 타입으로 반환함.
+  vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+
+  // 이중 for-loop 내에서 현재 프래그먼트를 중심으로 주변 texel 들의 깊이값을 shadow map 으로부터 샘플링하여 깊이값 누산 
+  // 'u축(== x축) 방향으로 3회 * v축(== y축) 방향으로 3회' => 총 9회의 shadow map 깊이값 샘플링
+  for(int x = -1; x <= 1; x++) {
+    // -1 ~ 1 까지 u축 방향으로 3회 순회
+
+    for(int y = -1; y <= 1; y++) {
+      // -1 ~ 1 까지 v축 방향으로 3회 순회
+
+      /*
+        현재 프래그먼트의 uv 좌표값(projCoords.xy)을 중심으로,
+        각 방향으로 단위 texel 크기 만큼의 offset 을 적용하여(vec2(x, y) * texelSize)
+
+        shadow map 으로부터 주변 texel 의 깊이값을 샘플링
+      */
+      float pcfDepth = texture2D(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+
+      /*
+        shadow map 으로부터 샘플링한 주변 texel 의 깊이값을 가지고서
+        shadow testing 을 수행한 결과를 shadow 변수에 누산함.
+      */
+      // shadow testing 시, 현재 프래그먼트의 깊이값에 bias 값만큼 빼서 깊이값이 광원에 더 가까워지도록 보정
+      shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+    }
+  }
+
+  // 주변 texel 로부터 깊이값을 샘플링하여 shadow testing 결과를 누산한 횟수만큼 나눠서 평균값을 구함
+  shadow /= 9.0;
 
   // 현재 프래그먼트의 깊이값(projCoords.z)이 NDC 좌표계 상의 far plane 의 깊이값(1.0)을 넘어서면,
   // 무조건 그림자 영역이 아닌 것으로 판정하도록 함으로써, Over sampling 이슈 해결 (관련 필기 하단 참고)
@@ -279,4 +313,44 @@ void main() {
   그림자 영역 안에 없는 현재 프래그먼트들이 
   억울하게 그림자 영역 안에 있는 것으로 판정되지 않도록,
   무조건 그림자 영역 밖에 있다고 판정해버릴 수 있겠지!
+*/
+
+/*
+	PCF 알고리즘
+
+
+	PCF 알고리즘(Percentage-Closer Filtering)은 
+	shadow mapping 으로 생성한 그림자의 외곽선 부분을 
+	더 부드럽게 렌더링해주는 기법 중 하나임.
+
+	기본적으로 shadow mapping 으로 생성한 그림자는
+	마치 aliasing 현상처럼 그림자의 외곽선 부분에
+	blocky 한 계단현상이 나타나게 됨.
+
+	
+	이를 좀 더 부드럽게 렌더링하기 위해,
+	shadow map 으로부터 현재 프래그먼트의 uv 좌표값(projCoords.xy)을 중심으로
+	주변 texel 들의 깊이값을 n 번 샘플링하여 누산하고,
+	그 누산값을 n 만큼 나눠서 '평균값'을 계산하게 됨.
+
+
+	이렇게 되면,
+	기존의 shadow 값이 0.0 또는 1.0 으로 나왔던 것들이,
+	'평균값'으로 계산되어 0.xxxx... 로 나오게 되겠지!
+
+	즉, 기존의 shadow 값으로 그림자 영역 안에 '있다 / 없다' 만 알 수 있었다면,
+	평균값으로 누산된 shadow 값은 그림자 영역 안에 '얼마나 있는지'를 알 수 있게 되는 것임!
+
+
+	즉, 해당 프래그먼트 지점이
+	광원으로부터 '얼마나 가까운 지'를 '비율로써' 나타낼 수 있으므로,
+	외곽선 영역으로 갈수록, 주변 texel 의 깊이값을 샘플링하여 누산된 평균값을 구한다면,
+  `shadow 영역이 더 부드럽게 렌더링될 수 있을 것임.
+
+	이처럼, 광원에 얼마나 '가까운 지'를 '비율로써' 나타낸다는 의미에서
+	Percentage-Closer Filtering 기법이라고 부르는 것임.
+
+
+	만약, offset 으로 사용하는 단위 texel 의 크기인 texelSize 를 조절하고,
+	주변 texel 샘플링 횟수를 증가시킨다면, 훨씬 더 부드러운 그림자를 렌더링 할 수 있을 것임!
 */
