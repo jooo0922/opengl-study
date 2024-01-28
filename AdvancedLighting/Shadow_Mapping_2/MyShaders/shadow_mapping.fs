@@ -32,7 +32,17 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
 
   // shadow map 에서 샘플링한 깊이값(closestDepth)과 현재 프래그먼트의 깊이값(currentDepth)을 비교하여,
   // 현재 프래그먼트가 그림자 영역 내에 존재하는지 (== occluded 되는지) 판단
-  float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+  // float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
+
+  // shadow acne 현상 해결을 위해, 조명벡터와 프래그먼트의 방향벡터(노멀벡터) 각도를 내적하여 shadow bias 계산 (하단 필기 참고)
+  vec3 normal = normalize(fs_in.Normal);
+  vec3 lightDir = normalize(lightPos - fs_in.FragPos);
+
+  // bias 계산 시, [0.005, 0.05] 범위 내의 값으로 계산되도록 clamping 내적
+  float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+
+  // shadow testing 시, 현재 프래그먼트의 깊이값에 bias 값만큼 빼서 깊이값이 광원에 더 가까워지도록 보정
+  float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
 
   return shadow;
 }
@@ -144,4 +154,88 @@ void main() {
 
   당연히 projCoords 의 z 값 또한
   [0, 1] 사이의 범위로 맞춰주는 게 타당하겠지!
+*/
+
+/*
+  shadow bias
+
+
+  shadow bias 란, 
+  shadow acne 라고 불리는 artifact 를 해결하기 위해
+  계산하는 보정값이라고 보면 됨.
+
+
+  shadow map 은 일정한 해상도가 존재하는 텍스쳐에 불과하기 때문에,
+  모든 프래그먼트의 좌표값(projCoords.xy)에 1:1 로 맵핑되는 texel 들이 존재하는 게 아님.
+
+  즉, 여러 개의 프래그먼트 좌표값이
+  shadow map 으로부터 동일한 texel 을 샘플링하게 될 확률이 높다는 뜻이지!
+
+
+  만약에 이렇다면 어떤 상황이 발생하게 될까?
+  서로 다른 프래그먼트들이 shadow map 으로부터 동일한 깊이값(closestDepth)을 샘플링하여,
+  자신의 깊이값(currentDepth)과 비교하게 될 것임.
+
+  이것은 일반적인 상황에서는 큰 문제가 되지는 않겠지만,
+  만약 조명벡터와 각 프래그먼트들의 표면 사이가 '기울어져' 있다면,
+  LearnOpenGL 본문에 삽입된 일러스트처럼,
+
+  샘플링하려는 shadow map 의 texel 이 각 프래그먼트의 표면과
+  지그재그로 기울어진 상태로 샘플링되는 꼴이 되어버림!
+  (혹은, 각 프래그먼트의 표면을 기울여진다고 상상해보면, 
+  그것도 마찬가지로 shadow map 의 texel 과 지그재그로 교차되는 꼴이 될 것임!)
+
+
+  이렇게 되면, 해당 일러스트에서 보는 것과 같이,
+  각 프래그먼트의 깊이값이 다르더라도, 
+  해상도의 한계로 인해 shadow map 으로부터 동일한 깊이값을 샘플링해와서
+  비교할 수 밖에 없다보니, 
+  
+  서로 가까이에 있는 프래그먼트들이라 하더라도,
+  어떤 부분은 그림자 영역 내에 있는 것으로 판정되고(일러스트의 검은색 부분),
+  어떤 부분은 그림자 영역 밖에 있는 것으로 판정되는(일러스트의 노란색 부분) 것임
+
+
+  이로 인해 약간의 Moiré 같은 패턴이 생기게 되는데,
+  이를 'shadow acne' 라고 함.
+
+
+  이를 해결하기 위한 방법은 아주 간단한데,
+  각 프래그먼트들의 깊이값(currentDepth)들을 전반적으로
+  광원의 위치에 더 가깝게 당겨줌으로써, 
+
+  동일한 shadow map 의 깊이값(closestDepth)을 지그재그 형태로 샘플링하더라도,
+
+  두 깊이값 사이의 차이가 확연하게 나지 않을 정도면,
+  항상 현재 프래그먼트의 깊이값이(currentDepth) 더 광원에 가까운 것으로 판정하는,
+  즉, 그림자 영역 밖에 있는 것으로 판정되도록 깊이값을 보정하는 것이지.
+
+
+  이럴 떄 사용하는 보정값이 
+  'shadow bias' 라고 보면 됨.
+
+
+  그런데, shadow bias 값을 계산할 때에는
+  몇 가지 주의할 사항들이 존재하는데,
+
+  첫째로, 각 프래그먼트 표면과 조명벡터 사이의 각도가 
+  전부 다르기 때문에, 각 프래그먼트와 shadow map 의 texel 이
+  어느 정도로 지그재그 되는지 그 각도마저도 모두 다름.
+
+  따라서, 그 각도에 대한 내적값을 이용해서,
+  각도에 따라 shadow bias 값을 프래그먼트마다 다르게 적용할 수 있도로 함.
+
+
+  둘째로, shadow bias 값이 너무 커지면,
+  확연히 그림자 영역 내에 존재해야 할 프래그먼트들 조차
+  광원에 더 가까워지다보니,
+
+  그림자 영역 밖에 있는 것으로 판정되는 이슈가 발생함.
+
+  이로 인해, 마치 그림자가 '떼어진 것처럼 보이는' 현상이 발생하는데
+  이를 Peter panning 이라고 함.
+
+  이 현상이 발생하지 않으려면,
+  shadow bias 를 계산할 때, 
+  일정 범위 내에서 clamping 되도록 범위를 지정해줘야 함. 
 */
