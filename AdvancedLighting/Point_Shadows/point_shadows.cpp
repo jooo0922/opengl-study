@@ -46,6 +46,10 @@ void renderCube();
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
+// point shadow 활성화 여부 상태값을 전역변수로 선언
+bool shadows = true;
+bool shadowKeyPressed = false;
+
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -653,6 +657,18 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !shadowKeyPressed)
+	{
+		// 스페이스 바 입력 시, point shadow 활성화 상태값 변경
+		shadows = !shadows;
+		shadowKeyPressed = true;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+	{
+		shadowKeyPressed = false;
 	}
 }
 
