@@ -128,6 +128,12 @@ int main()
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
+	// 현재 예제에서는 큐브만 렌더링하므로, 각 큐브의 불필요한 BACK_FACE 렌더링 방지를 위해 Face Culling 활성화
+	glEnable(GL_CULL_FACE);
+
+
+	/* 쉐이더 객체 생성 */
+
 	// light space 렌더링 시 적용할 쉐이더 객체 생성 -> shadow map 에 실제 기록될 깊이 버퍼를 렌더링
 	Shader simpleDepthShader("MyShaders/shadow_mapping_depth.vs", "MyShaders/shadow_mapping_depth.fs");
 
@@ -354,12 +360,38 @@ int main()
 /* shadow map 에 깊이 버퍼를 저장할 씬을 렌더링하는 함수 선언 */
 void renderScene(const Shader& shader)
 {
+	/* Room 큐브 그리기 */
+
+	// Room 큐브에 적용할 모델행렬 계산
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::scale(model, glm::vec3(5.0f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// Room 큐브는 안쪽 면을 렌더링해줘야 하므로, Face Culling 을 잠시 비활성화
+	glDisable(GL_CULL_FACE);
+
+	// Room 큐브 안쪽 면에 대해 정확히 조명계산을 처리하기 위해,
+	// 큐브의 각 면에 바깥쪽 방향을 기준으로 정의된 노멀벡터(renderCube() > float vertices[] 참고!)를
+	// 쉐이더 코드에서 안쪽 방향으로 뒤집어주도록 상태값을 true 로 전달함.
+	shader.setInt("reverse_normal", 1);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+
+	// Room 큐브 렌더링 완료 시, 이후 렌더링할 큐브들을 위해 노멀벡터 방향을 뒤집는 상태값을 false 로 비활성화시킴.
+	shader.setInt("reverse_normal", 0);
+
+	// Room 큐브 렌더링 완료 시, 이후 렌더링할 큐브들을 위해 Face Culling 을 다시 활성화
+	glEnable(GL_CULL_FACE);
+
 
 	/* 첫 번째 큐브 그리기 */
 
 	// 첫 번째 큐브에 적용할 모델행렬 계산
-	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(4.0f, -3.5f, 0.0f));
 	model = glm::scale(model, glm::vec3(0.5f));
 
 	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
@@ -373,8 +405,8 @@ void renderScene(const Shader& shader)
 
 	// 두 번째 큐브에 적용할 모델행렬 계산
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
-	model = glm::scale(model, glm::vec3(0.5f));
+	model = glm::translate(model, glm::vec3(2.0f, 3.0f, 1.0f));
+	model = glm::scale(model, glm::vec3(0.75f));
 
 	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
 	shader.setMat4("model", model);
@@ -387,9 +419,37 @@ void renderScene(const Shader& shader)
 
 	// 세 번째 큐브에 적용할 모델행렬 계산
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0f));
+	model = glm::translate(model, glm::vec3(-3.0f, -1.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(0.5f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+
+
+	/* 네 번째 큐브 그리기 */
+
+	// 네 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.5f, 1.0f, 1.5f));
+	model = glm::scale(model, glm::vec3(0.5f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+
+
+	/* 다섯 번째 큐브 그리기 */
+
+	// 다섯 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.5f, 2.0f, -3.0f));
 	model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f)));
-	model = glm::scale(model, glm::vec3(0.25f));
+	model = glm::scale(model, glm::vec3(0.75f));
 
 	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
 	shader.setMat4("model", model);
