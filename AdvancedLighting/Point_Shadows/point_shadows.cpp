@@ -134,7 +134,7 @@ int main()
 
 	/* 쉐이더 객체 생성 */
 
-	// light space 렌더링 시 적용할 쉐이더 객체 생성 -> shadow map 에 실제 기록될 깊이 버퍼를 렌더링
+	// light space 렌더링 시 적용할 쉐이더 객체 생성 -> omnidirectional shadow map(== 큐브맵) 에 실제 기록될 깊이 버퍼를 렌더링
 	Shader simpleDepthShader("MyShaders/shadow_mapping_depth.vs", "MyShaders/shadow_mapping_depth.fs");
 
 	// second pass 를 렌더링할 때 적용할 쉐이더 객체 생성
@@ -147,7 +147,7 @@ int main()
 	unsigned int woodTexture = loadTexture("resources/textures/wood.png");
 
 
-	/* shadow map 을 생성하기 위한 프레임버퍼 생성 및 설정 */
+	/* omnidirectional shadow map(== 큐브맵) 을 생성하기 위한 프레임버퍼 생성 및 설정 */
 
 	// shadow map 해상도 정의
 	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
@@ -157,27 +157,35 @@ int main()
 	glGenFramebuffers(1, &depthMapFBO);
 
 	// FBO 객체에 attach 할 텍스쳐 객체(== shadow map 텍스쳐) 생성 및 바인딩
-	unsigned int depthMap;
-	glGenTextures(1, &depthMap);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
+	unsigned int depthCubeMap;
+	glGenTextures(1, &depthCubeMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMap);
 
 	// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
 	// 텍스쳐 객체의 해상도는 shadow map 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 'shadow map'으로 사용할 거니까!
 	// 또한, 이 텍스쳐에는 깊이값만 덮어쓸 것이므로(== 깊이 버퍼 attachment), GL_RGB 가 아닌, 'GL_DEPTH_COMPONENT'으로 텍스쳐 포맷을 지정한다! 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		// 현재 바인딩된 큐브맵 텍스쳐 객체에 메모리 할당 시,
+		// Texture Target Enum 에 대응되는 정수값을 반복문 index 를 더해가며 
+		// 순서대로 큐브맵의 각 면에 대응되는 메모리 공간 할당!
+		// https://github.com/jooo0922/opengl-study/blob/main/AdvancedOpenGL/Cubemaps/cubemaps.cpp 참고!
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	}
 
 	// Texture Filtering(텍셀 필터링(보간)) 모드 설정
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	// Over Sampling 이슈를 방지하기 위해, Texture Wrapping 모드를 clamp to border 로 설정 (관련 내용 하단 필기 참고)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 
 	// clamp to border 로 샘플링할 색상을 흰색으로 설정
 	// -> [0, 1] 범위를 벗어난 uv 좌표값으로 shadow map 을 샘플링하면, 항상 이 색상으로 샘플링 될 것임.
 	float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	glTexParameterfv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 
 	// 생성했던 FBO 객체 바인딩
@@ -185,7 +193,7 @@ int main()
 
 	// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
 	// shadow map 텍스쳐 객체에는 최종 depth buffer 만 저장하면 되므로, depth attachment 만 적용함!
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubeMap, 0);
 
 	// shadow map 을 위해 생성한 프레임버퍼는 색상 버퍼를 필요로 하지 않음.
 	// -> 따라서, 현재 GL_FRAMEBUFFER 에 바인딩된 프레임버퍼가 색상 버퍼를 이용해서 실제 화면에 렌더링하지 않음을 명시하면,
@@ -333,7 +341,7 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 
 		// shadow map 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glBindTexture(GL_TEXTURE_2D, depthCubeMap);
 
 		// 실제 화면에 보여줄 씬 렌더링
 		renderScene(shader);
