@@ -42,11 +42,11 @@ void main() {
       // 생성할 출력 primitive 에 변환된 vertex 데이터를 추가
       EmitVertex();
     }
-  }
 
-  // 큐브맵 각 6면의 light space 좌표계로 변환된 세 정점들을 삼각형으로 조립(primitive assembly) 후, 
-  // 조립된 출력 primitive 를 다음 파이프라인(fragment shader)으로 전송
-  EndPrimitive();
+    // 큐브맵 각 6면의 light space 좌표계로 변환된 세 정점들을 삼각형으로 조립(primitive assembly) 후, 
+    // 조립된 출력 primitive 를 다음 파이프라인(fragment shader)으로 전송
+    EndPrimitive();
+  }
 }
 
 /*
