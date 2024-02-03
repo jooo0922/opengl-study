@@ -4,80 +4,24 @@ layout(location = 0) in vec3 aPos;
 
 /* 변환 행렬을 전송받는 uniform 변수 선언 */ 
 
-// 월드공간 좌표를 light space 좌표계로 변환하는 행렬
-uniform mat4 lightSpaceMatrix;
-
 // light space 내부의 각 오브젝트들에 적용할 모델 행렬
 uniform mat4 model;
 
 void main() {
-  // 오브젝트 공간 좌표에 모델 행렬 > light space 행렬 순으로 곱해서 좌표계를 변환시킴.
-  gl_Position = lightSpaceMatrix * model * vec4(aPos, 1.0);
+  // 오브젝트 공간 좌표에 모델 행렬을 곱해서 월드 공간까지만 변환시킨 후, geometry shader 파이프라인으로 넘겨줌.
+  gl_Position = model * vec4(aPos, 1.0);
 }
 
 /*
-  lightSpaceMatrix
+  왜 월드 공간까지만 변환시킨 후 geometry shader 로 넘기는걸까?
 
 
-  우선 이 행렬의 개념을 이해하려면,
-  shadow map 의 개념부터 이해해야 함.
+  omnidirectional shadow mapping 기법 구현 시,
+  큐브맵의 각 6면에 대해 각각의 light space 변환행렬을 적용해줘야 함.
 
-  shadow map 이란, 
-  렌더링되는 씬의 특정 프래그먼트가
-  그림자 영역 내에 있는지를 판단하는
-  'shadow testing' 작업에 사용되는 텍스쳐라고 보면 됨.
+  그런데, vertex shader 단계에서는
+  각 6면에 대한 각각의 변환을 수행하기 어렵겠지!
 
-  이 때, 어떤 프래그먼트가 그림자 영역 안에 있는지
-  어떤 기준으로 판별할 수 있을까?
-
-
-  바로, '광원으로부터 가장 가까운 물체(== 프래그먼트)보다 뒤에 있는 프래그먼트'가
-  '그림자 영역 내에 존재한다' 라고 볼 수 있겠지.
-
-  그래서, 해당 프래그먼트가 광원을 기준으로
-  다른 오브젝트에 가려지는지를 판단한다고도 볼 수 있어서,
-  해당 프래그먼트가 다른 프래그먼트에 'occluded 되는지를 판단한다'
-  라고도 함.
-
-
-  그렇다면, NDC 좌표계를 기준으로, 
-  씬 안에서 각 좌표마다 광원으로부터 가장 가까운 프래그먼트들의
-  깊이값을 텍스쳐 형태로 저장해두면,
-
-  씬 안의 모든 프래그먼트들과의 깊이값을 비교함으로써,
-  해당 프래그먼트들이 광원으로부터 가장 가까운 프래그먼트들에
-  'occluded' 되는지, 즉, '그림자 영역 내에 있는지' 판단할 수 있지 않을까?
-
-  이러한 아이디어에서 출발한 개념이 'shadow map'
-
-
-  'shadow map' 을 만드는 방법은 생각보다 단순하다.
-
-  먼저, 모든 오브젝트들의 좌표를 light space,
-  즉, '광원 좌표계'로 변환해야 한다.
-
-  이는 일반적인 그래픽스 좌표 변환 파이프라인에는 없는 개념이지만,
-
-  view space 가
-  '카메라를 원점으로 하는 좌표계' 인 것처럼,
-
-  light space, 즉,
-  '광원의 위치를 원점으로 하는 좌표계' 로 만든 후,
-  
-  일반적인 변환 파이프라인과 동일하게 
-  '투영 행렬'로 변환한 클립좌표를 gl_Position 에 할당하면,
-  
-  OpenGL 의 primitive assembly 단계에서 자동으로 '원근 분할'을 수행하면서
-  클립좌표의 x, y, z 값을 w 컴포넌트로 나눠 NDC 좌표계로 변환됨.
-
-
-  이후, 프래그먼트 쉐이더 단계로 넘어가게 되면, 별도의 처리가 없어도,
-  현재 프레임버퍼에 attach 된 depth buffer (== 현재 예제에서는 GL_TEXTURE_2D 로 바인딩함.) 에
-  NDC 좌표의 깊이값이 자동으로 기록됨.
-
-
-  이렇게 만들어진 shadow map 텍스쳐를
-  second pass 를 렌더링하는 쉐이더에서 샘플링해서
-  shadow testing 작업을 해주며 그림자 영역 내에 존재하는지 여부를 
-  판단하기 위해 사용하는 원리라고 보면 됨.
+  따라서, vertex shader 단계에서는 월드 공간 좌표계까지만 변환시키고,
+  light space 좌표계로의 변환은 geometry shader 단계에 맡기려는 것!
 */
