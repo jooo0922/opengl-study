@@ -13,8 +13,12 @@ in VS_OUT {
 // OpenGL 에서 전송해 줄 uniform 변수들 선언
 uniform sampler2D diffuseTexture; // 바닥 평면 텍스쳐 (0번 texture unit 에 바인딩된 텍스쳐 객체 샘플링)
 uniform sampler2D shadowMap; // shadow map 텍스쳐 (1번 texture unit 에 바인딩된 텍스쳐 객체 샘플링)
+
 uniform vec3 lightPos; // 광원 위치 > 조명벡터 계산에서 사용
 uniform vec3 viewPos; // 카메라 위치 > 뷰 벡터 계산에서 사용
+
+uniform float far_plane; // [0, 1] 사이로 정규화된 '광원 ~ 각 프래그먼트 사이의 월드공간 거리값'을 [0, far_plane] 사이의 거리값으로 복구할 때 사용
+uniform bool shadows; // point shadow 활성화 여부 상태값
 
 // 현재 프래그먼트가 그림자 안에 있는지 여부를 반환해주는 함수
 float ShadowCalculation(vec4 fragPosLightSpace) {
@@ -126,7 +130,7 @@ void main() {
   vec3 specular = spec * lightColor; // specular 조도에 조명 색상을 곱해 specular 성분값 계산
 
   // 현재 프래그먼트의 light space 좌표계를 매개변수로 전달하여 그림자 영역 내에 존재하는지 여부를 판단
-  float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
+  float shadow = shadows ? ShadowCalculation(fs_in.FragPosLightSpace) : 0.0;
 
   // 3가지 성분을 모두 더한 뒤, 바닥 평면 텍스쳐 색상값(diffuse color)를 곱하여 최종 색상 계산
   /*
