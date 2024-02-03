@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shadow_Mapping_1", "Shadow_
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shadow_Mapping_2", "Shadow_Mapping_2\Shadow_Mapping_2.vcxproj", "{E1297FC4-3278-4687-B142-8564A2E876C3}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Point_Shadows", "Point_Shadows\Point_Shadows.vcxproj", "{8BF5289D-11B1-4505-8005-C44B21F46BE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{E1297FC4-3278-4687-B142-8564A2E876C3}.Release|x64.Build.0 = Release|x64
 		{E1297FC4-3278-4687-B142-8564A2E876C3}.Release|x86.ActiveCfg = Release|Win32
 		{E1297FC4-3278-4687-B142-8564A2E876C3}.Release|x86.Build.0 = Release|Win32
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Debug|x64.ActiveCfg = Debug|x64
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Debug|x64.Build.0 = Debug|x64
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Debug|x86.ActiveCfg = Debug|Win32
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Debug|x86.Build.0 = Debug|Win32
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Release|x64.ActiveCfg = Release|x64
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Release|x64.Build.0 = Release|x64
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Release|x86.ActiveCfg = Release|Win32
+		{8BF5289D-11B1-4505-8005-C44B21F46BE2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
