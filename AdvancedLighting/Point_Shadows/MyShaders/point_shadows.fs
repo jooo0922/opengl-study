@@ -7,12 +7,11 @@ in VS_OUT {
   vec3 FragPos;
   vec3 Normal;
   vec2 TexCoords;
-  vec4 FragPosLightSpace;
 } fs_in;
 
 // OpenGL 에서 전송해 줄 uniform 변수들 선언
 uniform sampler2D diffuseTexture; // 바닥 평면 텍스쳐 (0번 texture unit 에 바인딩된 텍스쳐 객체 샘플링)
-uniform sampler2D shadowMap; // shadow map 텍스쳐 (1번 texture unit 에 바인딩된 텍스쳐 객체 샘플링)
+uniform samplerCube shadowMap; // omnidirectional shadow map 텍스쳐 (1번 texture unit 에 바인딩된 큐브맵 텍스쳐 객체 샘플링)
 
 uniform vec3 lightPos; // 광원 위치 > 조명벡터 계산에서 사용
 uniform vec3 viewPos; // 카메라 위치 > 뷰 벡터 계산에서 사용
@@ -21,72 +20,40 @@ uniform float far_plane; // [0, 1] 사이로 정규화된 '광원 ~ 각 프래�
 uniform bool shadows; // point shadow 활성화 여부 상태값
 
 // 현재 프래그먼트가 그림자 안에 있는지 여부를 반환해주는 함수
-float ShadowCalculation(vec4 fragPosLightSpace) {
-  // 현재 프래그먼트 위치값을 light space 좌표계(== projection 행렬까지 적용된 clip space 라고 봐도 무방) > NDC 좌표계로 변환 (자세한 내용은 하단 참고)
-  vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+float ShadowCalculation(vec3 fragPos) {
+  // '광원 ~ 현재 프래그먼트 사이'의 월드공간 벡터 계산
+  vec3 fragToLight = fragPos - lightPos;
 
-  // [-1, 1] 사이의 NDC 좌표계 > [0, 1] 사이의 범위로 맵핑 (-> uv 좌표로 쓰기 위해...) (자세한 내용은 하단 참고)
-  projCoords = projCoords * 0.5 + 0.5;
+  // '광원 ~ 현재 프래그먼트 사이'의 방향벡터로 깊이값이 저장된 큐브맵 샘플링
+  /*
+    큐브맵은 방향벡터 만으로도 샘플링이 가능하므로,
+    굳이 방향벡터의 길이를 1로 정규화하지 않아도 된다고 했었지?
+    https://github.com/jooo0922/opengl-study/blob/main/AdvancedOpenGL/Cubemaps/MyShaders/skybox.fs 참고
+  */
+  float closestDepth = texture(shadowMap, fragToLight).r;
 
-  // [0, 1] 사이로 맵핑된 좌표의 x, y 값을 uv 좌표로 사용해서 shadow map 샘플링
-  float closestDepth = texture2D(shadowMap, projCoords.xy).r;
+  // 큐브맵에서 가져온 깊이값은 [0, 1] 사이로 정규화된 '광원 ~ 가장 가까운 프래그먼트 사이의 거리값' 으로 저장되었기 때문에, 이를 다시 [0, far_plane] 범위의 값으로 복구시킴
+  closestDepth *= far_plane;
 
-  // [0, 1] 사이로 맵핑된 좌표의 z 값을 현재 프래그먼트의 깊이값으로 할당
-  float currentDepth = projCoords.z;
+  // 현재 프래그먼트의 깊이값은 '광원 ~ 현재 프래그먼트 사이'의 거리값으로 계산
+  float currentDepth = length(fragToLight);
 
-  // shadow map 에서 샘플링한 깊이값(closestDepth)과 현재 프래그먼트의 깊이값(currentDepth)을 비교하여,
+  /*
+    omnidirectional shadow mapping 에서 사용되는 깊이값(== 거리값, currentDepth)의 범위는 
+    [near_plane, far_plane] 으로 더 커졌기 때문에,
+  
+    shadow bias 로 적용할 값도 더 크게 잡아줄 것.
+  */
+  float bias = 0.05;
+
+  // 큐브맵에서 샘플링한 깊이값(closestDepth)과 현재 프래그먼트의 깊이값(currentDepth)을 비교하여,
   // 현재 프래그먼트가 그림자 영역 내에 존재하는지 (== occluded 되는지) 판단
-  // float shadow = currentDepth > closestDepth ? 1.0 : 0.0;
-
-  // shadow acne 현상 해결을 위해, 조명벡터와 프래그먼트의 방향벡터(노멀벡터) 각도를 내적하여 shadow bias 계산 (하단 필기 참고)
-  vec3 normal = normalize(fs_in.Normal);
-  vec3 lightDir = normalize(lightPos - fs_in.FragPos);
-
-  // bias 계산 시, [0.005, 0.05] 범위 내의 값으로 계산되도록 clamping 내적
-  float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
+  float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
 
   /* PCF 알고리즘 적용 (자세한 설명 하단 참고) */
 
   // 누산할 shadow 값 초기화
-  float shadow = 0.0;
-
-  // shadow map 텍스쳐의 단위 texel 당 크기 계산 (-> 주변 texel 을 샘플링할 때 uv 좌표값에 더해줄 offset 으로 사용할 예정)
-  // 참고로, textureSize() built-in 함수는 특정 LOD 레벨(여기서는 0) 상에서의 텍스쳐 width, height 값을 vec2 타입으로 반환함.
-  vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
-
-  // 이중 for-loop 내에서 현재 프래그먼트를 중심으로 주변 texel 들의 깊이값을 shadow map 으로부터 샘플링하여 깊이값 누산 
-  // 'u축(== x축) 방향으로 3회 * v축(== y축) 방향으로 3회' => 총 9회의 shadow map 깊이값 샘플링
-  for(int x = -1; x <= 1; x++) {
-    // -1 ~ 1 까지 u축 방향으로 3회 순회
-
-    for(int y = -1; y <= 1; y++) {
-      // -1 ~ 1 까지 v축 방향으로 3회 순회
-
-      /*
-        현재 프래그먼트의 uv 좌표값(projCoords.xy)을 중심으로,
-        각 방향으로 단위 texel 크기 만큼의 offset 을 적용하여(vec2(x, y) * texelSize)
-
-        shadow map 으로부터 주변 texel 의 깊이값을 샘플링
-      */
-      float pcfDepth = texture2D(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-
-      /*
-        shadow map 으로부터 샘플링한 주변 texel 의 깊이값을 가지고서
-        shadow testing 을 수행한 결과를 shadow 변수에 누산함.
-      */
-      // shadow testing 시, 현재 프래그먼트의 깊이값에 bias 값만큼 빼서 깊이값이 광원에 더 가까워지도록 보정
-      shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-    }
-  }
-
-  // 주변 texel 로부터 깊이값을 샘플링하여 shadow testing 결과를 누산한 횟수만큼 나눠서 평균값을 구함
-  shadow /= 9.0;
-
-  // 현재 프래그먼트의 깊이값(projCoords.z)이 NDC 좌표계 상의 far plane 의 깊이값(1.0)을 넘어서면,
-  // 무조건 그림자 영역이 아닌 것으로 판정하도록 함으로써, Over sampling 이슈 해결 (관련 필기 하단 참고)
-  if(projCoords.z > 1.0) {
-    shadow = 0.0;
-  }
+  // float shadow = 0.0;
 
   return shadow;
 }
@@ -125,12 +92,13 @@ void main() {
   // 내적값을 32제곱 > 32는 shininess 값으로써, 값이 클수록 highlight 영역이 정반사되고, 값이 작을수록 난반사됨.
   // Blinn-Phong 모델에서는 동일한 조건 하에 기본 Phong 모델에 비해 내적값이 더 작게 계산되기 때문에,
   // 일반적인 관례상 기본 Phong 모델보다 2~4배 큰 shininess(광택값)을 사용한다.
-  spec = pow(max(dot(normal, halfwayDir), 0.0), 32);
+  spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
 
   vec3 specular = spec * lightColor; // specular 조도에 조명 색상을 곱해 specular 성분값 계산
 
-  // 현재 프래그먼트의 light space 좌표계를 매개변수로 전달하여 그림자 영역 내에 존재하는지 여부를 판단
-  float shadow = shadows ? ShadowCalculation(fs_in.FragPosLightSpace) : 0.0;
+  // 현재 프래그먼트의 월드공간 좌표계를 매개변수로 전달하여 그림자 영역 내에 존재하는지 여부를 판단
+  // (shadows(point shadow 활성화 상태값)값에 따라 해당 월드공간 프래그먼트가 그림자 영역 내 존재하는지 여부를 계산할 지 결정!)
+  float shadow = shadows ? ShadowCalculation(fs_in.FragPos) : 0.0;
 
   // 3가지 성분을 모두 더한 뒤, 바닥 평면 텍스쳐 색상값(diffuse color)를 곱하여 최종 색상 계산
   /*
@@ -148,57 +116,6 @@ void main() {
 
   FragColor = vec4(lighting, 1.0);
 }
-
-/*
-  ShadowCalculation() 함수 내에서의 좌표계 변환
-  
-
-  1. light space 좌표계 > NDC 좌표계 변환
-
-  shadow map 의 깊이 버퍼를 기록할 때 사용하는
-  shadow_mapping_depth.vs 버텍스 쉐이더 내에서는
-
-  gl_Position 변수에 light space 좌표값(== clip space)을 할당하는 순간,
-  OpenGL 내부에서 곧바로 원근분할을 수행한 뒤에 깊이 버퍼에 z값을 저장함.
-
-
-  그러나, 실제 씬을 렌더링하는
-  shadow_mapping.vs, shadow_mapping.fs 함수 내에서는
-  light space 좌표계에 대한 원근분할을 수행하지 않으므로,
-  쉐이더 코드 내에서 직접 원근분할 작업을 구현해줘야 함.
-
-  이렇게 원근분할을 수행함으로써,
-  light space 좌표계를 NDC 좌표계로 변환해준 것.
-
-
-  2. [-1, 1] 사이의 NDC 좌표계 > [0, 1] 사이의 범위로 맵핑
-
-  위와 같은 좌표계 범위 맵핑을 해주는 이유는 크게 두 가지인데,
-
-
-  첫 번째는, 일단 projCoords 의 x, y 값을
-  shadow map 을 샘플링하는 uv 좌표계로 사용하고 싶은 것임.
-
-  그렇게 하려면, uv 좌표는 [0, 1] 사이의 범위까지만
-  유효한 텍스쳐 범위로 가정하고, 그 범위를 넘어서면
-  texture wrapping 모드가 적용되는 것으로 간주하므로,
-
-  uv 좌표계로 사용하려면 [0, 1] 사이의 범위로 맵핑하는 게 좋겠지.
-
-
-  두 번째는, projCoords 의 z 값을
-  shadow map 에서 샘플링한 깊이값과 비교하고 싶은 것임.
-  
-  그런데, shadowm map 은 grey scale(흑백) 텍스쳐이고,
-  이는 shadow map 안에 기록되어 있는 텍셀값이 [0, 1] 사이의 범위로
-  한정되어 있다는 의미가 됨.
-
-  따라서, [0, 1] 사이의 범위로 기록되어 있는
-  shadow map 내의 깊이값과 비교하려면
-
-  당연히 projCoords 의 z 값 또한
-  [0, 1] 사이의 범위로 맞춰주는 게 타당하겠지!
-*/
 
 /*
   shadow bias
@@ -282,41 +199,6 @@ void main() {
   이 현상이 발생하지 않으려면,
   shadow bias 를 계산할 때, 
   일정 범위 내에서 clamping 되도록 범위를 지정해줘야 함. 
-*/
-
-/*
-  Over sampling
-
-
-  Over sampling 에 대한 기본적인 설명은
-  shadow_mapping_2.cpp 에 정리해놨으니 참고하면 됨.
-
-
-  그러나, Wrapping mode 를 변경하는 것만으로
-  모든 Over sampling 이슈를 해결하기는 어려운 경우가 존재하는데,
-  
-  그건 바로 현재 프래그먼트의 깊이값(projCoords.z)이
-  NDC 좌표계 기준 far plane 의 깊이값(1.0)을 넘어서는 경우임.
-
-
-  projCoords.xy 값이 [0, 1] 범위를 넘어섰다는 사실은
-  NDC 좌표계 상의 Frustum 에서 x 축 및 y 축과 교차하는 면들,
-  즉, left, top, bottom, right 을 넘어서는 지점을 샘플링하려고 한다는
-  사실은 알 수 있으나,
-
-  near, far 처럼 z 축과 교차하는 면들을
-  넘어섰는지 여부는 판단할 수 없음.
-
-
-  따라서, far plane 에 대한 Over sampling 여부를 판단하려면, 
-  현재 프래그먼트의 깊이값(projCoords.z) 과 
-  NDC 좌표 기준 far plane 의 깊이값(1.0) 을 비교하면 되겠지.
-
-  이 비교 결과를 통해, 
-  far plane 에 대해 Over sampling 되었음이 판정될 경우,
-  그림자 영역 안에 없는 현재 프래그먼트들이 
-  억울하게 그림자 영역 안에 있는 것으로 판정되지 않도록,
-  무조건 그림자 영역 밖에 있다고 판정해버릴 수 있겠지!
 */
 
 /*
