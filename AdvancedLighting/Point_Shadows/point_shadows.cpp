@@ -337,6 +337,13 @@ int main()
 		// 광원 위치값 쉐이더 객체에 전송
 		shader.setVec3("lightPos", lightPos);
 
+		// point shadow 활성화 상태값 전송
+		shader.setInt("shadows", shadows);
+
+		// First pass 에서 각 정점들을 light space 로 변환할 때 사용했던 원근 투영행렬의 far_plane 값 전송 
+		// -> 프래그먼트 쉐이더에서 [0, 1] 사이로 정규화되어 큐브맵 깊이 버퍼에 기록되었던 '조명으로부터 각 프래그먼트까지의 월드 공간 거리값'을 다시 [0, far_plane] 범위로 복구시키기 위해 필요함.
+		shader.setFloat("far_plane", far_plane);
+
 		// diffuse map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
 
@@ -347,7 +354,7 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 
 		// shadow map 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, depthCubeMap);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubeMap);
 
 		// 실제 화면에 보여줄 씬 렌더링
 		renderScene(shader);
