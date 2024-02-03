@@ -253,7 +253,7 @@ int main()
 		float near_plane = 1.0f;
 
 		// 투영행렬 계산에 사용할 far 값 초기화
-		float far_plane = 7.5f;
+		float far_plane = 25.0f;
 
 		// point light 가 적용된 omnidirectional shadow map 을 구하려면, '원근 투영행렬'을 사용할 것! (하단 필기 참고)
 		// 이때, omnidirectional shadow map 을 생성할 때 사용할 원근 투영행렬의 fov(시야각)은 반드시 90도로 설정할 것! (하단 필기 참고)
@@ -396,13 +396,13 @@ void renderScene(const Shader& shader)
 	// Room 큐브 안쪽 면에 대해 정확히 조명계산을 처리하기 위해,
 	// 큐브의 각 면에 바깥쪽 방향을 기준으로 정의된 노멀벡터(renderCube() > float vertices[] 참고!)를
 	// 쉐이더 코드에서 안쪽 방향으로 뒤집어주도록 상태값을 true 로 전달함.
-	shader.setInt("reverse_normal", 1);
+	shader.setInt("reverse_normals", 1);
 
 	// 큐브 렌더링 함수 실행
 	renderCube();
 
 	// Room 큐브 렌더링 완료 시, 이후 렌더링할 큐브들을 위해 노멀벡터 방향을 뒤집는 상태값을 false 로 비활성화시킴.
-	shader.setInt("reverse_normal", 0);
+	shader.setInt("reverse_normals", 0);
 
 	// Room 큐브 렌더링 완료 시, 이후 렌더링할 큐브들을 위해 Face Culling 을 다시 활성화
 	glEnable(GL_CULL_FACE);
