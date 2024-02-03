@@ -19,24 +19,21 @@ uniform vec3 viewPos; // 카메라 위치 > 뷰 벡터 계산에서 사용
 uniform float far_plane; // [0, 1] 사이로 정규화된 '광원 ~ 각 프래그먼트 사이의 월드공간 거리값'을 [0, far_plane] 사이의 거리값으로 복구할 때 사용
 uniform bool shadows; // point shadow 활성화 여부 상태값
 
+// omnidirectional shadow map 큐브맵으로부터 샘플링할 현재의 방향벡터(광원 ~ 현재 프래그먼트)에 적용할 offset 벡터들을 정적 배열에 초기화
+vec3 gridSamplingDisk[20] = vec3[](vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1), vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1), vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0), vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1), vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, -1), vec3(0, 1, -1));
+
 // 현재 프래그먼트가 그림자 안에 있는지 여부를 반환해주는 함수
 float ShadowCalculation(vec3 fragPos) {
   // '광원 ~ 현재 프래그먼트 사이'의 월드공간 벡터 계산
   vec3 fragToLight = fragPos - lightPos;
 
-  // '광원 ~ 현재 프래그먼트 사이'의 방향벡터로 깊이값이 저장된 큐브맵 샘플링
-  /*
-    큐브맵은 방향벡터 만으로도 샘플링이 가능하므로,
-    굳이 방향벡터의 길이를 1로 정규화하지 않아도 된다고 했었지?
-    https://github.com/jooo0922/opengl-study/blob/main/AdvancedOpenGL/Cubemaps/MyShaders/skybox.fs 참고
-  */
-  float closestDepth = texture(shadowMap, fragToLight).r;
-
-  // 큐브맵에서 가져온 깊이값은 [0, 1] 사이로 정규화된 '광원 ~ 가장 가까운 프래그먼트 사이의 거리값' 으로 저장되었기 때문에, 이를 다시 [0, far_plane] 범위의 값으로 복구시킴
-  closestDepth *= far_plane;
-
   // 현재 프래그먼트의 깊이값은 '광원 ~ 현재 프래그먼트 사이'의 거리값으로 계산
   float currentDepth = length(fragToLight);
+
+  /* PCF 알고리즘 적용 (자세한 설명 하단 참고) */
+
+  // 누산할 shadow 값 초기화
+  float shadow = 0.0;
 
   /*
     omnidirectional shadow mapping 에서 사용되는 깊이값(== 거리값, currentDepth)의 범위는 
@@ -44,16 +41,76 @@ float ShadowCalculation(vec3 fragPos) {
   
     shadow bias 로 적용할 값도 더 크게 잡아줄 것.
   */
-  float bias = 0.05;
+  float bias = 0.15;
 
-  // 큐브맵에서 샘플링한 깊이값(closestDepth)과 현재 프래그먼트의 깊이값(currentDepth)을 비교하여,
-  // 현재 프래그먼트가 그림자 영역 내에 존재하는지 (== occluded 되는지) 판단
-  float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+  // PCF 알고리즘을 위해 '광원 ~ 현재 프래그먼트' 방향벡터의 주변을 샘플링할 횟수 -> '광원 ~ 현재 프래그먼트' 방향벡터에 적용할 offset 벡터(== vec3 gridSamplingDisk[20]) 개수와 일치
+  int samples = 20;
 
-  /* PCF 알고리즘 적용 (자세한 설명 하단 참고) */
+  // 카메라에서 현재 프래그먼트와의 거리 계산
+  float viewDistance = length(viewPos - fragPos);
 
-  // 누산할 shadow 값 초기화
-  // float shadow = 0.0;
+  // 현재 방향벡터에 더해줄 offset 벡터의 길이 계산 (-> 카메라와의 거리가 멀수록 offset 벡터가 더 길어지도록 계산)
+  float diskRadius = (1.0 + (viewDistance / far_plane)) / 25.0;
+
+  // 샘플링 횟수만큼 반복문 순회
+  for(int i = 0; i < samples; i++) {
+    // 현재 방향벡터에 offset 벡터를 더한 주변 방향벡터들로 큐브맵에 저장된 깊이값 샘플링
+    /*
+      큐브맵은 방향벡터 만으로도 샘플링이 가능하므로,
+      굳이 방향벡터의 길이를 1로 정규화하지 않아도 된다고 했었지?
+      https://github.com/jooo0922/opengl-study/blob/main/AdvancedOpenGL/Cubemaps/MyShaders/skybox.fs 참고
+
+      또한, offset 벡터의 길이를 결정하는 diskRadius 값이
+      카메라에서 멀어질수록 커지도록 계산되기 때문에,
+
+      현재 카메라에서 멀리 떨어진 프래그먼트일 수록,
+      현재 방향벡터에서 더 멀리 떨어진 방향벡터를 사용해서 큐브맵을 샘플링하게 됨.
+
+      -> 이렇게 함으로써, 카메라에서 멀리 떨어진 프래그먼트일 수록,
+      현재 프래그먼트 방향에서 더 멀리 떨어진 방향에 존재하는 큐브맵 깊이값을 fetch 해와서
+      shadow test 를 진행한 결과를 누산하게 될 것이고,
+
+      shadow map 상에서 더 멀리 떨어진 깊이값과의 shadow test 결과를
+      누산하여 평균을 내게 되면, 그림자 영역이 더 뭉게지고 부드러워질 것임.
+
+      반면, 카메라에서 더 가까이 존재하는 프래그먼트일 수록,
+      현재 방향벡터에서 아주 가까운 방향벡터를 사용해서 큐브맵을 샘플링하게 됨.
+
+      -> 이는 카메라에서 멀리 떨어진 경우와는 반대로,
+      오히려 현재 방향벡터와 유사한 방향벡터들로 샘플링 깊이값으로 shadow test 를 하게 될 것이고,
+      그 결과를 누산하여 평균을 내면, 사실상 현재 방향벡터로 샘플링한 깊이값을 shadow test 한 결과와
+      거의 동일한 값을 도출하게 될 것임.
+
+      즉, 카메라에서 더 가까운 프래그먼트일 수록,
+      PCF 알고리즘을 적용하지 않은 것처럼, 즉, 더 sharp 하고 각진 그림자로 렌더링될 것임.
+    */
+    /*
+      참고로, 방향벡터에 다른 offset 벡터를 더한다고 하면,
+      방향벡터는 '방향'만이 의미있는 벡터이니 '방향'은 그대로이고, '길이'만 바뀌는 것뿐 아닐까라고
+      언뜻 보기에는 착각할 수 있음.
+
+      그러나, 이는
+      원본 방향벡터에 '스칼라 실수를 곱할 때' 성립되는 개념이고,
+      
+      원본 방향벡터에 '또다른 offset 벡터를 더할 떄'에는
+      원본 방향벡터의 각 컴포넌트들이 일정한 비율로 uniform scaling 되는 것이 아니기 때문에,
+      '아예 다른 방향을 갖는 벡터'가 도출된다는 것을 알 수 있음!
+    */
+    float closestDepth = texture(shadowMap, fragToLight + gridSamplingDisk[i] * diskRadius).r;
+
+    // 큐브맵에서 가져온 깊이값은 [0, 1] 사이로 정규화된 '광원 ~ 가장 가까운 프래그먼트 사이의 거리값' 으로 저장되었기 때문에, 이를 다시 [0, far_plane] 범위의 값으로 복구시킴
+    closestDepth *= far_plane;
+
+    // 큐브맵에서 샘플링한 깊이값(closestDepth)과 현재 프래그먼트의 깊이값(currentDepth)을 비교하여,
+    // 현재 프래그먼트가 그림자 영역 내에 존재할 때, shadow 값을 누산함
+    if(currentDepth - bias > closestDepth) {
+      shadow += 1.0;
+    }
+  }
+
+  // 누산된 shadow 결과값을 샘플링 횟수로 나눠서 평균을 구함 -> '그림자 영역에 얼마만큼 포함되는지(Percentage-Closer)'의 비율값을 구할 수 있음!
+  // (이때, 나눗셈 연산을 위해 samples 정수형 값을 float 타입으로 형변환)
+  shadow /= float(samples);
 
   return shadow;
 }
