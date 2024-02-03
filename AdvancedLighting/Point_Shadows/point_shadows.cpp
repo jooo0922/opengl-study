@@ -139,7 +139,7 @@ int main()
 	/* 쉐이더 객체 생성 */
 
 	// light space 렌더링 시 적용할 쉐이더 객체 생성 -> omnidirectional shadow map(== 큐브맵) 에 실제 기록될 깊이 버퍼를 렌더링
-	Shader simpleDepthShader("MyShaders/point_shadows_depth.vs", "MyShaders/point_shadows_depth.fs");
+	Shader simpleDepthShader("MyShaders/point_shadows_depth.vs", "MyShaders/point_shadows_depth.fs", "MyShaders/point_shadows_depth.gs");
 
 	// second pass 를 렌더링할 때 적용할 쉐이더 객체 생성
 	Shader shader("MyShaders/point_shadows.vs", "MyShaders/point_shadows.fs");
