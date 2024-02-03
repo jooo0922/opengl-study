@@ -234,6 +234,10 @@ int main()
 		lastFrame = currentFrame;
 
 
+		// 경과시간에 따라 광원의 z 좌표값을 [-3.0, 3.0] 사이의 값으로 움직여주기
+		lightPos.z = static_cast<float>(sin(glfwGetTime() * 0.5) * 3.0);
+
+
 		// 윈도우 창 및 키 입력 감지 밎 이벤트 처리
 		processInput(window);
 
