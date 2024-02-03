@@ -243,13 +243,7 @@ int main()
 		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
 
 
-		/* shadow map 에 기록할 씬에 적용할 변환행렬 계산 및 쉐이더 객체에 전송 */
-
-		// light space 좌표계로 변환 시 적용할 투영 행렬과 뷰 행렬 변수 초기화
-		glm::mat4 lightProjection, lightView;
-
-		// light space 좌표계로 변환 시 적용할 lightSpaceMatrix 변수 초기화
-		glm::mat4 lightSpaceMatrix;
+		/* omnidirectional shadow map(== 큐브맵) 에 기록할 씬에 적용할 변환행렬 계산 */
 
 		// 투영행렬 계산에 사용할 near 값 초기화
 		float near_plane = 1.0f;
@@ -257,20 +251,21 @@ int main()
 		// 투영행렬 계산에 사용할 far 값 초기화
 		float far_plane = 7.5f;
 
-		// directional light 가 적용된 shadow map 을 구하려면, '직교 투영행렬'을 사용할 것! (하단 필기 참고)
-		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+		// point light 가 적용된 omnidirectional shadow map 을 구하려면, '원근 투영행렬'을 사용할 것! (하단 필기 참고)
+		// 이때, omnidirectional shadow map 을 생성할 때 사용할 원근 투영행렬의 fov(시야각)은 반드시 90도로 설정할 것! (하단 필기 참고)
+		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT, near_plane, far_plane);
 
-		// '광원의 위치가 원점이고, 방향은 '월드공간 원점'을 바라보는' light space 좌표계로 변환하는 뷰 행렬(= LookAt 행렬) 계산
-		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		// Room 큐브의 각 6면에 대한 light space 변환행렬을 각각 계산하여 캐싱해 둘 동적 배열 vector 선언
+		std::vector<glm::mat4> shadowTransforms;
 
-		// 쉐이더로 변환행렬을 전송하기 전, cpp 단계에서 lightProjection 과 lightView 를 미리 한 번에 곱해둠
-		lightSpaceMatrix = lightProjection * lightView;
-
-		// 변환행렬을 전송할 QuadMesh 쉐이더 프로그램 바인딩
-		simpleDepthShader.use();
-
-		// 계산된 lightSpaceMatrix 를 쉐이더 프로그램에 전송
-		simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+		// "'광원의 위치'가 원점이고, 방향은 'Room 큐브의 각 면'을 바라보는" light space 좌표계로 변환하는 '뷰 행렬(= LookAt 행렬)' 계산 후,
+		// 미리 계산해 둔 '원근 투영행렬(shadowProj)'과 곱하여 최종 light space 변환행렬로 만든 다음, 동적 배열 vector 에 캐싱
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
+		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)));
 
 
 		/* First Pass (shadow map 에 깊이버퍼 기록) */
@@ -284,11 +279,20 @@ int main()
 		// 현재 바인딩된 framebuffer 의 깊이 버퍼 초기화
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
-		glActiveTexture(GL_TEXTURE0);
+		// uniform 변수를 전송할 쉐이더 객체 바인딩
+		simpleDepthShader.use();
 
-		// 씬 안의 큐브와 바닥평면에 적용할 woodTexture 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, woodTexture);
+		// 지오메트리 쉐이더에서 각 정점들을 큐브맵의 각 6면의 light space 로 변환시킬 때 사용할 변환행렬 전송
+		for (unsigned int i = 0; i < 6; i++)
+		{
+			simpleDepthShader.setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
+		}
+		
+		// 프래그먼트 쉐이더에서 '조명으로부터 각 프래그먼트까지의 월드 공간 거리값'을 [0, 1] 사이로 정규화하기 위해 필요한 far_plane 값 전송
+		simpleDepthShader.setFloat("far_plane", far_plane);
+
+		// 광원의 위치값 전송
+		simpleDepthShader.setVec3("lightPos", lightPos);
 
 		// shadow map 에 깊이 버퍼를 기록할 씬 렌더링
 		renderScene(simpleDepthShader);
@@ -328,9 +332,6 @@ int main()
 
 		// 광원 위치값 쉐이더 객체에 전송
 		shader.setVec3("lightPos", lightPos);
-
-		// First Pass 렌더링 시 계산해뒀던 lightSpaceMatrix 를 쉐이더 프로그램에 전송
-		shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 		// diffuse map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
@@ -781,6 +782,33 @@ unsigned int loadTexture(const char* path)
 	light casting 타입을 기준으로 하는 좌표계로 변환하려면,
 
 	'원근 투영행렬(perspective projection)' 이 적절하겠지.
+*/
+
+/*
+	omnidirectional shadow map 의 fov(시야각)은 왜 90도여야 할까?
+
+
+	Omnidirectional shadow map, 
+	즉, 큐브맵으로 shadow map 을 생성하려면,
+
+	조명 위치(== 큐브맵의 중심)으로부터 큐브맵의 각 6면의 방향으로 바라본 시점에서
+	각각의 shadow map 을 생성하여 cubemap 텍스쳐 객체 버퍼에 기록해야겠지?
+
+	이때, shadow map 큐브맵의 각 6면이 서로 만나는
+	모서리 지점에서 소위 '아다리가 딱딱 맞아 떨어지려면',
+	
+	조명 원점에서 각 6면을 바라보는 시점에서의 원근 투영이
+	90도의 fov(== 시야각)로 설정되어야 함.
+	
+	그래야 '><' 요런 모양으로 '앞면/뒷면/오른쪽 면/왼쪽 면' 
+	(또는 '윗면/아랫면/오른쪽 면/왼쪽 면' 또는 '앞면/뒷면/윗면/아랫면') 을
+	투영변환할 때의 frustum 의 시야각이 '90 + 90 + 90 + 90 = 360' 으로 딱 떨어져서
+
+	각 면을 바라보면서 투영변환된 shadow map 을
+	큐브맵 버퍼에 기록해서 나중에 맞춰보면
+	
+	각 면이 만나는 모서리 지점이 
+	퍼즐처럼 딱 맞아 떨어져서 이어지는 걸 볼 수 있음!
 */
 
 /*
