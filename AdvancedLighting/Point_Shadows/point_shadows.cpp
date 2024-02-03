@@ -212,7 +212,8 @@ int main()
 
 
 	// 광원 위치값 초기화
-	glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
+	// point light 를 Room 큐브의 중심에 두어서 omnidirectional shadow map 을 구현할 것이므로, 광원 위치를 월드공간 원점으로 변경
+	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
