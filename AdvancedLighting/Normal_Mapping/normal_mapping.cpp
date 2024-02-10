@@ -368,6 +368,33 @@ void renderQuad()
 		bitangent1.x = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
 
 
+		/* 두 번째 삼각형이 local 인 탄젠트 공간의 탄젠트 벡터와 비탄젠트 벡터 계산 */
+
+		// 두 번째 삼각형의 Edge 벡터 E₁, E₂ 계산
+		edge1 = pos3 - pos1;
+		edge2 = pos4 - pos1;
+
+		// 두 번째 삼각형의 uv 좌표 변화량 (ΔU₁, ΔV₁), (ΔU₂, ΔV₂) 계산
+		deltaUV1 = uv3 - uv1;
+		deltaUV2 = uv4 - uv1;
+
+		// 두 번째 삼각형의 uv 변화량으로 구성된 행렬(LearnOpenGL 본문 참고)의 
+		// 행렬식(determinant) 의 역수 (Fractional Part) 계산
+		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+		// 두 번째 삼각형의 탄젠트 공간의 탄젠트 벡터 계산
+		// (LearnOpenGL 본문의 행렬 곱셈식 코드로 전개)
+		tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+		// 두 번째 삼각형의 탄젠트 공간의 비탄젠트 벡터 계산
+		// (LearnOpenGL 본문의 행렬 곱셈식 코드로 전개)
+		bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+		bitangent1.x = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+		bitangent1.x = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+
 		// QuadMesh 의 정점 데이터 정적 배열 초기화
 		float quadVertices[] = {
 			// positions        // texture Coords
