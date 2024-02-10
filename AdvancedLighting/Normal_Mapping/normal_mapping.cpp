@@ -145,7 +145,7 @@ int main()
 
 
 	// 광원 위치값 초기화
-	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+	glm::vec3 lightPos(0.5f, 1.0f, 0.3f);
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
