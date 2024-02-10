@@ -215,6 +215,17 @@ int main()
 		shader.setVec3("lightPos", lightPos);
 
 
+		/* 텍스쳐 객체를 활성화된 각 texture unit 위치에 바인딩 */
+
+		// diffuseMap 텍스쳐 객체를 0번 texture unit 위치에 바인딩
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, diffuseMap);
+
+		// normalMap 텍스쳐 객체를 1번 texture unit 위치에 바인딩
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, normalMap);
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
