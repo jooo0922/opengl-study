@@ -191,11 +191,17 @@ int main()
 	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
 
 	// 텍스쳐 객체 생성
-	unsigned int floorTexture = loadTexture("resources/textures/wood.png");
+	unsigned int diffuseMap = loadTexture("resources/textures/brickwall.jpg");
+	unsigned int normalMap = loadTexture("resources/textures/brickwall_normal.jpg");
 
-	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 0번 texture unit 위치값 전송
+	/*
+		프래그먼트 쉐이더에 선언된 각 uniform sampler 변수에서
+		diffuseMap 은 0번 texture unit 위치값을, 
+		normalMap 은 1번 texture unit 위치값을 전송
+	*/
 	shader.use();
-	shader.setInt("texture1", 0);
+	shader.setInt("diffuseMap", 0);
+	shader.setInt("normalMap", 1);
 
 
 	// 광원 위치값 초기화
@@ -268,7 +274,7 @@ int main()
 
 		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
 		// 바닥 평면 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 6);
