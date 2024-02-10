@@ -192,7 +192,18 @@ int main()
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
 		shader.setMat4("view", view);
 
-		// 모델행렬 전송 생략 -> 큐브를 변환하지 않음!
+		
+		/* QuadMesh 를 회전시키는 모델행렬 계산 및 전송 */
+
+		// 모델행렬을 단위 행렬로 초기화
+		glm::mat4 model = glm::mat4(1.0f);
+
+		// 경과시간 흐름에 따라 x축, z축으로 각각 회전시키는 회전행렬 적용
+		// -> QuadMesh 의 방향벡터가 회전에 의해 매 프레임마다 변경되더라도, normal mapping 이 정상적으로 적용되는지 테스트하기 위함
+		model = glm::rotate(model, glm::radians((float)glfwGetTime() * -10.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 0.0f)));
+
+		// 계산된 모델행렬을 쉐이더 프로그램에 전송
+		shader.setMat4("model", model);
 
 
 		/* 기타 uniform 변수들 쉐이더 객체에 전송 */
