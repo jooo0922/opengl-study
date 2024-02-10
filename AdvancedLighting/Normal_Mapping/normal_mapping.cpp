@@ -204,19 +204,6 @@ int main()
 		shader.setVec3("lightPos", lightPos);
 
 
-		/* 바닥 평면 그리기 */
-
-		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(planeVAO);
-
-		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, diffuseMap);
-
-		// 바닥 평면 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-
-
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
@@ -224,9 +211,6 @@ int main()
 		glfwPollEvents();
 	}
 
-	// 렌더링 루프 종료 시, 생성해 둔 VAO, VBO 객체들은 더 이상 필요가 없으므로 메모리 해제한다!
-	glDeleteVertexArrays(1, &planeVAO);
-	glDeleteBuffers(1, &planeVBO);
 
 	// while 렌더링 루프 탈출 시, GLFWwindow 종료 및 리소스 메모리 해제
 	glfwTerminate();
