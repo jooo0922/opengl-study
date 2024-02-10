@@ -226,6 +226,10 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, normalMap);
 
 
+		// QuadMesh 렌더링 함수 호출
+		renderQuad();
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
