@@ -395,13 +395,18 @@ void renderQuad()
 		bitangent1.x = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
 
 
-		// QuadMesh 의 정점 데이터 정적 배열 초기화
+		/* QuadMesh 의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩 */
+
+		// QuadMesh 의 정점 데이터 정적 배열 초기화 (위에서 계산한 tangent, bitangent 벡터 추가)
 		float quadVertices[] = {
-			// positions        // texture Coords
-			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+			// positions            // normal         // texcoords  // tangent                          // bitangent
+			pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+			pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+			pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+
+			pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+			pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+			pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
 		};
 
 		// VAO(Vertex Array Object) 객체 생성
@@ -418,20 +423,38 @@ void renderQuad()
 		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
 
 		// 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
-		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
 
 		// 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. 
 		// -> 그 중에서 0번 location 변수를 사용하도록 활성화
 		glEnableVertexAttribArray(0);
 
 		// 정점 위치 데이터(0번 location 입력변수 in vec3 aPos 에 전달할 데이터) 해석 방식 정의
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
 
 		// 1번 location 변수를 사용하도록 활성화
 		glEnableVertexAttribArray(1);
 
-		// 정점 UV 데이터(1번 location 입력변수 in vec2 aTexCoords 에 전달할 데이터) 해석 방식 정의
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+		// 정점 normal 데이터(1번 location 입력변수 in vec3 aNormal 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
+
+		// 2번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(2);
+
+		// 정점 UV 데이터(2번 location 입력변수 in vec2 aTexCoords 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
+
+		// 3번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(3);
+
+		// 정점 tangent 데이터(3번 location 입력변수 in vec3 aTangent 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+
+		// 4번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(4);
+
+		// 정점 bitangent 데이터(4번 location 입력변수 in vec3 aBitangent 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
 
 		// VBO 객체 설정을 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -446,9 +469,7 @@ void renderQuad()
 	glBindVertexArray(quadVAO);
 
 	// QuadMesh 그리기 명령
-	// (Quad 를 그리려면 2개의 삼각형(== 6개의 정점)이 정의되어야 하지만, 
-	// 위에서 4개의 정점 데이터만 정의했으므로, 정점을 공유하여 삼각형을 조립하는 GL_TRIANGLE_STRIP 모드로 렌더링한다.)
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
 
 	// 그리기 명령 종료 후, VAO 객체 바인딩 해제
 	glBindVertexArray(0);
