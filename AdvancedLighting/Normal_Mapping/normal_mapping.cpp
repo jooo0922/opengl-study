@@ -412,8 +412,27 @@ unsigned int loadTexture(const char* path)
 
 		// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
 		// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		/*
+			.png 같은 RGBA 포맷일 경우, 반투명한 texel 이 존재함.
+
+			텍스쳐 좌표가 보간(interpolation)되어
+			정수값이 아닌 텍스쳐 좌표로 texel 을 샘플링하려고 하면,
+			인접한 주변의 texl 값들이 섞여서 샘플링됨.
+
+			이때, 텍스쳐의 경계 부분을 샘플링할 경우,
+			GL_REPEAT 모드로 인해 next repeat 지점의 인접 texel 들을 가져와
+			혼합을 시도하게 되고, 
+			
+			인접한 texel 들 중에서 텍스쳐 경계 부분의 texel 과
+			투명도가 아예 달라지는 값이 필시 존재할테니,
+			그 투명도가 혼합되어 '반투명(semi-transparent) 경계'가 샘플링됨.
+
+			이를 방지하기 위해,
+			GL_CLAMP_TO_EDGE 모드로 WRAPPING 모드를 설정하여
+			텍스쳐 경계 부분이 엉뚱한 texel 의 투명도와 섞이지 않도록 함!
+		*/
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 
 		// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정 (관련 필기 정리 하단 참고)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
