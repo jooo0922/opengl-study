@@ -128,7 +128,7 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// 큐브 렌더링 시 적용할 쉐이더 객체 생성
-	Shader shader("MyShaders/normal_mapping.vs", "MyShaders/normal_mapping.fs");
+	Shader shader("MyShaders/parallax_mapping.vs", "MyShaders/parallax_mapping.fs");
 
 
 	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
