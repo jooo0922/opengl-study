@@ -131,17 +131,20 @@ int main()
 	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
 
 	// 텍스쳐 객체 생성
-	unsigned int diffuseMap = loadTexture("resources/textures/brickwall.jpg");
-	unsigned int normalMap = loadTexture("resources/textures/brickwall_normal.jpg");
+	unsigned int diffuseMap = loadTexture("resources/textures/bricks2.jpg");
+	unsigned int normalMap = loadTexture("resources/textures/bricks2_normal.jpg");
+	unsigned int heightMap = loadTexture("resources/textures/bricks2_disp.jpg");
 
 	/*
 		프래그먼트 쉐이더에 선언된 각 uniform sampler 변수에서
 		diffuseMap 은 0번 texture unit 위치값을,
-		normalMap 은 1번 texture unit 위치값을 전송
+		normalMap 은 1번 texture unit 위치값을,
+		heightMap (정확히는 displacementMap 으로 사용될 depthMap)은 2번 texture unit 위치값을 전송
 	*/
 	shader.use();
 	shader.setInt("diffuseMap", 0);
 	shader.setInt("normalMap", 1);
+	shader.setInt("depthMap", 2);
 
 
 	// 광원 위치값 초기화
@@ -224,6 +227,10 @@ int main()
 		// normalMap 텍스쳐 객체를 1번 texture unit 위치에 바인딩
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, normalMap);
+
+		// depthMap 텍스쳐 객체를 2번 texture unit 위치에 바인딩
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, heightMap);
 
 
 		// QuadMesh 렌더링 함수 호출
