@@ -43,6 +43,9 @@ void renderQuad();
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
+// parallax mapping 에서 샘플링된 전체 깊이값을 조절하는 scale 값 초기화
+float heightScale = 0.1f;
+
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -216,6 +219,12 @@ int main()
 
 		// 광원 위치값 쉐이더 프로그램에 전송
 		shader.setVec3("lightPos", lightPos);
+
+		// heightScale 값 쉐이더 프로그램에 전송
+		shader.setFloat("heightScale", heightScale);
+
+		// 현재 heightScale 값을 콘솔에 출력
+		std::cout << heightScale << std::endl;
 
 
 		/* 텍스쳐 객체를 활성화된 각 texture unit 위치에 바인딩 */
@@ -491,6 +500,36 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
+	}
+
+	/*
+		Q 키 입력 시, heightScale 값을 감소시키고,
+		E 키 입력 시, heightScale 값을 증가시킴.
+	*/
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		// heightScale 이 0 보다 작아지지 않도록 감소시킴
+		if (heightScale > 0.0f)
+		{
+			heightScale -= 0.0005f;
+		}
+		else
+		{
+			heightScale = 0.0f;
+		}
+	}
+	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	{
+		// heightScale 이 1 보다 커지지 않도록 증가시킴
+		if (heightScale < 1.0f)
+		{
+			heightScale += 0.0005f;
+		}
+		else
+		{
+			heightScale = 1.0f;
+		}
+
 	}
 }
 
