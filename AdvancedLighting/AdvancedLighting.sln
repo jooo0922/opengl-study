@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Point_Shadows", "Point_Shad
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Normal_Mapping", "Normal_Mapping\Normal_Mapping.vcxproj", "{C133C3F1-DD29-4B9F-AEC4-8C67364B76A8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Parallax_Mapping", "Parallax_Mapping\Parallax_Mapping.vcxproj", "{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -71,6 +73,14 @@ Global
 		{C133C3F1-DD29-4B9F-AEC4-8C67364B76A8}.Release|x64.Build.0 = Release|x64
 		{C133C3F1-DD29-4B9F-AEC4-8C67364B76A8}.Release|x86.ActiveCfg = Release|Win32
 		{C133C3F1-DD29-4B9F-AEC4-8C67364B76A8}.Release|x86.Build.0 = Release|Win32
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Debug|x64.ActiveCfg = Debug|x64
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Debug|x64.Build.0 = Debug|x64
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Debug|x86.ActiveCfg = Debug|Win32
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Debug|x86.Build.0 = Debug|Win32
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Release|x64.ActiveCfg = Release|x64
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Release|x64.Build.0 = Release|x64
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Release|x86.ActiveCfg = Release|Win32
+		{6F594B4C-FE8F-4145-9EF5-7EDFE7EB7F8C}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
