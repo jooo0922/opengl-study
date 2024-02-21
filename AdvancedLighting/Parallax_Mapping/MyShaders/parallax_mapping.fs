@@ -20,18 +20,69 @@ uniform float heightScale; // depthMap 에서 샘플링한 depth(= height 을 �
 
 /* 현재의 texCoord 로부터 변위(= 위치 이동, offset, displacement)된 텍스쳐 좌표를 반환하는 ParallaxMapping 함수 */ 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir) {
-  // depthMap 에서 depth(= height 을 반전시킨 값) 샘플링
-  float height = texture2D(depthMap, texCoords).r;
+  /* 기본 Parallax Mapping 알고리즘 */
 
-  // 현재 texCoord 로부터 이동시킬 offset 에 해당하는 벡터 p 계산 (하단 필기 참고)
-  vec2 p = viewDir.xy / viewDir.z * (height * heightScale);
+  // // depthMap 에서 depth(= height 을 반전시킨 값) 샘플링
+  // float height = texture2D(depthMap, texCoords).r;
+
+  // // 현재 texCoord 로부터 이동시킬 offset 에 해당하는 벡터 p 계산 (하단 필기 참고)
+  // vec2 p = viewDir.xy / viewDir.z * (height * heightScale);
+
+  // /*
+  //   depthMap(= heightMap 반전시킨 텍스쳐)을 사용할 경우, 
+  //   뷰 벡터의 반대 방향으로 offset 시켜야 하므로, 
+  //   현재 texCoords 에서 offset 벡터 p 를 빼줌.
+  // */
+  // return texCoords - p;
+  //
+
+  //  
+  /* Steep Parallax Mapping 알고리즘 (하단 필기 참고) */
+
+  // 전체 깊이를 동간격으로 나눠줄 layer 갯수
+  const float numLayer = 10;
+
+  // 반복문을 순회하며 더해줄 각 레이어의 깊이 간격
+  float layerDepth = 1.0 / numLayer;
+
+  // 반복문을 순회하며 누산될 현재 레이어의 깊이값
+  float currentLayerDepth = 0.0;
+
+  // 기본 Parallax Mapping 알고리즘에서 계산했던 offset 벡터 p 계산 (여기서는 길이를 height 으로 딱 맞추지 않음.)
+  vec2 P = viewDir.xy / viewDir.z * heightScale;
+
+  // 반복문을 순회하며 현재 texCoords 에 전체 레이어 갯수대로 더하여 변위시킬 동간격의 offset 벡터
+  vec2 deltaTexCoords = P / numLayer;
+
+  // 반복문을 순회하며 동간격의 offset 벡터만큼 이동해나갈 현재 texCoords 초기화
+  vec2 currentTexCoords = texCoords;
+
+  // 현재 texCoords 위치에서 샘플링한 깊이값을 저장할 변수 초기화
+  float currentDepthMapValue = texture2D(depthMap, currentTexCoords).r;
+
+  // 현재 texCoords 위치에서 샘플링한 깊이값이 교차한 layer 의 깊이값보다 작아지기 전까지 반복문 순회
+  while(currentLayerDepth < currentDepthMapValue) {
+    // 현재 texCoord 를 동간격의 offset 벡터만큼 (뷰 벡터 반대 방향으로) 이동
+    currentTexCoords -= deltaTexCoords;
+
+    // 이동한 지점에서 깊이값 샘플링
+    currentDepthMapValue = texture2D(depthMap, currentTexCoords).r;
+
+    // 현재 texCoord 가 이동했으니 다음 레이어의 깊이값으로 갱신(누산)
+    currentLayerDepth += layerDepth;
+  }
 
   /*
-    depthMap(= heightMap 반전시킨 텍스쳐)을 사용할 경우, 
-    뷰 벡터의 반대 방향으로 offset 시켜야 하므로, 
-    현재 texCoords 에서 offset 벡터 p 를 빼줌.
+    현재 texCoords 위치에서 샘플링한 깊이값이 교차한 layer 의 깊이값보다 작아져서 
+    반복문을 탈출했다면,
+    
+    현재 texCoords 위치와 그 이전 texCoords 위치(= currentTexCoords + deltaTexCoords) 사이에
+    우리가 찾고자 하는 정확한 지점 B (LearnOpenGL 본문 일러스트 참고) 이 존재한다는 뜻이므로,
+    
+    현재 texCoord 를 우리가 찾고자 하는 B 의 위치에 대한 근사값이라 치고 반환함.
   */
-  return texCoords - p;
+  return currentTexCoords;
+  //
 }
 
 void main() {
@@ -41,7 +92,7 @@ void main() {
   // 현재 프래그먼트의 texCoords 에서 변위(displacement)된 텍스쳐 좌표를 계산
   vec2 texCoords = ParallaxMapping(fs_in.TexCoords, viewDir);
 
-  // 텍스쳐 좌표 변위(displacement)로 인해, 일반적인 텍스쳐 좌표 범위인 [0, 1]을 넘어설 경우, 프래그먼트를 discard 하여 경계 부분의 artifact 제거
+  // 텍스쳐 좌표 변위(displacement)로 인해 일반적인 텍스쳐 좌표 범위인 [0, 1]을 넘어설 경우, 프래그먼트를 discard 하여 경계 부분의 artifact 제거
   if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0) {
     discard;
   }
@@ -136,4 +187,22 @@ void main() {
   샘플링한 depth 값에 의해 결정되기 때문에,
 
   조정된 height 값을 벡터 p 에 최종적으로 곱해줌.
+*/
+
+/*
+  Steep Parallax Mapping
+
+
+  Steep Parallax Mapping 은 
+  depthMap 에 정의된 전체 깊이를 동간격의 layer 로
+  일정한 개수만큼 나눠주고,
+
+  현재 texCoords 로부터
+  동간격의 offset 만큼 이동한다고 가정할 때,
+
+  동간격으로 이동한 텍스쳐 좌표로부터 샘플링된 depth 값과
+  해당 텍스쳐 좌표에서 수직으로 내렸을 때, 교차하는 layer 의 깊이값을 비교하는 방식으로
+  
+  '뷰 벡터와 더 정확하게 교차하는 깊이 지점(LearnOpenGL 본문 일러스트의 점 B)의 텍스쳐 좌표'를 
+  계산하는 알고리즘
 */
