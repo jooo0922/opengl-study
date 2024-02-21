@@ -138,6 +138,11 @@ int main()
 	unsigned int normalMap = loadTexture("resources/textures/bricks2_normal.jpg");
 	unsigned int heightMap = loadTexture("resources/textures/bricks2_disp.jpg");
 
+	//unsigned int diffuseMap = loadTexture("resources/textures/toy_box_diffuse.png");
+	//unsigned int normalMap = loadTexture("resources/textures/toy_box_normal.png");
+	//unsigned int heightMap = loadTexture("resources/textures/toy_box_disp.png");
+
+
 	/*
 		프래그먼트 쉐이더에 선언된 각 uniform sampler 변수에서
 		diffuseMap 은 0번 texture unit 위치값을,
