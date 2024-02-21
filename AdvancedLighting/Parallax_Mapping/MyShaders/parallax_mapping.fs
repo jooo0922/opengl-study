@@ -98,8 +98,28 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir) {
     
     현재 texCoord 를 우리가 찾고자 하는 B 의 위치에 대한 근사값이라 치고 반환함.
   */
-  return currentTexCoords;
+  // return currentTexCoords;
   //
+
+  //
+  /* Parallax Occlusion Mapping (하단 필기 참고) */
+
+  // 깊이값 차이가 역전되기 이전 지점의 텍스쳐 좌표값 계산
+  vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+  // (깊이값 차이가 역전된 지점(현재 지점)에서 샘플링한 깊이값 - layer 깊이값) 간격 계산 -> 깊이값 차이 역전에 의해 음수가 나옴
+  float afterDepth = currentDepthMapValue - currentLayerDepth;
+
+  // (깊이값 차이가 역전되기 이전 지점에서 샘플링한 깊이값 - layer 깊이값) 간격 계산 -> 깊이값 차이 역전되기 전이므로 양수가 나옴
+  float beforeDpeth = texture2D(depthMap, prevTexCoords).r - currentLayerDepth + layerDepth;
+
+  // 두 깊이값 간격으로 선형보간 가중치 계산 ((afterDepth - beforeDepth) 는 afterDepth 와 beforeDepth 의 절댓값의 합에서 -(마이너스) 를 붙인 값이겠지?)
+  float weight = afterDepth / (afterDepth - beforeDpeth);
+
+  // 깊이값 차이가 역전된 지점의 텍스쳐 좌표값과 역전되기 이전 지점의 텍스쳐 좌표값을 선형보간하여 최종 텍스쳐 좌표값 계산
+  vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+  return finalTexCoords;
 }
 
 void main() {
@@ -222,4 +242,21 @@ void main() {
   
   '뷰 벡터와 더 정확하게 교차하는 깊이 지점(LearnOpenGL 본문 일러스트의 점 B)의 텍스쳐 좌표'를 
   계산하는 알고리즘
+*/
+
+/* 
+  Parallax Occlusion Mapping 
+
+
+  Parallax Occlusion Mapping 은
+  
+  현재 texCoords 위치에서 샘플링한 깊이값과 교차한 layer 의 깊이값의 차이가 
+  역전되는 시점의 텍스쳐 좌표와
+
+  역전되기 직전의 텍스쳐 좌표를 
+  linear interpolation(선형보간) 함으로써,
+  
+  두 텍스쳐 좌표 사이에 존재하는 
+  더 정확한 목표 지점 B(LearnOpenGL 본문 일러스트 참고) 의 
+  텍스쳐 좌표를 얻어내는 알고리즘 
 */
