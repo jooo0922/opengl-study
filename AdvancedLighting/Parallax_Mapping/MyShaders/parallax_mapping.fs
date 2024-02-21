@@ -41,6 +41,11 @@ void main() {
   // 현재 프래그먼트의 texCoords 에서 변위(displacement)된 텍스쳐 좌표를 계산
   vec2 texCoords = ParallaxMapping(fs_in.TexCoords, viewDir);
 
+  // 텍스쳐 좌표 변위(displacement)로 인해, 일반적인 텍스쳐 좌표 범위인 [0, 1]을 넘어설 경우, 프래그먼트를 discard 하여 경계 부분의 artifact 제거
+  if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0) {
+    discard;
+  }
+
   // normal map 으로부터 탄젠트 공간 노멀벡터 샘플링
   vec3 normal = texture2D(normalMap, texCoords).rgb;
 
