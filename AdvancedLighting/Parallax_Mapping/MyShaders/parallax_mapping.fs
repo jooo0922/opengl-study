@@ -39,8 +39,25 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir) {
   //  
   /* Steep Parallax Mapping 알고리즘 (하단 필기 참고) */
 
+  /*
+    Steep Parallax Mapping 은 layer 를 나눠주는 갯수가 많아질수록
+    목표하는 지점 B 에 더 가까운 근사치를 낼 수 있음.
+
+    그렇다고 해서, 무조건 layer 갯수를 많이 나눠주면
+    성능 저하가 발생할 수 있음!
+
+    따라서, 카메라가 수직방향 (vec3(0.0, 0.0, 1.0))에 가까울 때에는
+    layer 를 적게 나눠서 최적화하고,
+
+    카메라가 비스듬할수록 layer 를 많이 나눠서
+    목표 지점 B 에 더 가까운 정확한 근사치를 얻어서
+    Parallax Mapping 의 효과를 극대화하는 기법을 사용함!
+  */
+  const float minLayers = 8.0;
+  const float maxLayers = 32.0;
+
   // 전체 깊이를 동간격으로 나눠줄 layer 갯수
-  const float numLayer = 10;
+  float numLayer = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
 
   // 반복문을 순회하며 더해줄 각 레이어의 깊이 간격
   float layerDepth = 1.0 / numLayer;
