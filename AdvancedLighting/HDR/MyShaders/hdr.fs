@@ -32,7 +32,10 @@ void main() {
     */
 
     // Reinhard Tone mapping 알고리즘을 사용하여 HDR -> LDR 변환
-    vec3 result = hdrColor / (hdrColor + vec3(1.0));
+    // vec3 result = hdrColor / (hdrColor + vec3(1.0));
+
+    // exposure tone mapping 적용
+    vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
 
     // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력 (하단 필기 참고)
     result = pow(result, vec3(1.0 / gamma));
@@ -62,4 +65,32 @@ void main() {
   모니터에 그대로 출력할 수 있게 됨
   
   -> 이것이 바로 'gamma correction'
+*/
+
+/*
+  exposure tone mapping 알고리즘
+
+
+  exposure 즉, 노출값을 기반으로
+  톤 맵핑을 동적으로 적용할 수 있도록 함.
+
+  인간의 홍채가 
+  밝은 환경에서는 동공을 줄이고,
+  어두운 환경에서는 동공을 늘려서 
+  눈으로 들어오는 빛의 양을 조절하는 것과 같은 원리로,
+
+  조명이 밝은 씬에서는 exposure 을 낮추고,
+  조명이 어두운 씬에서는 exposure 을 높이는 식으로
+
+  어느 영역에 detail 을 살릴 지 동적으로 결정할 수 있도록 함.
+
+  즉, exposure 이 높으면,
+  어두운 영역의 detail 이 더 살아나고,
+  exposure 이 낮으면,
+  밝은 영역의 detail 이 더 살아남.
+
+
+  참고로, 이 알고리즘에 사용된 
+  exp() 내장함수는 자연상수 e = 2.7182818284... 의
+  거듭제곱을 계산해주는 함수임.
 */
