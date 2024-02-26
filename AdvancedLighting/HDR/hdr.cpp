@@ -206,8 +206,22 @@ int main()
 	hdrShader.setInt("hdrBuffer", 0);
 
 
-	// 광원 위치값 초기화
-	glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
+	/* 광원 정보 초기화 */
+	
+	// 터널에 배치할 4개 광원 위치값을 std::vector 동적 배열로 초기화
+	std::vector<glm::vec3> lightPositions;
+	lightPositions.push_back(glm::vec3(0.0f, 0.0f, 49.5f));
+	lightPositions.push_back(glm::vec3(-1.4f, -1.9f, 9.0f));
+	lightPositions.push_back(glm::vec3(0.0f, -1.8f, 4.0f));
+	lightPositions.push_back(glm::vec3(0.8f, -1.7f, 6.0f));
+
+	// 터널에 배치할 4개 광원 색상값을 std::vector 동적 배열로 초기화
+	std::vector<glm::vec3> lightColors;
+	lightColors.push_back(glm::vec3(200.0f, 200.0f, 200.0f)); // 터널 끝에 배치할 광원 (강도가 가장 높음)
+	lightColors.push_back(glm::vec3(0.1f, 0.0f, 0.0f));
+	lightColors.push_back(glm::vec3(0.0f, 0.0f, 0.2f));
+	lightColors.push_back(glm::vec3(0.0f, 0.1f, 0.0f));
+
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
