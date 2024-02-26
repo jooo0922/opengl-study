@@ -32,17 +32,22 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 
 // 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
-unsigned int loadTexture(const char* path, bool gammaCorrection);
+unsigned int loadTexture(const char* path);
+
+// shadow map 에 깊이 버퍼를 저장할 씬을 렌더링하는 함수 선언
+void renderScene(const Shader& shader);
+
+// 씬에 큐브를 렌더링하는 함수 선언
+void renderCube();
+
+// shadow map 을 샘플링하여 깊이 버퍼를 시각화할 QuadMesh 를 렌더링하는 함수 선언
+void renderQuad();
 
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
-
-// gamma correction 상태값을 나타내는 전역 변수 선언
-bool gammaEnabled = false;
-bool gammaKeyPressed = false;
 
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -57,6 +62,9 @@ bool firstMouse = true;
 // 카메라 이동속도 보정에 사용되는 deltaTime 변수 선언 및 초기화
 float deltaTime = 0.0f; // 마지막에 그려진 프레임 ~ 현재 프레임 사이의 시간 간격
 float lastFrame = 0.0f; // 마지막에 그려진 프레임의 ElapsedTime(경과시간)
+
+// Plane VAO 객체(object) 참조 id 를 저장할 변수를 전역으로 선언 (why? renderScene() 함수에서도 참조해야 함.)
+unsigned int planeVAO;
 
 int main()
 {
@@ -125,26 +133,29 @@ int main()
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// 큐브 렌더링 시 적용할 쉐이더 객체 생성
-	Shader shader("MyShaders/gamma_correction.vs", "MyShaders/gamma_correction.fs");
+	// light space 렌더링 시 적용할 쉐이더 객체 생성 -> shadow map 에 실제 기록될 깊이 버퍼를 렌더링
+	Shader simpleDepthShader("MyShaders/shadow_mapping_depth.vs", "MyShaders/shadow_mapping_depth.fs");
+
+	// shadow map 을 시각화할 QuadMesh 에 적용할 쉐이더 객체 생성
+	Shader debugDepthQuad("MyShaders/debug_quad.vs", "MyShaders/debug_quad.fs");
 
 	// 바닥 평면의 정점 데이터 정적 배열 초기화
 	float planeVertices[] = {
 		// positions            // normals         // texcoords
-		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-		-10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+		-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
 
-		 10.0f, -0.5f,  10.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-		-10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-		 10.0f, -0.5f, -10.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+		 25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
 	};
 
 
 	/* 바닥 평면의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고) */
 
 	// VBO, VAO 객체(object) 참조 id 를 저장할 변수
-	unsigned int planeVBO, planeVAO;
+	unsigned int planeVBO;
 
 	// VAO(Vertex Array Object) 객체 생성
 	glGenVertexArrays(1, &planeVAO);
@@ -190,32 +201,61 @@ int main()
 
 	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
 
-	// 텍스쳐 객체 생성 (sRGB(이미 gamma correction 적용된 텍스쳐) -> linear 색 공간 변환 미적용)
-	unsigned int floorTexture = loadTexture("resources/textures/wood.png", false);
-
-	// 텍스쳐 객체 생성 (sRGB(이미 gamma correction 적용된 텍스쳐) -> linear 색 공간 변환 적용)
-	unsigned int floorTextureGammaCorrected = loadTexture("resources/textures/wood.png", true);
-
-	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 0번 texture unit 위치값 전송
-	shader.use();
-	shader.setInt("texture1", 0);
+	// 텍스쳐 객체 생성
+	unsigned int woodTexture = loadTexture("resources/textures/wood.png");
 
 
-	// 4개의 광원 위치값을 정적 배열로 선언 및 초기화
-	glm::vec3 lightPositions[] = {
-		glm::vec3(-3.0f, 0.0f, 0.0f),
-		glm::vec3(-1.0f, 0.0f, 0.0f),
-		glm::vec3(1.0f, 0.0f, 0.0f),
-		glm::vec3(3.0f, 0.0f, 0.0f)
-	};
+	/* shadow map 을 생성하기 위한 프레임버퍼 생성 및 설정 */
 
-	// 4개의 조명 색상값을 정적 배열로 선언 및 초기화
-	glm::vec3 lightColors[] = {
-		glm::vec3(0.25),
-		glm::vec3(0.50),
-		glm::vec3(0.75),
-		glm::vec3(1.00)
-	};
+	// shadow map 해상도 정의
+	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+
+	// FBO(FrameBufferObject) 객체 생성
+	unsigned int depthMapFBO;
+	glGenFramebuffers(1, &depthMapFBO);
+
+	// FBO 객체에 attach 할 텍스쳐 객체(== shadow map 텍스쳐) 생성 및 바인딩
+	unsigned int depthMap;
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+
+	// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
+	// 텍스쳐 객체의 해상도는 shadow map 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 'shadow map'으로 사용할 거니까!
+	// 또한, 이 텍스쳐에는 깊이값만 덮어쓸 것이므로(== 깊이 버퍼 attachment), GL_RGB 가 아닌, 'GL_DEPTH_COMPONENT'으로 텍스쳐 포맷을 지정한다! 
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+
+	// Texture Filtering(텍셀 필터링(보간)) 모드 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Texture Wrapping 모드 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// 생성했던 FBO 객체 바인딩
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+
+	// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+	// shadow map 텍스쳐 객체에는 최종 depth buffer 만 저장하면 되므로, depth attachment 만 적용함!
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+
+	// shadow map 을 위해 생성한 프레임버퍼는 색상 버퍼를 필요로 하지 않음.
+	// -> 따라서, 현재 GL_FRAMEBUFFER 에 바인딩된 프레임버퍼가 색상 버퍼를 이용해서 실제 화면에 렌더링하지 않음을 명시하면,
+	// 색상 버퍼(== color attachment)에 데이터를 굳이 저장하지 않아도 되도록 설정할 수 있음!
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	// 생성한 FBO 객체 설정 완료 후, 다시 default framebuffer 바인딩하여 원상복구 (참고로, default framebuffer 의 참조 id 가 0임!)
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	// QuadMesh 프래그먼트 쉐이더에 선언된 uniform sampler 변수(shadow map)에 0번 texture unit 위치값 전송
+	debugDepthQuad.use();
+	debugDepthQuad.setInt("depthMap", 0);
+
+
+	// 광원 위치값 초기화
+	glm::vec3 lightPos(-2.0f, 4.0f, -1.0f);
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
@@ -245,61 +285,83 @@ int main()
 		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
 
 
-		/* 변환행렬 계산 및 쉐이더 객체에 전송 */
+		/* shadow map 에 기록할 씬에 적용할 변환행렬 계산 및 쉐이더 객체에 전송 */
 
-		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
-		shader.use();
+		// light space 좌표계로 변환 시 적용할 투영 행렬과 뷰 행렬 변수 초기화
+		glm::mat4 lightProjection, lightView;
 
-		// 카메라의 zoom 값으로부터 투영 행렬 계산
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		// light space 좌표계로 변환 시 적용할 lightSpaceMatrix 변수 초기화
+		glm::mat4 lightSpaceMatrix;
 
-		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
-		glm::mat4 view = camera.GetViewMatrix();
+		// 투영행렬 계산에 사용할 near 값 초기화
+		float near_plane = 1.0f;
 
-		// 계산된 투영행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("projection", projection);
+		// 투영행렬 계산에 사용할 far 값 초기화
+		float far_plane = 7.5f;
 
-		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("view", view);
+		// directional light 가 적용된 shadow map 을 구하려면, '직교 투영행렬'을 사용할 것! (하단 필기 참고)
+		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
 
-		// 모델행렬 전송 생략 -> 큐브를 변환하지 않음!
+		// '광원의 위치가 원점이고, 방향은 '월드공간 원점'을 바라보는' light space 좌표계로 변환하는 뷰 행렬(= LookAt 행렬) 계산
+		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
+		// 쉐이더로 변환행렬을 전송하기 전, cpp 단계에서 lightProjection 과 lightView 를 미리 한 번에 곱해둠
+		lightSpaceMatrix = lightProjection * lightView;
 
-		/* 조명 관련 정적 배열들을 쉐이더 객체에 전송 */
+		// 변환행렬을 전송할 QuadMesh 쉐이더 프로그램 바인딩
+		simpleDepthShader.use();
 
-		// 4개의 조명 위치값을 쉐이더 객체에 전송 (정적 배열을 uniform 변수에 전송하는 방법 관련 하단 필기 참고)
-		glUniform3fv(glGetUniformLocation(shader.ID, "lightPositions"), 4, &lightPositions[0][0]);
-
-		// 4개의 조명 색상값을 쉐이더 객체에 전송
-		glUniform3fv(glGetUniformLocation(shader.ID, "lightColors"), 4, &lightColors[0][0]);
-
-
-		/* 기타 uniform 변수들 쉐이더 객체에 전송 */
-
-		// 카메라 위치값 쉐이더 프로그램에 전송
-		shader.setVec3("viewPos", camera.Position);
-
-		// gamma correction 활성화 상태를 쉐이더 프로그램에 전송
-		shader.setBool("gamma", gammaEnabled);
+		// 계산된 lightSpaceMatrix 를 쉐이더 프로그램에 전송
+		simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 
-		/* 바닥 평면 그리기 */
+		/* First Pass (shadow map 에 깊이버퍼 기록) */
 
-		// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-		glBindVertexArray(planeVAO);
+		// GLFWwindow 상에 렌더링될 뷰포트 영역을 shadow map 해상도에 맞게 resize
+		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 
-		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
+		// shadow map 텍스쳐 객체가 attach 된 framebuffer 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+
+		// 현재 바인딩된 framebuffer 의 깊이 버퍼 초기화
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
 
-		// 현재 gamma correction 활성화 여부에 따라, gamma correction 중복 처리가 보정된 텍스쳐 객체를 바인딩할 지 결정
-		glBindTexture(GL_TEXTURE_2D, gammaEnabled ? floorTextureGammaCorrected : floorTexture);
+		// 씬 안의 큐브와 바닥평면에 적용할 woodTexture 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, woodTexture);
 
-		// 바닥 평면 그리기 명령
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// shadow map 에 깊이 버퍼를 기록할 씬 렌더링
+		renderScene(simpleDepthShader);
+
+		// default framebuffer 로 바인딩 복구
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		// 현재 gamma correction 활성화 상태 출력
-		std::cout << (gammaEnabled ? "Gamma enabled" : "Gamma disabled") << std::endl;
+		/* Second Pass (shadow map 을 QuadMesh 에 시각화) */
+
+		// GLFWwindow 상에 렌더링될 뷰포트 영역을 스크린 해상도로 복구
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+
+		// 현재 바인딩된 default framebuffer 의 깊이 버퍼 및 색상 버퍼 초기화
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
+		debugDepthQuad.use();
+
+		// QuadMesh 에 적용할 쉐이더에 uniform 변수 전송
+		debugDepthQuad.setFloat("near_plane", near_plane);
+		debugDepthQuad.setFloat("far_plane", far_plane);
+
+		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// shadow map 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+
+		// QuadMesh 렌더링
+		renderQuad();
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -319,7 +381,261 @@ int main()
 	return 0;
 }
 
-// 전방선언된 콜백함수 정의
+
+/* 전방선언된 콜백함수 정의 */
+
+
+/* shadow map 에 깊이 버퍼를 저장할 씬을 렌더링하는 함수 선언 */
+void renderScene(const Shader& shader)
+{
+	/* 바닥 평면 그리기 */
+
+	// 바닥 평면에 적용할 모델행렬 초기화 (단위행렬 사용 -> 변환 x)
+	glm::mat4 model = glm::mat4(1.0f);
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+	glBindVertexArray(planeVAO);
+
+	// 바닥 평면 그리기 명령
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+	/* 첫 번째 큐브 그리기 */
+
+	// 첫 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
+	model = glm::scale(model, glm::vec3(0.5f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+
+
+	/* 두 번째 큐브 그리기 */
+
+	// 두 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
+	model = glm::scale(model, glm::vec3(0.5f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+
+
+	/* 세 번째 큐브 그리기 */
+
+	// 세 번째 큐브에 적용할 모델행렬 계산
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0f));
+	model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f)));
+	model = glm::scale(model, glm::vec3(0.25f));
+
+	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
+	shader.setMat4("model", model);
+
+	// 큐브 렌더링 함수 실행
+	renderCube();
+}
+
+
+/* 씬에 큐브를 렌더링하는 함수 구현 */
+
+// Cube VBO, VAO 객체(object) 참조 id 를 저장할 변수 전역 선언 (why? 다른 함수들에서도 참조)
+unsigned int cubeVAO = 0;
+unsigned int cubeVBO = 0;
+
+void renderCube()
+{
+	/*
+		VAO 참조 ID 가 아직 할당되지 않았을 경우,
+		큐브의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고)
+	*/
+	if (cubeVAO == 0)
+	{
+		// 큐브의 정점 데이터 정적 배열 초기화
+		float vertices[] = {
+			// back face
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+			// front face
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			// left face
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			// right face
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
+			// bottom face
+			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			 1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+			 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			-1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			// top face
+			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			 1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			 1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
+			 1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
+		};
+
+		// VAO(Vertex Array Object) 객체 생성
+		glGenVertexArrays(1, &cubeVAO);
+
+		// VBO(Vertex Buffer Object) 객체 생성
+		glGenBuffers(1, &cubeVBO);
+
+		// VAO 객체 먼저 컨텍스트에 바인딩(연결)함. 
+		// -> 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
+		glBindVertexArray(cubeVAO);
+
+		// VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
+		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+
+		// 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+		// 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. 
+		// -> 그 중에서 0번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(0);
+
+		// 정점 위치 데이터(0번 location 입력변수 in vec3 aPos 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+
+		// 1번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(1);
+
+		// 정점 노멀 데이터(1번 location 입력변수 in vec3 aNormal 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+
+		// 2번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(2);
+
+		// 정점 UV 데이터(2번 location 입력변수 in vec2 aTexCoords 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+
+		// VBO 객체 설정을 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// 마찬가지로, VAO 객체도 OpenGL 컨텍스트로부터 바인딩 해제 
+		glBindVertexArray(0);
+	}
+
+	/* 큐브 그리기 */
+
+	// 큐브에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+	glBindVertexArray(cubeVAO);
+
+	// 큐브 그리기 명령
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	// 그리기 명령 종료 후, VAO 객체 바인딩 해제
+	glBindVertexArray(0);
+}
+
+
+/* 깊이 버퍼를 시각화할 QuadMesh 를 렌더링하는 함수 구현 */
+
+// QuadMesh VBO, VAO 객체(object) 참조 id 를 저장할 변수 전역 선언 (why? 다른 함수들에서도 참조)
+unsigned int quadVAO = 0;
+unsigned int quadVBO = 0;
+
+void renderQuad()
+{
+	/*
+		VAO 참조 ID 가 아직 할당되지 않았을 경우,
+		QuadMesh 의 VAO(Vertex Array Object), VBO(Vertex Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고)
+	*/
+	if (quadVAO == 0)
+	{
+		// QuadMesh 의 정점 데이터 정적 배열 초기화
+		float quadVertices[] = {
+			// positions        // texture Coords
+			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		};
+
+		// VAO(Vertex Array Object) 객체 생성
+		glGenVertexArrays(1, &quadVAO);
+
+		// VBO(Vertex Buffer Object) 객체 생성
+		glGenBuffers(1, &quadVBO);
+
+		// VAO 객체 먼저 컨텍스트에 바인딩(연결)함. 
+		// -> 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
+		glBindVertexArray(quadVAO);
+
+		// VBO 객체는 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩되어야 함.
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+
+		// 실제 정점 데이터를 생성 및 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+		// 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. 
+		// -> 그 중에서 0번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(0);
+
+		// 정점 위치 데이터(0번 location 입력변수 in vec3 aPos 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+
+		// 1번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(1);
+
+		// 정점 UV 데이터(1번 location 입력변수 in vec2 aTexCoords 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+
+		// VBO 객체 설정을 끝마쳤으므로, OpenGL 컨텍스트로부터 바인딩 해제
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// 마찬가지로, VAO 객체도 OpenGL 컨텍스트로부터 바인딩 해제 
+		glBindVertexArray(0);
+	}
+
+	/* QuadMesh 그리기 */
+
+	// QuadMesh 에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
+	glBindVertexArray(quadVAO);
+
+	// QuadMesh 그리기 명령
+	// (Quad 를 그리려면 2개의 삼각형(== 6개의 정점)이 정의되어야 하지만, 
+	// 위에서 4개의 정점 데이터만 정의했으므로, 정점을 공유하여 삼각형을 조립하는 GL_TRIANGLE_STRIP 모드로 렌더링한다.)
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	// 그리기 명령 종료 후, VAO 객체 바인딩 해제
+	glBindVertexArray(0);
+}
+
+
 // GLFWwindow 윈도우 창 리사이징 감지 시, 호출할 콜백 함수 정의
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -390,22 +706,10 @@ void processInput(GLFWwindow* window)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
-
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !gammaKeyPressed)
-	{
-		// space 키 입력 시, gamma correction 상태값 변경
-		gammaEnabled = !gammaEnabled;
-		gammaKeyPressed = true;
-	}
-
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
-	{
-		gammaKeyPressed = false;
-	}
 }
 
 // 텍스쳐 이미지 로드 및 객체 생성 함수 구현부 (텍스쳐 객체 참조 id 반환)
-unsigned int loadTexture(const char* path, bool gammaCorrection)
+unsigned int loadTexture(const char* path)
 {
 	unsigned int textureID; // 텍스쳐 객체(object) 참조 id 를 저장할 변수 선언
 	glGenTextures(1, &textureID); // 텍스쳐 객체 생성
@@ -419,35 +723,18 @@ unsigned int loadTexture(const char* path, bool gammaCorrection)
 	{
 		// 이미지 데이터 로드 성공 시 처리
 
-		// 이미지 데이터의 색상 채널 개수에 따라~
-
-		// glTexImage2D() 에서 텍스쳐 객체에 저장할 데이터 포맷 ENUM 값 결정
-		GLenum internalFormat;
-
-		// glTexImage2D() 에 전달할 원본 텍스쳐 이미지 포맷의 ENUM 값 결정
-		GLenum dataFormat;
-
+		// 이미지 데이터의 색상 채널 개수에 따라 glTexImage2D() 에 넘겨줄 픽셀 데이터 포맷의 ENUM 값을 결정
+		GLenum format;
 		if (nrComponents == 1)
-		{
-			internalFormat = GL_RED;
-			dataFormat = GL_RED;
-		}
+			format = GL_RED;
 		else if (nrComponents == 3)
-		{
-			// gamma correction 적용 여부에 따라 텍스쳐 객체에 저장할 데이터 포맷을 결정 (관련 필기 하단 참고)
-			internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
-			dataFormat = GL_RGB;
-		}
+			format = GL_RGB;
 		else if (nrComponents == 4)
-		{
-			// gamma correction 적용 여부에 따라 텍스쳐 객체에 저장할 데이터 포맷을 결정 (관련 필기 하단 참고)
-			internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
-			dataFormat = GL_RGBA;
-		}
+			format = GL_RGBA;
 
 		// 텍스쳐 객체 바인딩 및 로드한 이미지 데이터 쓰기
 		glBindTexture(GL_TEXTURE_2D, textureID); // GL_TEXTURE_2D 타입의 상태에 텍스쳐 객체 바인딩 > 이후 텍스쳐 객체 설정 명령은 바인딩된 텍스쳐 객체에 적용.
-		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data); // 로드한 이미지 데이터를 현재 바인딩된 텍스쳐 객체에 덮어쓰기
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data); // 로드한 이미지 데이터를 현재 바인딩된 텍스쳐 객체에 덮어쓰기
 		glGenerateMipmap(GL_TEXTURE_2D); // 현재 바인딩된 텍스쳐 객체에 필요한 모든 단계의 Mipmap 을 자동 생성함. 
 
 		// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
@@ -519,58 +806,32 @@ unsigned int loadTexture(const char* path, bool gammaCorrection)
 */
 
 /*
-	정적 배열을 uniform 변수에 전송하기
+	light space 로 변환할 때의 투영행렬
 
 
-	glUniform3fv(glGetUniformLocation(ShaderProgram 참조 ID, "uniform 변수명"), count, value(주소값));
+	어떤 씬의 오브젝트들을
+	world space -> light space 로 변환할 때,
 
-	vec3 타입의 변수들이 담긴 정적 배열을
-	uniform 변수에 전송한다고 가정하면, 위의 코드대로 작성하면 됨.
-
-	각각의 매개변수에 대해 설명하자면,
-
-	1. glGetUniformLocation 은 쉐이더 코드 상에서
-	uniform 변수의 위치값을 의미한다는 것은 알 것이고,
-
-	2. count 는 몇 개의 요소들을 정적 배열에 담아 보낼 것인지 의미함.
-	예를 들어, glUniform3fv 라는 것은 vec3(float, float, float) 타입의 요소를
-	uniform 변수에 전송할 때 사용하는데, 이 타입의 요소가 몇 개 담긴 정적 배열을
-	uniform 변수에 전송할 것인지 명시할 때, 그 정적 배열의 개수를 count 에 전달하면 됨.
-
-	3. value 는 당연히 정적 배열의 시작 위치의 주소값을 의미하는 거겠지?
-	배열은 시작 요소로부터 연속적으로 메모리 상에 저장되어 있기 때문에,
-	대부분의 c-style 메서드들은 배열을 매개변수로 전달할 때,
-	항상 배열의 시작 위치 주소값을 전달하는 방식으로 되어 있음.
-*/
-
-/*
-	sRGB 텍스쳐 적용
+	실제로 렌더링할 씬이
+	어떤 light type 을 사용하고 있는지에 따라
+	light space 변환 시 사용할 투영행렬이 달라짐.
 
 
-	텍스쳐에서 sRGB 색 공간이 적용되었다는 것은,
+	예를 들어, directional light 인 경우,
+	'동일한 방향'의 light ray 들이 평행하게 내리쬐는
+	light casting 을 모델링한 것이기 때문에,
+	'방향'만 존재할 뿐, '광원의 위치'가 존재하지 않음.
 
-	보통 디자이너가 텍스쳐 이미지를 작업할 때,
-	이미 gamma correction(1/2.2 제곱) 이 적용된 상태에서
-	이미지를 작업해버렸다는 뜻임.
+	이처럼,
+	'평행한 방향값만 존재하는' light casting 타입을
+	기준으로 하는 좌표계로 변환하려면,
 
-	주로 diffuse 텍스쳐처럼,
-	물체의 색상을 표현하는 텍스쳐들은
-	sRGB 색 공간으로 지정해놓고 작업하는 경우가 많음.
+	'직교 투영행렬(orthographic projection)' 이 적절할 것임.
 
-	그러나, 본문의 그래프에서도 보면 알겠지만,
-	gamma correction 이 적용되면 전체적으로 색상값이 밝아지기 때문에,
 
-	쉐이더 객체에서 이미 gamma correction 이 적용된 텍스쳐를
-	샘플링해서 다시 gamma correction (1/2.2 제곱) 을 적용해버리면
+	반대로, spot light 나 point light 처럼,
+	명확한 '광원의 위치'가 존재하는
+	light casting 타입을 기준으로 하는 좌표계로 변환하려면,
 
-	결과적으로 gamma correction 이 두 번 적용됨으로써,
-	텍스쳐 영역의 최종 색상이 과하게 밝아지는 문제가 발생함.
-
-	이를 해결하기 위해,
-	OpenGL 내부에서 자체적으로 텍스쳐 이미지 데이터를 저장할 때,
-
-	"이 텍스쳐 데이터는 이미 sRGB 감마 보정이 적용되어 있으니,
-	linear space 색 공간으로 변환해서 저장해주세요"
-
-	라고 명령하는 것과 같음.
+	'원근 투영행렬(perspective projection)' 이 적절하겠지.
 */
