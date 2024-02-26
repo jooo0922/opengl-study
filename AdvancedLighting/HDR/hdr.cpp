@@ -128,23 +128,11 @@ int main()
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// light space 렌더링 시 적용할 쉐이더 객체 생성 -> shadow map 에 실제 기록될 깊이 버퍼를 렌더링
-	Shader simpleDepthShader("MyShaders/shadow_mapping_depth.vs", "MyShaders/shadow_mapping_depth.fs");
+	// HDR 프레임버퍼에 렌더링되는 씬에 적용할 쉐이더 객체 생성
+	Shader shader("MyShaders/lighting.vs", "MyShaders/lighting.fs");
 
-	// shadow map 을 시각화할 QuadMesh 에 적용할 쉐이더 객체 생성
-	Shader debugDepthQuad("MyShaders/debug_quad.vs", "MyShaders/debug_quad.fs");
-
-	// 바닥 평면의 정점 데이터 정적 배열 초기화
-	float planeVertices[] = {
-		// positions            // normals         // texcoords
-		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-		-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-
-		 25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-		-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-		 25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
-	};
+	// HDR 을 시각화할 QuadMesh 에 적용할 쉐이더 객체 생성
+	Shader hdrShader("MyShaders/hdr.vs", "MyShaders/hdr.fs");
 
 
 	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
@@ -198,8 +186,8 @@ int main()
 
 
 	// QuadMesh 프래그먼트 쉐이더에 선언된 uniform sampler 변수(shadow map)에 0번 texture unit 위치값 전송
-	debugDepthQuad.use();
-	debugDepthQuad.setInt("depthMap", 0);
+	hdrShader.use();
+	hdrShader.setInt("depthMap", 0);
 
 
 	// 광원 위치값 초기화
@@ -257,10 +245,10 @@ int main()
 		lightSpaceMatrix = lightProjection * lightView;
 
 		// 변환행렬을 전송할 QuadMesh 쉐이더 프로그램 바인딩
-		simpleDepthShader.use();
+		shader.use();
 
 		// 계산된 lightSpaceMatrix 를 쉐이더 프로그램에 전송
-		simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+		shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
 
 		/* First Pass (shadow map 에 깊이버퍼 기록) */
@@ -293,11 +281,11 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
-		debugDepthQuad.use();
+		hdrShader.use();
 
 		// QuadMesh 에 적용할 쉐이더에 uniform 변수 전송
-		debugDepthQuad.setFloat("near_plane", near_plane);
-		debugDepthQuad.setFloat("far_plane", far_plane);
+		hdrShader.setFloat("near_plane", near_plane);
+		hdrShader.setFloat("far_plane", far_plane);
 
 		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
