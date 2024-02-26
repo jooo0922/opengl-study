@@ -251,49 +251,54 @@ int main()
 		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
 
 
-		/* shadow map 에 기록할 씬에 적용할 변환행렬 계산 및 쉐이더 객체에 전송 */
-
-		// light space 좌표계로 변환 시 적용할 투영 행렬과 뷰 행렬 변수 초기화
-		glm::mat4 lightProjection, lightView;
-
-		// light space 좌표계로 변환 시 적용할 lightSpaceMatrix 변수 초기화
-		glm::mat4 lightSpaceMatrix;
-
-		// 투영행렬 계산에 사용할 near 값 초기화
-		float near_plane = 1.0f;
-
-		// 투영행렬 계산에 사용할 far 값 초기화
-		float far_plane = 7.5f;
-
-		// directional light 가 적용된 shadow map 을 구하려면, '직교 투영행렬'을 사용할 것! (하단 필기 참고)
-		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-
-		// '광원의 위치가 원점이고, 방향은 '월드공간 원점'을 바라보는' light space 좌표계로 변환하는 뷰 행렬(= LookAt 행렬) 계산
-		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-		// 쉐이더로 변환행렬을 전송하기 전, cpp 단계에서 lightProjection 과 lightView 를 미리 한 번에 곱해둠
-		lightSpaceMatrix = lightProjection * lightView;
-
-		// 변환행렬을 전송할 QuadMesh 쉐이더 프로그램 바인딩
-		shader.use();
-
-		// 계산된 lightSpaceMatrix 를 쉐이더 프로그램에 전송
-		shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-
-		/* First Pass (shadow map 에 깊이버퍼 기록) */
+		/* First Pass (Floating point framebuffer 에 HDR 효과를 적용할 씬 렌더링) */
 
 		// shadow map 텍스쳐 객체가 attach 된 framebuffer 바인딩
 		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
-		// 현재 바인딩된 framebuffer 의 깊이 버퍼 초기화
-		glClear(GL_DEPTH_BUFFER_BIT);
+		// 현재 바인딩된 framebuffer 의 색상 및 깊이 버퍼 초기화
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		// 카메라의 zoom 값으로부터 투영 행렬 계산
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
+		glm::mat4 view = camera.GetViewMatrix();
+		
+		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
+		shader.use();
+
+		// 계산된 투영행렬을 쉐이더 프로그램에 전송
+		shader.setMat4("projection", projection);
+
+		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
+		shader.setMat4("view", view);
+
+		// diffuseTexture 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
 
 		// 씬 안의 큐브와 바닥평면에 적용할 woodTexture 텍스쳐 객체 바인딩
 		glBindTexture(GL_TEXTURE_2D, woodTexture);
+
+		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 광원 데이터 전송
+		for (unsigned int i = 0; i < lightPositions.size(); i++)
+		{
+			shader.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
+			shader.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
+		}
+
+		// 터널 큐브에 적용할 모델행렬 계산
+		glm::mat4 model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 25.0f));
+		model = glm::scale(model, glm::vec3(2.5f, 2.5f, 27.5f));
+
+		// 계산된 모델행렬을 쉐이더 프로그램에 전송
+		shader.setMat4("model", model);
+
+		// 터널은 BACK_FACE 를 렌더링해줘야 하므로, 바깥으로 향하는 노멀벡터를 뒤집도록 플래그 설정
+		shader.setInt("inverse_normal", true);
+
+		renderCube();
 
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -309,10 +314,6 @@ int main()
 
 		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
 		hdrShader.use();
-
-		// QuadMesh 에 적용할 쉐이더에 uniform 변수 전송
-		hdrShader.setFloat("near_plane", near_plane);
-		hdrShader.setFloat("far_plane", far_plane);
 
 		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
