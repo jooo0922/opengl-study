@@ -34,9 +34,6 @@ void processInput(GLFWwindow* window);
 // 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
 unsigned int loadTexture(const char* path);
 
-// shadow map 에 깊이 버퍼를 저장할 씬을 렌더링하는 함수 선언
-void renderScene(const Shader& shader);
-
 // 씬에 큐브를 렌더링하는 함수 선언
 void renderCube();
 
@@ -332,9 +329,6 @@ int main()
 		// 씬 안의 큐브와 바닥평면에 적용할 woodTexture 텍스쳐 객체 바인딩
 		glBindTexture(GL_TEXTURE_2D, woodTexture);
 
-		// shadow map 에 깊이 버퍼를 기록할 씬 렌더링
-		renderScene(simpleDepthShader);
-
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -383,69 +377,6 @@ int main()
 
 
 /* 전방선언된 콜백함수 정의 */
-
-
-/* shadow map 에 깊이 버퍼를 저장할 씬을 렌더링하는 함수 선언 */
-void renderScene(const Shader& shader)
-{
-	/* 바닥 평면 그리기 */
-
-	// 바닥 평면에 적용할 모델행렬 초기화 (단위행렬 사용 -> 변환 x)
-	glm::mat4 model = glm::mat4(1.0f);
-
-	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
-	shader.setMat4("model", model);
-
-	// 바닥 평면에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO 객체와 설정대로 그리도록 명령
-	glBindVertexArray(planeVAO);
-
-	// 바닥 평면 그리기 명령
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-
-	/* 첫 번째 큐브 그리기 */
-
-	// 첫 번째 큐브에 적용할 모델행렬 계산
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
-	model = glm::scale(model, glm::vec3(0.5f));
-
-	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
-	shader.setMat4("model", model);
-
-	// 큐브 렌더링 함수 실행
-	renderCube();
-
-
-	/* 두 번째 큐브 그리기 */
-
-	// 두 번째 큐브에 적용할 모델행렬 계산
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
-	model = glm::scale(model, glm::vec3(0.5f));
-
-	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
-	shader.setMat4("model", model);
-
-	// 큐브 렌더링 함수 실행
-	renderCube();
-
-
-	/* 세 번째 큐브 그리기 */
-
-	// 세 번째 큐브에 적용할 모델행렬 계산
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0f));
-	model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f)));
-	model = glm::scale(model, glm::vec3(0.25f));
-
-	// 매개변수로 전달받은 쉐이더 객체에 모델행렬 전송
-	shader.setMat4("model", model);
-
-	// 큐브 렌더링 함수 실행
-	renderCube();
-}
-
 
 /* 씬에 큐브를 렌더링하는 함수 구현 */
 
@@ -803,35 +734,4 @@ unsigned int loadTexture(const char* path)
 	필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
 
 	즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
-*/
-
-/*
-	light space 로 변환할 때의 투영행렬
-
-
-	어떤 씬의 오브젝트들을
-	world space -> light space 로 변환할 때,
-
-	실제로 렌더링할 씬이
-	어떤 light type 을 사용하고 있는지에 따라
-	light space 변환 시 사용할 투영행렬이 달라짐.
-
-
-	예를 들어, directional light 인 경우,
-	'동일한 방향'의 light ray 들이 평행하게 내리쬐는
-	light casting 을 모델링한 것이기 때문에,
-	'방향'만 존재할 뿐, '광원의 위치'가 존재하지 않음.
-
-	이처럼,
-	'평행한 방향값만 존재하는' light casting 타입을
-	기준으로 하는 좌표계로 변환하려면,
-
-	'직교 투영행렬(orthographic projection)' 이 적절할 것임.
-
-
-	반대로, spot light 나 point light 처럼,
-	명확한 '광원의 위치'가 존재하는
-	light casting 타입을 기준으로 하는 좌표계로 변환하려면,
-
-	'원근 투영행렬(perspective projection)' 이 적절하겠지.
 */
