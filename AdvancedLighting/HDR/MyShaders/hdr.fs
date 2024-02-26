@@ -24,7 +24,15 @@ void main() {
   vec3 hdrColor = texture2D(hdrBuffer, TexCoords).rgb;
 
   if(hdr) {
-    vec3 result = hdrColor;
+    /*
+      [0, 1] 범위를 벗어난 HDR 색상값을
+      [0, 1] 범위 내로 존재하는 LDR 색상값으로 변환하기
+
+      -> 즉, Tone mapping 알고리즘 적용!
+    */
+
+    // Reinhard Tone mapping 알고리즘을 사용하여 HDR -> LDR 변환
+    vec3 result = hdrColor / (hdrColor + vec3(1.0));
 
     // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력 (하단 필기 참고)
     result = pow(result, vec3(1.0 / gamma));
