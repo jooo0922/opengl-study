@@ -135,30 +135,21 @@ int main()
 	Shader hdrShader("MyShaders/hdr.vs", "MyShaders/hdr.fs");
 
 
-	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
-
-	// 텍스쳐 객체 생성
-	unsigned int woodTexture = loadTexture("resources/textures/wood.png");
-
-
-	/* shadow map 을 생성하기 위한 프레임버퍼 생성 및 설정 */
-
-	// shadow map 해상도 정의
-	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+	/* HDR 효과를 적용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
 
 	// FBO(FrameBufferObject) 객체 생성
-	unsigned int depthMapFBO;
-	glGenFramebuffers(1, &depthMapFBO);
+	unsigned int hdrFBO;
+	glGenFramebuffers(1, &hdrFBO);
 
-	// FBO 객체에 attach 할 텍스쳐 객체(== shadow map 텍스쳐) 생성 및 바인딩
-	unsigned int depthMap;
-	glGenTextures(1, &depthMap);
-	glBindTexture(GL_TEXTURE_2D, depthMap);
+	// FBO 객체에 attach 할 텍스쳐 객체 생성 및 바인딩
+	unsigned int colorBuffer;
+	glGenTextures(1, &colorBuffer);
+	glBindTexture(GL_TEXTURE_2D, colorBuffer);
 
 	// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
-	// 텍스쳐 객체의 해상도는 shadow map 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 'shadow map'으로 사용할 거니까!
-	// 또한, 이 텍스쳐에는 깊이값만 덮어쓸 것이므로(== 깊이 버퍼 attachment), GL_RGB 가 아닌, 'GL_DEPTH_COMPONENT'으로 텍스쳐 포맷을 지정한다! 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	// 텍스쳐 객체의 해상도는 스크린 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 '스크린 평면'에 적용할 거니까!
+	// 또한, 현재 프레임버퍼를 Floating point framebuffer (부동소수점 지원 프레임버퍼)로 만들기 위해 색상 버퍼 내부 포맷을 GL_RGBA16F 로 지정 (하단 필기 참고)
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
 	// Texture Filtering(텍셀 필터링(보간)) 모드 설정
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -168,26 +159,51 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+	// FBO 객체에 attach 할 RBO(RenderBufferObject) 객체 생성 및 바인딩
+	unsigned int rboDepth;
+	glGenRenderbuffers(1, &rboDepth);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+
+	// RBO 객체 메모리 공간 할당
+	// 단일 Renderbuffer 에 depth 값만 저장하는 데이터 포맷 지정 -> GL_DEPTH_COMPONENT 
+	// 또한, 텍스쳐 객체와 마찬가지로 스크린 해상도와 Renderbuffer 해상도를 일치시킴 -> 그래야 SCR_WIDTH * SCR_HEIGHT 개수 만큼의 데이터 저장 공간 확보 가능!
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+
 	// 생성했던 FBO 객체 바인딩
-	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
 	// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
-	// shadow map 텍스쳐 객체에는 최종 depth buffer 만 저장하면 되므로, depth attachment 만 적용함!
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	// floating point framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함!
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
 
-	// shadow map 을 위해 생성한 프레임버퍼는 색상 버퍼를 필요로 하지 않음.
-	// -> 따라서, 현재 GL_FRAMEBUFFER 에 바인딩된 프레임버퍼가 색상 버퍼를 이용해서 실제 화면에 렌더링하지 않음을 명시하면,
-	// 색상 버퍼(== color attachment)에 데이터를 굳이 저장하지 않아도 되도록 설정할 수 있음!
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
+	// FBO 객체에 생성한 RBO 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+	// off-screen framebuffer 에 렌더링 시, RBO 객체에는 depth 값만 저장할 것이므로, GL_DEPTH_STENCIL_ATTACHMENT 를 적용함!
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+
+	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사 (설정 완료 조건은 LearnOpenGL 본문 참고)
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+	}
 
 	// 생성한 FBO 객체 설정 완료 후, 다시 default framebuffer 바인딩하여 원상복구 (참고로, default framebuffer 의 참조 id 가 0임!)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-	// QuadMesh 프래그먼트 쉐이더에 선언된 uniform sampler 변수(shadow map)에 0번 texture unit 위치값 전송
+	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
+
+	// 텍스쳐 객체 생성
+	unsigned int woodTexture = loadTexture("resources/textures/wood.png");
+
+	/*
+		각 프래그먼트 쉐이더에 선언된 uniform sampler 변수들이 
+		모두 0번 texture unit 위치값을 공유하도록 설정
+	*/
+	shader.use();
+	shader.setInt("diffuseTexture", 0);
 	hdrShader.use();
-	hdrShader.setInt("depthMap", 0);
+	hdrShader.setInt("hdrBuffer", 0);
 
 
 	// 광원 위치값 초기화
@@ -253,11 +269,8 @@ int main()
 
 		/* First Pass (shadow map 에 깊이버퍼 기록) */
 
-		// GLFWwindow 상에 렌더링될 뷰포트 영역을 shadow map 해상도에 맞게 resize
-		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-
 		// shadow map 텍스쳐 객체가 attach 된 framebuffer 바인딩
-		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
 		// 현재 바인딩된 framebuffer 의 깊이 버퍼 초기화
 		glClear(GL_DEPTH_BUFFER_BIT);
@@ -291,7 +304,7 @@ int main()
 		glActiveTexture(GL_TEXTURE0);
 
 		// shadow map 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glBindTexture(GL_TEXTURE_2D, colorBuffer);
 
 		// QuadMesh 렌더링
 		renderQuad();
@@ -670,4 +683,41 @@ unsigned int loadTexture(const char* path)
 	필요한 VAO 객체를 교체하거나 꺼내쓸 수 있다.
 
 	즉, 저런 번거로운 VBO 객체 생성 및 설정 작업을 반복하지 않아도 된다는 뜻!
+*/
+
+/*
+	Floating point framebuffer
+
+
+	HDR 을 구현하려면, [0, 1] 범위를 넘어서는 색상값들이 
+	프레임버퍼에 attach 된 텍스쳐 객체에 저장될 때, 
+	[0, 1] 사이로 clamping 되지 않고,
+
+	원래의 색상값이 그대로 저장될 수 있어야 함.
+
+	그러나, 일반적인 프레임버퍼에서 color 를 저장할 때,
+	내부 포맷으로 사용하는 GL_RGB 같은 포맷은
+	fixed point(고정 소수점) 포맷이기 때문에,
+	
+	OpenGL 에서 프레임버퍼에 색상값을 저장하기 전에
+	자동으로 [0, 1] 사이의 값으로 clamping 해버리는 문제가 있음.
+
+
+	이를 해결하기 위해,
+	GL_RGB16F, GL_RGBA16F, GL_RGB32F, GL_RGBA32F 같은
+	floating point(부동 소수점) 포맷으로 
+	프레임버퍼의 내부 색상 포맷을 변경하면,
+
+	[0, 1] 범위를 벗어나는 값들에 대해서도
+	부동 소수점 형태로 저장할 수 있도록 해줌!
+
+
+	이때, 일반적인 프레임버퍼의 기본 색상 포맷인
+	GL_RGB 같은 경우 하나의 컴포넌트 당 8 bits 메모리를 사용하는데,
+	GL_RGB32F, GL_RGBA32F 같은 포맷은 하나의 컴포넌트 당 32 bits 의 메모리를 사용하기 때문에,
+	우리는 이 정도로 많은 메모리를 필요로 하지는 않음.
+
+	따라서, GL_RGB16F, GL_RGBA16F 같이
+	한 컴포넌트 당 16 bits 정도의 메모리를 예약해서 사용하는
+	적당한 크기의 색상 포맷으로 사용하는 게 좋겠지!
 */
