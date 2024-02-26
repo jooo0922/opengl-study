@@ -615,6 +615,39 @@ void processInput(GLFWwindow* window)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
 	}
+
+	// space 키 입력 시, hdr 상태값 변경
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !hdrKeyPressed)
+	{
+		hdr = !hdr;
+		hdrKeyPressed = true;
+	}
+
+	// space 키 입력 해제
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+	{
+		hdrKeyPressed = false;
+	}
+
+	/*
+		Q 키 입력 시, 노출값 감소시키고,
+		E 키 입력 시, 노출값 증가시킴.
+	*/
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		if (exposure > 0.0f)
+		{
+			exposure -= 0.001f;
+		}
+		else
+		{
+			exposure = 0.0f;
+		}
+	}
+	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	{
+		exposure += 0.001f;
+	}
 }
 
 // 텍스쳐 이미지 로드 및 객체 생성 함수 구현부 (텍스쳐 객체 참조 id 반환)
