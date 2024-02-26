@@ -46,6 +46,13 @@ void renderQuad();
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
+// hdr 활성화 상태값 초기화
+bool hdr = true;
+bool hdrKeyPressed = false;
+
+// tone mapping 알고리즘에 사용할 노출값 초기화
+float exposure = 1.0f;
+
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 
@@ -304,10 +311,7 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		/* Second Pass (shadow map 을 QuadMesh 에 시각화) */
-
-		// GLFWwindow 상에 렌더링될 뷰포트 영역을 스크린 해상도로 복구
-		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		/* Second Pass (HDR 효과를 QuadMesh 에 시각화) */
 
 		// 현재 바인딩된 default framebuffer 의 깊이 버퍼 및 색상 버퍼 초기화
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -315,14 +319,24 @@ int main()
 		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
 		hdrShader.use();
 
-		// shadow map 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		// hdrBuffer 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
 
-		// shadow map 텍스쳐 객체 바인딩
+		// hdrBuffer 텍스쳐 객체(= Floating point framebuffer 에 attach 되어있는 텍스쳐 객체 버퍼) 바인딩
 		glBindTexture(GL_TEXTURE_2D, colorBuffer);
+
+		// hdr 효과 활성화 상태값 전송
+		hdrShader.setBool("hdr", hdr);
+
+		// tone mapping 알고리즘에 사용할 노출값 전송
+		hdrShader.setFloat("exposure", exposure);
 
 		// QuadMesh 렌더링
 		renderQuad();
+
+
+		// hdr 활성화 여부 및 노출값 콘솔 출력
+		std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
