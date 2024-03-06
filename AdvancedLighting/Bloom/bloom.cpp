@@ -135,11 +135,17 @@ int main()
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// HDR 프레임버퍼에 렌더링되는 씬에 적용할 쉐이더 객체 생성
-	Shader shader("MyShaders/lighting.vs", "MyShaders/lighting.fs");
+	// 큐브 및 바닥 평면에 적용할 쉐이더 객체 생성
+	Shader shader("MyShaders/bloom.vs", "MyShaders/bloom.fs");
 
-	// HDR 을 시각화할 QuadMesh 에 적용할 쉐이더 객체 생성
-	Shader hdrShader("MyShaders/hdr.vs", "MyShaders/hdr.fs");
+	// 광원 큐브에 적용할 쉐이더 객체 생성
+	Shader shaderLight("MyShaders/bloom.vs", "MyShaders/light_box.fs");
+
+	// Gaussian blur 를 QuadMesh 에 적용할 쉐이더 객체 생성
+	Shader shaderBlur("MyShaders/blur.vs", "MyShaders/blur.fs");
+
+	// 최종 후처리로 gamma correction 및 tone mapping 을 적용할 쉐이더 객체 생성
+	Shader shaderBloomFinal("MyShaders/bloom_final.vs", "MyShaders/bloom_final.fs");
 
 
 	/* HDR 효과를 적용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
@@ -258,13 +264,16 @@ int main()
 	unsigned int containerTexture = loadTexture("resources/textures/container2.png", true);
 
 	/*
-		각 프래그먼트 쉐이더에 선언된 uniform sampler 변수들이
-		모두 0번 texture unit 위치값을 공유하도록 설정
+		각 프래그먼트 쉐이더에 선언된 uniform sampler 변수들에
+		texture unit 위치값 전송
 	*/
 	shader.use();
 	shader.setInt("diffuseTexture", 0);
-	hdrShader.use();
-	hdrShader.setInt("hdrBuffer", 0);
+	shaderBlur.use();
+	shaderBlur.setInt("image", 0);
+	shaderBloomFinal.use();
+	shaderBloomFinal.setInt("scene", 0);
+	shaderBloomFinal.setInt("bloomBlur", 1);
 
 
 	/* 광원 정보 초기화 */
@@ -371,7 +380,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
-		hdrShader.use();
+		shaderBlur.use();
 
 		// hdrBuffer 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
@@ -380,10 +389,10 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
 
 		// hdr 효과 활성화 상태값 전송
-		hdrShader.setBool("hdr", hdr);
+		shaderBlur.setBool("hdr", hdr);
 
 		// tone mapping 알고리즘에 사용할 노출값 전송
-		hdrShader.setFloat("exposure", exposure);
+		shaderBlur.setFloat("exposure", exposure);
 
 		// QuadMesh 렌더링
 		renderQuad();
