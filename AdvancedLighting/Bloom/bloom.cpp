@@ -143,28 +143,38 @@ int main()
 
 
 	/* HDR 효과를 적용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
+	/* 또한, 이 프레임버퍼는 Multiple Render Target(MRT) 로 설정. */
 
 	// FBO(FrameBufferObject) 객체 생성
 	unsigned int hdrFBO;
 	glGenFramebuffers(1, &hdrFBO);
 
 	// FBO 객체에 attach 할 텍스쳐 객체 생성 및 바인딩
-	unsigned int colorBuffer;
-	glGenTextures(1, &colorBuffer);
-	glBindTexture(GL_TEXTURE_2D, colorBuffer);
+	unsigned int colorBuffers[2];
+	glGenTextures(2, colorBuffers);
 
-	// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
-	// 텍스쳐 객체의 해상도는 스크린 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 '스크린 평면'에 적용할 거니까!
-	// 또한, 현재 프레임버퍼를 Floating point framebuffer (부동소수점 지원 프레임버퍼)로 만들기 위해 색상 버퍼 내부 포맷을 GL_RGBA16F 로 지정 (하단 필기 참고)
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	// MRT 프레임버퍼 생성을 위해, 2개의 텍스쳐 객체(= 색상 버퍼) 생성 및 바인딩 (하단 필기 참고)
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
 
-	// Texture Filtering(텍셀 필터링(보간)) 모드 설정
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
+		// 텍스쳐 객체의 해상도는 스크린 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 '스크린 평면'에 적용할 거니까!
+		// 또한, 현재 프레임버퍼를 Floating point framebuffer (부동소수점 지원 프레임버퍼)로 만들기 위해 색상 버퍼 내부 포맷을 GL_RGBA16F 로 지정 (하단 필기 참고)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-	// Texture Wrapping 모드 설정
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// Texture Filtering(텍셀 필터링(보간)) 모드 설정
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		// Texture Wrapping 모드 설정
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
+		// floating point framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함!
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+	}
 
 	// FBO 객체에 attach 할 RBO(RenderBufferObject) 객체 생성 및 바인딩
 	unsigned int rboDepth;
@@ -179,13 +189,13 @@ int main()
 	// 생성했던 FBO 객체 바인딩
 	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
-	// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
-	// floating point framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함!
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
-
 	// FBO 객체에 생성한 RBO 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
 	// off-screen framebuffer 에 렌더링 시, RBO 객체에는 depth 값만 저장할 것이므로, GL_DEPTH_STENCIL_ATTACHMENT 를 적용함!
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+
+	// MRT 프레임버퍼 사용을 위해, OpenGL 에게 하나의 프레임버퍼가 2개의 color attachment 에 각각 렌더링할 수 있도록 명시함
+	unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	glDrawBuffers(2, attachments);
 
 	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사 (설정 완료 조건은 LearnOpenGL 본문 참고)
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -324,7 +334,7 @@ int main()
 		glActiveTexture(GL_TEXTURE0);
 
 		// hdrBuffer 텍스쳐 객체(= Floating point framebuffer 에 attach 되어있는 텍스쳐 객체 버퍼) 바인딩
-		glBindTexture(GL_TEXTURE_2D, colorBuffer);
+		glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
 
 		// hdr 효과 활성화 상태값 전송
 		hdrShader.setBool("hdr", hdr);
@@ -833,4 +843,40 @@ unsigned int loadTexture(const char* path, bool gammaCorrection)
 	linear space 색 공간으로 변환해서 저장해주세요"
 
 	라고 명령하는 것과 같음.
+*/
+
+/*
+	Multiple Render Target(MRT) 프레임버퍼
+
+
+	Bloom 을 구현하려면,
+	현재 씬을 렌더링하는 Render Pass 로부터
+	2개의 이미지를 추출해와야 함.
+
+	첫 번째 이미지는 일반적인 조명 계산에 의한 씬의 이미지이고,
+	두 번째 이미지는 밝기값(gray scale)이 일정 threshold 를 넘는 색상값만 추출한 씬의 이미지임.
+	(자세한 건 LearnOpenGL 본문 일러스트 참고)
+
+
+	현재 씬으로부터 2개의 이미지를 렌더링하려면,
+	2개의 프레임버퍼를 각각 생성 및 바인딩해서 
+	2번의 Render Pass 로부터 얻어오는 방법이 가장 먼저 떠오르겠지만,
+
+	1개의 프레임버퍼만 생성 및 바인딩하고,
+	해당 프레임버퍼에 2개의 color attachment(즉, 텍스쳐 객체)를 생성 및 바인딩해서,
+	1번의 Render Pass 로부터 2개의 이미지를 렌더링할 수 있는 방법이 있음!
+
+	이러한 기법을 'Multiple Render Target(MRT)' 라고 함.
+
+
+	이때, 주의해야 할 점은,
+
+	OpenGL 은 기본적으로 프레임버퍼에 
+	여러 개의 color attachment 가 바인딩되어 있을 시, 
+	맨 첫 번째 color attachment 에만 렌더링 결과를 저장하고,
+	나머지 color attachment 들은 무시해버림.
+
+	이러한 현상을 방지하기 위해, glDrawBuffers() 함수를 사용하여
+	'이 프레임버퍼에서는 여러 개의 color attachment 를 사용할 것'임을
+	명시할 수 있음!
 */
