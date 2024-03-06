@@ -202,6 +202,7 @@ int main()
 
 	// 텍스쳐 객체 생성
 	unsigned int woodTexture = loadTexture("resources/textures/wood.png", true);
+	unsigned int containerTexture = loadTexture("resources/textures/container2.png", true);
 
 	/*
 		각 프래그먼트 쉐이더에 선언된 uniform sampler 변수들이
