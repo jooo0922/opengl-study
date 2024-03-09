@@ -94,9 +94,9 @@ void main() {
   // 위 쉐이더 코드에서의 grayscale 계산을 내적 계산(dot)으로 단순화한 것 뿐임!
   float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
 
-  // BrightColor 출력 변수(= 즉, GL_COLOR_ATTACHMENT1 텍스쳐 객체)에는 광원큐브 영역의 색상만 저장함. 
+  // BrightColor 출력 변수(= 즉, GL_COLOR_ATTACHMENT1 텍스쳐 객체)에는 특정 밝기값 이상의 색상만 저장함. 
   if(brightness > 1.0) {
-    // 특정 밝기값 threshold 를 넘는 색상 (= 즉, 광원큐브 영역의 색상)만 BrightColor 출력 변수에 저장
+    // 특정 밝기값 threshold 를 넘는 색상만 BrightColor 출력 변수에 저장
     BrightColor = vec4(FragColor.rgb, 1.0);
   } else {
     // 특정 밝기값 threshold 를 넘지 못하는 색상들은 모두 검정색으로 BrightColor 출력 변수에 저장
