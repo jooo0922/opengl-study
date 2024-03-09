@@ -7,11 +7,14 @@ in vec2 TexCoords;
 
 /* uniform 변수 선언 */
 
-// hdrBuffer 텍스쳐 (Floating point framebuffer 에 저장된 색상 버퍼)
-uniform sampler2D hdrBuffer;
+// scene 텍스쳐 (HDR 범위로 원본 씬을 렌더링한 텍스쳐 객체(즉, color attachment))
+uniform sampler2D scene;
 
-// HDR 효과 활성화 여부
-uniform bool hdr;
+// bloomBlur 텍스쳐 (광원 큐브 영역에 대해 two-pass Gaussian blur 를 적용한 텍스쳐 객체(즉, color attachment))
+uniform sampler2D bloomBlur;
+
+// bloom 효과 활성화 여부
+uniform bool bloom;
 
 // tone mapping 에 사용할 노출값 (빛이 많을 때 / 적을 때 인간의 홍채, 카메라 조리개와 같은 역할!)
 uniform float exposure;
@@ -20,32 +23,34 @@ void main() {
   // gamma correction 에 사용할 gamma 값
   const float gamma = 2.2;
 
-  // Floating point framebuffer 에 저장된 텍스쳐 색상 버퍼에서 색상값 샘플링 -> 여기에 HDR 효과를 적용!
-  vec3 hdrColor = texture2D(hdrBuffer, TexCoords).rgb;
+  // HDR 범위로 원본 씬을 렌더링한 텍스쳐 객체에서 색상값 샘플링 -> 여기에 HDR 톤 매핑 효과를 적용할 것임!
+  vec3 hdrColor = texture2D(scene, TexCoords).rgb;
 
-  if(hdr) {
-    /*
-      [0, 1] 범위를 벗어난 HDR 색상값을
-      [0, 1] 범위 내로 존재하는 LDR 색상값으로 변환하기
+  // 광원 큐브 영역에 대해 two-pass Gaussian blur 를 적용한 텍스쳐 객체에서 색상값 샘플링
+  vec3 bloomColor = texture2D(bloomBlur, TexCoords).rgb;
 
-      -> 즉, Tone mapping 알고리즘 적용!
-    */
-
-    // Reinhard Tone mapping 알고리즘을 사용하여 HDR -> LDR 변환
-    // vec3 result = hdrColor / (hdrColor + vec3(1.0));
-
-    // exposure tone mapping 적용
-    vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
-
-    // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력 (하단 필기 참고)
-    result = pow(result, vec3(1.0 / gamma));
-    FragColor = vec4(result, 1.0);
-  } else {
-    // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력
-    vec3 result = pow(hdrColor, vec3(1.0 / gamma));
-    FragColor = vec4(result, 1.0);
+  // bloom 상태값 여부에 따라 가산 혼합 적용
+  if(bloom) {
+    // 'HDR 범위로 렌더링된 원본 씬'에 '광원 큐브 영역의 two-pass Gaussian blur' 색상을 가산 혼합(additive blending)
+    hdrColor += bloomColor;
   }
 
+  /*
+    [0, 1] 범위를 벗어난 HDR 색상값을
+    [0, 1] 범위 내로 존재하는 LDR 색상값으로 변환하기
+
+    -> 즉, Tone mapping 알고리즘 적용!
+  */
+
+  // Reinhard Tone mapping 알고리즘을 사용하여 HDR -> LDR 변환
+  // vec3 result = hdrColor / (hdrColor + vec3(1.0));
+
+  // exposure tone mapping 적용
+  vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
+
+  // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력 (하단 필기 참고)
+  result = pow(result, vec3(1.0 / gamma));
+  FragColor = vec4(result, 1.0);
 }
 
 /*      
