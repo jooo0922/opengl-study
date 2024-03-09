@@ -7,90 +7,44 @@ in vec2 TexCoords;
 
 /* uniform 변수 선언 */
 
-// hdrBuffer 텍스쳐 (Floating point framebuffer 에 저장된 색상 버퍼)
-uniform sampler2D hdrBuffer;
+// image 텍스쳐 (blur 처리를 적용할 텍스쳐 객체(= color attachment) 색상 버퍼)
+uniform sampler2D image;
 
-// HDR 효과 활성화 여부
-uniform bool hdr;
+// blur 처리 방향 변수
+uniform bool horizontal;
 
-// tone mapping 에 사용할 노출값 (빛이 많을 때 / 적을 때 인간의 홍채, 카메라 조리개와 같은 역할!)
-uniform float exposure;
+// 각 blur 방향으로 샘플링된 texel 에 적용할 가중치 kernel (= convolution matrix)
+uniform float weight[5] = float[](0.2270270270, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162);
 
 void main() {
-  // gamma correction 에 사용할 gamma 값
-  const float gamma = 2.2;
+  // 각 blur 방향의 주변 texel 좌표 계산을 위해 더해줄 offset 값 -> 단일 texel 사이즈에 해당
+  vec2 tex_offset = 1.0 / textureSize(image, 0);
 
-  // Floating point framebuffer 에 저장된 텍스쳐 색상 버퍼에서 색상값 샘플링 -> 여기에 HDR 효과를 적용!
-  vec3 hdrColor = texture2D(hdrBuffer, TexCoords).rgb;
+  // 현재 texel 을 중심으로 가중치를 적용하여 누산할 변수 result 선언 및 초기화
+  // blur 를 적용할 현재 texel (= kernel 의 중점) 에 첫 번째 가중치를 곱하여 누산값 초기화 
+  vec3 result = texture(image, TexCoords).rgb * weight[0];
 
-  if(hdr) {
-    /*
-      [0, 1] 범위를 벗어난 HDR 색상값을
-      [0, 1] 범위 내로 존재하는 LDR 색상값으로 변환하기
+  // 현재 texel 을 중심으로, blur 처리 방향(= horizontal)을 따라 5개의 주변 texel 을 샘플링하여 가중치 적용 및 누산
+  if(horizontal) {
+    // 수평 방향 blur 처리
+    for(int i = 0; i < 5; i++) {
+      // 현재 texel 의 오른쪽 방향 주변 texel 들에 대해 가중치 적용 및 누산
+      result += texture(image, TexCoords + vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
 
-      -> 즉, Tone mapping 알고리즘 적용!
-    */
-
-    // Reinhard Tone mapping 알고리즘을 사용하여 HDR -> LDR 변환
-    // vec3 result = hdrColor / (hdrColor + vec3(1.0));
-
-    // exposure tone mapping 적용
-    vec3 result = vec3(1.0) - exp(-hdrColor * exposure);
-
-    // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력 (하단 필기 참고)
-    result = pow(result, vec3(1.0 / gamma));
-    FragColor = vec4(result, 1.0);
+      // 현재 texel 의 왼쪽 방향 주변 texel 들에 대해 가중치 적용 및 누산
+      result += texture(image, TexCoords - vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
+    }
   } else {
-    // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력
-    vec3 result = pow(hdrColor, vec3(1.0 / gamma));
-    FragColor = vec4(result, 1.0);
+    // 수직 방향 blur 처리
+    for(int i = 0; i < 5; i++) {
+      // 현재 texel 의 위쪽 방향 주변 texel 들에 대해 가중치 적용 및 누산
+      result += texture(image, TexCoords + vec2(tex_offset.y * i, 0.0)).rgb * weight[i];
+
+      // 현재 texel 의 아래쪽 방향 주변 texel 들에 대해 가중치 적용 및 누산
+      result += texture(image, TexCoords - vec2(tex_offset.y * i, 0.0)).rgb * weight[i];
+    }
   }
 
+  // 누산된 최종 색상값을 출력 변수에 저장
+  FragColor = vec4(result, 1.0);
 }
-
-/*      
-  gamma correction
-
-  
-  CRT 모니터의 gamma 값 2.2 의 역수인 1.0 / 2.2 만큼으로 거듭제곱 함으로써,
-  최종 출력 색상을 미리 밝게 보정해 줌.
-  
-  이렇게 하면, 
-  모니터 출력 시, 2.2 거듭제곱으로 다시 gamma correction 이 적용됨으로써,
-
-  미리 프래그먼트 쉐이더에서 gamma correction 되어 밝아진 색상이 
-  다시 어두워짐으로써
-  
-  원래의 의도한 linear space 색 공간을
-  모니터에 그대로 출력할 수 있게 됨
-  
-  -> 이것이 바로 'gamma correction'
-*/
-
-/*
-  exposure tone mapping 알고리즘
-
-
-  exposure 즉, 노출값을 기반으로
-  톤 맵핑을 동적으로 적용할 수 있도록 함.
-
-  인간의 홍채가 
-  밝은 환경에서는 동공을 줄이고,
-  어두운 환경에서는 동공을 늘려서 
-  눈으로 들어오는 빛의 양을 조절하는 것과 같은 원리로,
-
-  조명이 밝은 씬에서는 exposure 을 낮추고,
-  조명이 어두운 씬에서는 exposure 을 높이는 식으로
-
-  어느 영역에 detail 을 살릴 지 동적으로 결정할 수 있도록 함.
-
-  즉, exposure 이 높으면,
-  어두운 영역의 detail 이 더 살아나고,
-  exposure 이 낮으면,
-  밝은 영역의 detail 이 더 살아남.
-
-
-  참고로, 이 알고리즘에 사용된 
-  exp() 내장함수는 자연상수 e = 2.7182818284... 의
-  거듭제곱을 계산해주는 함수임.
-*/
