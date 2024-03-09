@@ -444,6 +444,50 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+		/* Second Pass (ping-pong 프레임버퍼를 사용하여 two-pass Gaussian blur 구현) */
+		
+		// 샘플링 방향(수평 or 수직) 상태값 초기화
+		bool horizontal = true;
+
+		// 총 10번의 샘플링 중, 최초 샘플링 여부를 캐싱하는 상태값 초기화
+		bool first_iteration = true;
+
+		// 총 샘플링 횟수 상태값 초기화
+		unsigned int amount = 10;
+
+		// two-pass Gaussian blur 쉐이더 바인딩
+		shaderBlur.use();
+
+		// 수평 <-> 수직 방향을 번걸아가며 각각 5번씩, 총 10번 Gaussian blur 샘플링 수행
+		for (unsigned int i = 0; i < amount; i++)
+		{
+			// horizontal 변수의 암시적 형변환에 의해 ping-pong 프레임버퍼 바인딩 (하단 필기 참고)
+			glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+
+			// two-pass Gaussian blur 쉐이더 프로그램에 blur 처리 방향값 전달
+			shaderBlur.setInt("horizontal", horizontal);
+
+			// blur 처리를 적용할 텍스쳐 객체(= color attachment)를 찾아 바인딩
+			// 최초 샘플링은 광원 큐브만 추출하여 저장된 텍스쳐 객체(= color attachment) 인 colorBuffers[1] 로부터 가져옴
+			glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorBuffers[!horizontal]);
+
+			// 현재 바인딩된 ping-pong 프레임버퍼에 blur 처리 결과를 시각화할 QuadMesh 렌더링
+			renderQuad();
+
+			// 다음 순회에서 적용할 horizontal 방향 변경
+			horizontal = !horizontal;
+
+			// 만약 최초 샘플링이 끝났다면, 최초 샘플링 여부를 false 로 변경
+			if (first_iteration)
+			{
+				first_iteration = false;
+			}
+		}
+
+		// default framebuffer 로 바인딩 복구
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 		/* Second Pass (HDR 효과를 QuadMesh 에 시각화) */
 
 		// 현재 바인딩된 default framebuffer 의 깊이 버퍼 및 색상 버퍼 초기화
@@ -1042,4 +1086,23 @@ unsigned int loadTexture(const char* path, bool gammaCorrection)
 	각 프레임버퍼가 가로 방향으로 한 번, 세로 방향으로 한 번
 	서로 주고받은 텍스쳐를 샘플링해서 Gaussian blur 처리를 해준다는 의미에서
 	'ping-pong' 이라고 부르는 것임.
+*/
+
+/*
+	bool horizontal 변수의 암시적 형변환
+
+	
+	bool 타입의 horizontal 변수를
+	배열의 index 로 사용하는 경우,
+
+	'암시적 형변환'이 발생하여
+	false -> 0,
+	true -> 1
+	로 casting 되어 배열의 index 값으로 활용됨.
+
+	즉, 첫 번째 ping-pong 프레임버퍼(horizontal == false -> 0)가
+	수직 방향의 blur 를 처리하게 되고,
+
+	두 번째 ping-pong 프레임버퍼(horizontal == true -> 1)가
+	수평 방향의 blur 를 처리하게 되겠지!
 */
