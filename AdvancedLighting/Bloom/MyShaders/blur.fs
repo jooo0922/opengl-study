@@ -24,10 +24,10 @@ void main() {
   // blur 를 적용할 현재 texel (= kernel 의 중점) 에 첫 번째 가중치를 곱하여 누산값 초기화 
   vec3 result = texture(image, TexCoords).rgb * weight[0];
 
-  // 현재 texel 을 중심으로, blur 처리 방향(= horizontal)을 따라 5개의 주변 texel 을 샘플링하여 가중치 적용 및 누산
+  // 현재 texel 을 중심으로, blur 처리 방향(= horizontal)을 따라 4개(5개에서 현재 texel 1개 제외)의 주변 texel 을 샘플링하여 가중치 적용 및 누산
   if(horizontal) {
     // 수평 방향 blur 처리
-    for(int i = 0; i < 5; i++) {
+    for(int i = 1; i < 5; i++) {
       // 현재 texel 의 오른쪽 방향 주변 texel 들에 대해 가중치 적용 및 누산
       result += texture(image, TexCoords + vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
 
@@ -36,12 +36,12 @@ void main() {
     }
   } else {
     // 수직 방향 blur 처리
-    for(int i = 0; i < 5; i++) {
+    for(int i = 1; i < 5; i++) {
       // 현재 texel 의 위쪽 방향 주변 texel 들에 대해 가중치 적용 및 누산
-      result += texture(image, TexCoords + vec2(tex_offset.y * i, 0.0)).rgb * weight[i];
+      result += texture(image, TexCoords + vec2(0.0, tex_offset.y * i)).rgb * weight[i];
 
       // 현재 texel 의 아래쪽 방향 주변 texel 들에 대해 가중치 적용 및 누산
-      result += texture(image, TexCoords - vec2(tex_offset.y * i, 0.0)).rgb * weight[i];
+      result += texture(image, TexCoords - vec2(0.0, tex_offset.y * i)).rgb * weight[i];
     }
   }
 
