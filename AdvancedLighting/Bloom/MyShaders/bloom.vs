@@ -25,9 +25,6 @@ uniform mat4 model;
 
 /* 기타 uniform 변수 선언 */
 
-// 노멀벡터 뒤집기 여부
-uniform bool inverse_normal;
-
 void main() {
   /* interface block 에 정의된 멤버변수들에 프래그먼트 쉐이더 단계로 보간하여 출력할 값들을 할당 */
 
@@ -37,12 +34,9 @@ void main() {
   // 텍스쳐 좌표 보간 출력
   vs_out.TexCoords = aTexCoords;
 
-  // 노멀벡터 뒤집기 여부에 따라 노멀벡터를 뒤집어 줌. (터널은 BACK_FACE 를 렌더링하므로, 바깥 쪽으로 향하는 노멀벡터를 뒤집어줘야 함!)
-  vec3 n = inverse_normal ? -aNormal : aNormal;
-
   // 노멀벡터를 월드 공간 노멀벡터로 변환하기 위한 노멀행렬 계산
   mat3 normalMatrix = transpose(inverse(mat3(model)));
-  vs_out.Normal = normalize(normalMatrix * n);
+  vs_out.Normal = normalize(normalMatrix * aNormal);
 
   // 오브젝트 공간 좌표에 모델 행렬 > 뷰 행렬 > 투영 행렬 순으로 곱해서 좌표계를 변환시킴.
   gl_Position = projection * view * model * vec4(aPos, 1.0);
