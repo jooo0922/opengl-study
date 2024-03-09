@@ -312,7 +312,7 @@ int main()
 		processInput(window);
 
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 		// 색상 버퍼 및 깊이 버퍼 초기화 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -321,9 +321,9 @@ int main()
 		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
 
 
-		/* First Pass (Floating point framebuffer 에 HDR 효과를 적용할 씬 렌더링) */
+		/* First Pass (Floating point framebuffer(또한, MRT 프레임버퍼) 에 HDR 효과를 적용할 씬 렌더링) */
 
-		// shadow map 텍스쳐 객체가 attach 된 framebuffer 바인딩
+		// MRT framebuffer 바인딩
 		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
 		// 현재 바인딩된 framebuffer 의 색상 및 깊이 버퍼 초기화
@@ -334,6 +334,9 @@ int main()
 
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
+
+		// 쉐이더에 전송할 모델 행렬을 단위 행렬로 초기화
+		glm::mat4 model = glm::mat4(1.0f);
 
 		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
 		shader.use();
@@ -357,18 +360,85 @@ int main()
 			shader.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
 		}
 
-		// 터널 큐브에 적용할 모델행렬 계산
-		glm::mat4 model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, 25.0f));
-		model = glm::scale(model, glm::vec3(2.5f, 2.5f, 27.5f));
+		// 카메라 위치값을 쉐이더 프로그램에 전송
+		shader.setVec3("viewPos", camera.Position);
 
+		// 바닥 큐브 렌더링
+		// 바닥 큐브에 적용할 모델행렬 계산
+		glm::mat4 model = glm::mat4(1.0);
+		model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(12.5f, 0.5f, 12.5f));
 		// 계산된 모델행렬을 쉐이더 프로그램에 전송
 		shader.setMat4("model", model);
-
-		// 터널은 BACK_FACE 를 렌더링해줘야 하므로, 바깥으로 향하는 노멀벡터를 뒤집도록 플래그 설정
-		shader.setInt("inverse_normal", true);
-
+		// 바닥 큐브를 렌더링하는 함수 호출
 		renderCube();
+
+		// 큐브 렌더링에 사용할 텍스쳐 객체 바인딩 교체
+		glBindTexture(GL_TEXTURE_2D, containerTexture);
+
+		// 첫 번째 큐브 렌더링
+		// 첫 번째 큐브에 적용할 모델행렬 계산
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.5f));
+		// 계산된 모델행렬을 쉐이더 프로그램에 전송
+		shader.setMat4("model", model);
+		// 첫 번째 큐브를 렌더링하는 함수 호출
+		renderCube();
+
+		// 두 번째 큐브 렌더링
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
+		model = glm::scale(model, glm::vec3(0.5f));
+		shader.setMat4("model", model);
+		renderCube();
+
+		// 세 번째 큐브 렌더링
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, -1.0f, 2.0f));
+		model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+		shader.setMat4("model", model);
+		renderCube();
+
+		// 네 번째 큐브 렌더링
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 2.7f, 4.0f));
+		model = glm::rotate(model, glm::radians(23.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+		model = glm::scale(model, glm::vec3(1.25f));
+		shader.setMat4("model", model);
+		renderCube();
+
+		// 다섯 번째 큐브 렌더링
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-2.0f, 1.0f, -3.0f));
+		model = glm::rotate(model, glm::radians(124.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+		shader.setMat4("model", model);
+		renderCube();
+
+		// 여섯 번째 큐브 렌더링
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.5f));
+		shader.setMat4("model", model);
+		renderCube();
+
+		// 광원 큐브 렌더링을 위한 쉐이더 프로그램 바인딩 교체
+		shaderLight.use();
+		shaderLight.setMat4("projection", projection);
+		shaderLight.setMat4("view", view);
+
+		// for loop 를 순회하며 4개의 광원 큐브 렌더링
+		for (unsigned int i = 0; i < lightPositions.size(); i++)
+		{
+			// 광원 큐브에 적용할 모델행렬 계산
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, glm::vec3(lightPositions[i]));
+			model = glm::scale(model, glm::vec3(0.25f));
+
+			// 계산된 모델행렬 및 광원 색상을 쉐이더 프로그램에 전송
+			shaderLight.setMat4("model", model);
+			shaderLight.setVec3("lightColor", lightColors[i]);
+		}
 
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
