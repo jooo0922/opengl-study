@@ -168,15 +168,15 @@ int main()
 		// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
 		// 텍스쳐 객체의 해상도는 스크린 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 '스크린 평면'에 적용할 거니까!
 		// 또한, 현재 프레임버퍼를 Floating point framebuffer (부동소수점 지원 프레임버퍼)로 만들기 위해 색상 버퍼 내부 포맷을 GL_RGBA16F 로 지정 (하단 필기 참고)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 
 		// Texture Filtering(텍셀 필터링(보간)) 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 		// Texture Wrapping 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 		// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
 		// floating point framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함!
@@ -234,15 +234,15 @@ int main()
 
 		// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
 		// 또한, 현재 프레임버퍼를 Floating point framebuffer (부동소수점 지원 프레임버퍼)로 만들기 위해 색상 버퍼 내부 포맷을 GL_RGBA16F 로 지정 (하단 필기 참고)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
 
 		// Texture Filtering(텍셀 필터링(보간)) 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 		// Texture Wrapping 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 		// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
 		// floating point framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함!
@@ -365,7 +365,7 @@ int main()
 
 		// 바닥 큐브 렌더링
 		// 바닥 큐브에 적용할 모델행렬 계산
-		glm::mat4 model = glm::mat4(1.0);
+		model = glm::mat4(1.0);
 		model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
 		model = glm::scale(model, glm::vec3(12.5f, 0.5f, 12.5f));
 		// 계산된 모델행렬을 쉐이더 프로그램에 전송
@@ -438,6 +438,9 @@ int main()
 			// 계산된 모델행렬 및 광원 색상을 쉐이더 프로그램에 전송
 			shaderLight.setMat4("model", model);
 			shaderLight.setVec3("lightColor", lightColors[i]);
+
+			// 광원 큐브 렌더링
+			renderCube();
 		}
 
 		// default framebuffer 로 바인딩 복구
@@ -513,7 +516,7 @@ int main()
 
 		// tone mapping 알고리즘에 사용할 노출값 전송
 		shaderBloomFinal.setFloat("exposure", exposure);
-
+		
 		// QuadMesh 렌더링
 		renderQuad();
 
