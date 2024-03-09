@@ -46,9 +46,9 @@ void renderQuad();
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
-// hdr 활성화 상태값 초기화
-bool hdr = true;
-bool hdrKeyPressed = false;
+// bloom 활성화 상태값 초기화
+bool bloom = true;
+bool bloomKeyPressed = false;
 
 // tone mapping 알고리즘에 사용할 노출값 초기화
 float exposure = 1.0f;
@@ -488,32 +488,38 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		/* Second Pass (HDR 효과를 QuadMesh 에 시각화) */
+		/* Third Pass (HDR 톤매핑 및 bloom 효과를 QuadMesh 에 시각화) */
 
 		// 현재 바인딩된 default framebuffer 의 깊이 버퍼 및 색상 버퍼 초기화
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
-		shaderBlur.use();
+		shaderBloomFinal.use();
 
-		// hdrBuffer 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
+		// HDR 범위로 원본 씬을 렌더링한 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
 		glActiveTexture(GL_TEXTURE0);
 
-		// hdrBuffer 텍스쳐 객체(= Floating point framebuffer 에 attach 되어있는 텍스쳐 객체 버퍼) 바인딩
+		// HDR 범위로 원본 씬을 렌더링한 텍스쳐 객체 바인딩
 		glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
 
-		// hdr 효과 활성화 상태값 전송
-		shaderBlur.setBool("hdr", hdr);
+		// two-pass Gaussian blur 를 적용한 텍스쳐 객체를 바인딩할 1번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE1);
+
+		// two-pass Gaussian blur 를 적용한 텍스쳐 객체 바인딩
+		glBindTexture(GL_TEXTURE_2D, pingpongColorBuffers[!horizontal]);
+
+		// bloom 효과 활성화 상태값 전송
+		shaderBloomFinal.setBool("bloom", bloom);
 
 		// tone mapping 알고리즘에 사용할 노출값 전송
-		shaderBlur.setFloat("exposure", exposure);
+		shaderBloomFinal.setFloat("exposure", exposure);
 
 		// QuadMesh 렌더링
 		renderQuad();
 
 
-		// hdr 활성화 여부 및 노출값 콘솔 출력
-		std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
+		// bloom 활성화 여부 및 노출값 콘솔 출력
+		std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
@@ -794,16 +800,16 @@ void processInput(GLFWwindow* window)
 	}
 
 	// space 키 입력 시, hdr 상태값 변경
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !hdrKeyPressed)
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !bloomKeyPressed)
 	{
-		hdr = !hdr;
-		hdrKeyPressed = true;
+		bloom = !bloom;
+		bloomKeyPressed = true;
 	}
 
 	// space 키 입력 해제
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
 	{
-		hdrKeyPressed = false;
+		bloomKeyPressed = false;
 	}
 
 	/*
