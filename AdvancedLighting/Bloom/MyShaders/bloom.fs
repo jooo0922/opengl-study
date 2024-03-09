@@ -97,12 +97,12 @@ void main() {
   // BrightColor 출력 변수(= 즉, GL_COLOR_ATTACHMENT1 텍스쳐 객체)에는 특정 밝기값 이상의 색상만 저장함. 
   if(brightness > 1.0) {
     // 특정 밝기값 threshold 를 넘는 색상만 BrightColor 출력 변수에 저장
-    BrightColor = vec4(FragColor.rgb, 1.0);
+    BrightColor = vec4(result, 1.0);
   } else {
     // 특정 밝기값 threshold 를 넘지 못하는 색상들은 모두 검정색으로 BrightColor 출력 변수에 저장
     BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
   }
 
   // FragColor 출력 변수(= 즉, GL_COLOR_ATTACHMENT0 텍스쳐 객체)에는 씬에 렌더링되는 모든 색상을 저장함.
-  FragColor = vec4(ambient + lighting, 1.0);
+  FragColor = vec4(result, 1.0);
 }
