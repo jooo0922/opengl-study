@@ -146,6 +146,27 @@ int main()
 	Shader shaderBloomFinal("MyShaders/bloom_final.vs", "MyShaders/bloom_final.fs");
 
 
+	/* Assimp 를 사용하여 모델 업로드 */
+
+	// model.h 에서 텍스쳐 업로드 전, OpenGL 좌표계에 맞게 이미지를 Y축 반전(= 수직 반전)하여 로드되도록 설정
+	stbi_set_flip_vertically_on_load(true);
+
+	// Assimp 의 기능들을 추상화한 Model 클래스를 생성하여 모델 업로드
+	Model backpack("resources/models/backpack/backpack.obj");
+
+	// 씬에 렌더링할 모델들의 위치값을 저장해 둘 std::vector 동적 배열
+	std::vector<glm::vec3> objectPositions;
+	objectPositions.push_back(glm::vec3(-3.0, -0.5, -3.0));
+	objectPositions.push_back(glm::vec3(0.0, -0.5, -3.0));
+	objectPositions.push_back(glm::vec3(3.0, -0.5, -3.0));
+	objectPositions.push_back(glm::vec3(-3.0, -0.5, 0.0));
+	objectPositions.push_back(glm::vec3(0.0, -0.5, 0.0));
+	objectPositions.push_back(glm::vec3(3.0, -0.5, 0.0));
+	objectPositions.push_back(glm::vec3(-3.0, -0.5, 3.0));
+	objectPositions.push_back(glm::vec3(0.0, -0.5, 3.0));
+	objectPositions.push_back(glm::vec3(3.0, -0.5, 3.0));
+
+
 	/* HDR 효과를 적용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
 	/* 또한, 이 프레임버퍼는 Multiple Render Target(MRT) 로 설정. */
 
