@@ -44,13 +44,6 @@ void renderQuad();
 const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
 
-// bloom 활성화 상태값 초기화
-bool bloom = true;
-bool bloomKeyPressed = false;
-
-// tone mapping 알고리즘에 사용할 노출값 초기화
-float exposure = 1.0f;
-
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 
@@ -409,11 +402,6 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-
-		// bloom 활성화 여부 및 노출값 콘솔 출력
-		std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;
-
-
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
@@ -689,39 +677,6 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
-	}
-
-	// space 키 입력 시, hdr 상태값 변경
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !bloomKeyPressed)
-	{
-		bloom = !bloom;
-		bloomKeyPressed = true;
-	}
-
-	// space 키 입력 해제
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
-	{
-		bloomKeyPressed = false;
-	}
-
-	/*
-		Q 키 입력 시, 노출값 감소시키고,
-		E 키 입력 시, 노출값 증가시킴.
-	*/
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-	{
-		if (exposure > 0.0f)
-		{
-			exposure -= 0.001f;
-		}
-		else
-		{
-			exposure = 0.0f;
-		}
-	}
-	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-	{
-		exposure += 0.001f;
 	}
 }
 
