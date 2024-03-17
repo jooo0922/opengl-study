@@ -32,9 +32,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 // GLFW 윈도우 및 키 입력 감지 및 이에 대한 반응 처리 함수 선언
 void processInput(GLFWwindow* window);
 
-// 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
-unsigned int loadTexture(const char* path, bool gammaCorrection);
-
 // 씬에 큐브를 렌더링하는 함수 선언
 void renderCube();
 
@@ -822,95 +819,6 @@ void processInput(GLFWwindow* window)
 	}
 }
 
-// 텍스쳐 이미지 로드 및 객체 생성 함수 구현부 (텍스쳐 객체 참조 id 반환)
-unsigned int loadTexture(const char* path, bool gammaCorrection)
-{
-	unsigned int textureID; // 텍스쳐 객체(object) 참조 id 를 저장할 변수 선언
-	glGenTextures(1, &textureID); // 텍스쳐 객체 생성
-
-	int width, height, nrComponents; // 로드한 이미지의 width, height, 색상 채널 개수를 저장할 변수 선언
-
-	// 이미지 데이터 가져와서 char 타입의 bytes 데이터로 저장. 
-	// 이미지 width, height, 색상 채널 변수의 주소값도 넘겨줌으로써, 해당 함수 내부에서 값을 변경. -> 출력변수 역할
-	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-	if (data)
-	{
-		// 이미지 데이터 로드 성공 시 처리
-
-		// 이미지 데이터의 색상 채널 개수에 따라~
-
-		// glTexImage2D() 에서 텍스쳐 객체에 저장할 데이터 포맷 ENUM 값 결정
-		GLenum internalFormat;
-
-		// glTexImage2D() 에 전달할 원본 텍스쳐 이미지 포맷의 ENUM 값 결정
-		GLenum dataFormat;
-
-		if (nrComponents == 1)
-		{
-			internalFormat = GL_RED;
-			dataFormat = GL_RED;
-		}
-		else if (nrComponents == 3)
-		{
-			// gamma correction 적용 여부에 따라 텍스쳐 객체에 저장할 데이터 포맷을 결정 (관련 필기 하단 참고)
-			internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
-			dataFormat = GL_RGB;
-		}
-		else if (nrComponents == 4)
-		{
-			// gamma correction 적용 여부에 따라 텍스쳐 객체에 저장할 데이터 포맷을 결정 (관련 필기 하단 참고)
-			internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
-			dataFormat = GL_RGBA;
-		}
-
-		// 텍스쳐 객체 바인딩 및 로드한 이미지 데이터 쓰기
-		glBindTexture(GL_TEXTURE_2D, textureID); // GL_TEXTURE_2D 타입의 상태에 텍스쳐 객체 바인딩 > 이후 텍스쳐 객체 설정 명령은 바인딩된 텍스쳐 객체에 적용.
-		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data); // 로드한 이미지 데이터를 현재 바인딩된 텍스쳐 객체에 덮어쓰기
-		glGenerateMipmap(GL_TEXTURE_2D); // 현재 바인딩된 텍스쳐 객체에 필요한 모든 단계의 Mipmap 을 자동 생성함. 
-
-		// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
-		// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-		// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정 (관련 필기 정리 하단 참고)
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-	else
-	{
-		// 이미지 데이터 로드 실패 시 처리
-		std::cout << "Texture failed to load at path: " << path << std::endl;
-	}
-
-	// 텍스쳐 객체에 이미지 데이터를 전달하고, 밉맵까지 생성 완료했다면, 로드한 이미지 데이터는 항상 메모리 해제할 것!
-	stbi_image_free(data);
-
-	// 텍스쳐 객체 참조 ID 반환
-	return textureID;
-}
-
-
-
-/*
-	stb_image.h
-
-	주요 이미지 파일 포맷을 로드할 수 있는
-	싱글 헤더 이미지로드 라이브러리.
-
-	#define 매크로 전처리기를 통해
-	특정 매크로를 선언함으로써, 헤더파일 내에서
-	해당 매크로 영역의 코드만 include 할 수 있도록 함.
-
-	실제로 stb_image.h 안에 보면
-
-	#ifdef STB_IMAGE_IMPLEMENTATION
-	~
-	#endif
-
-	요렇게 전처리기가 정의되어 있는 부분이 있음.
-	이 부분의 코드들만 include 하겠다는 것이지!
-*/
 
 /*
 	VAO 는 왜 만드는걸까?
@@ -975,38 +883,6 @@ unsigned int loadTexture(const char* path, bool gammaCorrection)
 */
 
 /*
-	sRGB 텍스쳐 적용
-
-
-	텍스쳐에서 sRGB 색 공간이 적용되었다는 것은,
-
-	보통 디자이너가 텍스쳐 이미지를 작업할 때,
-	이미 gamma correction(1/2.2 제곱) 이 적용된 상태에서
-	이미지를 작업해버렸다는 뜻임.
-
-	주로 diffuse 텍스쳐처럼,
-	물체의 색상을 표현하는 텍스쳐들은
-	sRGB 색 공간으로 지정해놓고 작업하는 경우가 많음.
-
-	그러나, 본문의 그래프에서도 보면 알겠지만,
-	gamma correction 이 적용되면 전체적으로 색상값이 밝아지기 때문에,
-
-	쉐이더 객체에서 이미 gamma correction 이 적용된 텍스쳐를
-	샘플링해서 다시 gamma correction (1/2.2 제곱) 을 적용해버리면
-
-	결과적으로 gamma correction 이 두 번 적용됨으로써,
-	텍스쳐 영역의 최종 색상이 과하게 밝아지는 문제가 발생함.
-
-	이를 해결하기 위해,
-	OpenGL 내부에서 자체적으로 텍스쳐 이미지 데이터를 저장할 때,
-
-	"이 텍스쳐 데이터는 이미 sRGB 감마 보정이 적용되어 있으니,
-	linear space 색 공간으로 변환해서 저장해주세요"
-
-	라고 명령하는 것과 같음.
-*/
-
-/*
 	Multiple Render Target(MRT) 프레임버퍼
 
 
@@ -1040,64 +916,4 @@ unsigned int loadTexture(const char* path, bool gammaCorrection)
 	이러한 현상을 방지하기 위해, glDrawBuffers() 함수를 사용하여
 	'이 프레임버퍼에서는 여러 개의 color attachment 를 사용할 것'임을
 	명시할 수 있음!
-*/
-
-/*
-	two-pass Gaussian blur 와 ping-pong 프레임버퍼
-
-
-	Gaussian blur 를 구현하기 위해서는,
-	다른 일반적인 Post-processing 을 구현하는 것과 마찬가지로,
-	n*n 크기의 kernel(= convolution matrix) 를 사용하는 것이 일반적임.
-	(https://github.com/jooo0922/opengl-study/blob/main/AdvancedOpenGL/Framebuffers/MyShaders/framebuffers_screen_kernel_blur.fs 참고)
-
-	그러나, 만약 예를 들어 32*32 가중치 행렬을 사용해서
-	Gaussian blur 효과를 구현한다고 치면,
-
-	하나의 pixel 을 렌더링하기 위해
-	32*32 = 1024 개의 texel 을 매번 샘플링해오고,
-	각 texel 을 커널의 가중치와 곱해서 누산해줘야 함.
-
-	즉, 이 방식은 성능에 많은 부담이 갈 수밖에 없음.
-
-
-	이 방법 대신,
-	수평 방향으로 32번 texel 을 샘플링하여 가중치를 곱해서 누산하고,
-	수직 방향으로 32번 texel 을 샘플링하여 가중치를 곱해서 누산해준다면,
-
-	하나의 pixel 당 32 + 32 = 64 번의 샘플링 만으로도
-	위 방식과 거의 차이가 없는 blur 효과를 만들어낼 수 있음!
-
-	이를 two-pass Gaussian blur 기법이라고 하며,
-	이를 위해서는 말 그대로 2번의 Render Pass 를 그려낼 수 있는
-	2개의 프레임버퍼가 필요한데, 이를 'ping-pong 프레임버퍼' 라고 함.
-
-
-	왜 'ping-pong 프레임버퍼'라고 하냐면,
-
-	2개의 프레임버퍼가 마치 ping-pong 을 하듯이,
-	서로가 렌더링한 color attachment(즉, 텍스쳐 객체)를 주거니 받거니 하면서
-
-	각 프레임버퍼가 가로 방향으로 한 번, 세로 방향으로 한 번
-	서로 주고받은 텍스쳐를 샘플링해서 Gaussian blur 처리를 해준다는 의미에서
-	'ping-pong' 이라고 부르는 것임.
-*/
-
-/*
-	bool horizontal 변수의 암시적 형변환
-
-
-	bool 타입의 horizontal 변수를
-	배열의 index 로 사용하는 경우,
-
-	'암시적 형변환'이 발생하여
-	false -> 0,
-	true -> 1
-	로 casting 되어 배열의 index 값으로 활용됨.
-
-	즉, 첫 번째 ping-pong 프레임버퍼(horizontal == false -> 0)가
-	수직 방향의 blur 를 처리하게 되고,
-
-	두 번째 ping-pong 프레임버퍼(horizontal == true -> 1)가
-	수평 방향의 blur 를 처리하게 되겠지!
 */
