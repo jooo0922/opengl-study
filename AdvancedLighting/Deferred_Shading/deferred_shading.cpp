@@ -16,6 +16,7 @@
 #include "MyHeaders/model.h"
 
 #include <iostream>
+#include <cstdlib> // srand() 및 rand() 함수 사용을 위해 포함
 
 
 /* 콜백함수 전방선언 */
@@ -239,20 +240,46 @@ int main()
 
 	/* 광원 정보 초기화 */
 
-	// 씬에 배치할 4개 광원 위치값을 std::vector 동적 배열로 초기화
+	// 씬에 배치할 광원의 전체 갯수 초기화
+	const unsigned int NR_LIGHTS = 32;
+
+	// 씬에 배치할 4개 광원 위치값을 저장할 std::vector 동적 배열 선언
 	std::vector<glm::vec3> lightPositions;
-	lightPositions.push_back(glm::vec3(0.0f, 0.5f, 1.5f));
-	lightPositions.push_back(glm::vec3(-4.0f, 0.5f, -3.0f));
-	lightPositions.push_back(glm::vec3(3.0f, 0.5f, 1.0f));
-	lightPositions.push_back(glm::vec3(-0.8f, 2.4f, -1.0f));
 
-	// 씬에 배치할 4개 광원 색상값을 std::vector 동적 배열로 초기화
+	// 씬에 배치할 4개 광원 색상값을 저장할 std::vector 동적 배열 선언
 	std::vector<glm::vec3> lightColors;
-	lightColors.push_back(glm::vec3(5.0f, 5.0f, 5.0f));
-	lightColors.push_back(glm::vec3(10.0f, 0.0f, 0.0f));
-	lightColors.push_back(glm::vec3(0.0f, 0.0f, 15.0f));
-	lightColors.push_back(glm::vec3(0.0f, 5.0f, 0.0f));
 
+	// 난수 생성 시 사용할 고정 seed 값 설정
+	// https://github.com/jooo0922/cpp-study/blob/76127bd7d126247e34db789883091eb39acb0f73/TBCppStudy/Chapter5_09/Chapter5_09.cpp 참고
+	std::srand(13);
+
+	// 광원 전체 갯수만큼 반복문을 순회하여 랜덤한 광원 색상 및 위치값 계산
+	for (unsigned int i = 0; i < NR_LIGHTS; i++)
+	{
+		// rand() 함수를 사용하여 일정 범위 내의 랜덤한 위치값 계산
+		/*
+			참고로, rand() 는 [0, RAND_MAX] 사이의 난수를 반환함.
+
+			RAND_MAX 는 rand() 가 반환할 수 있는 최대 정수값을
+			매크로 전처리기로 선언해 둔 것이며, 컴파일 및 빌드 환경에 따라 다르지만,
+			일반적으로 최소 32767 이상으로 컴파일 됨.
+		*/
+		float xPos = static_cast<float>(((std::rand() % 100) / 100.0) * 6.0 - 3.0); // [-3, 3] 사이의 x값 계산
+		float yPos = static_cast<float>(((std::rand() % 100) / 100.0) * 6.0 - 4.0); // [-4, 2] 사이의 y값 계산
+		float zPos = static_cast<float>(((std::rand() % 100) / 100.0) * 6.0 - 3.0); // [-3, 3] 사이의 z값 계산
+
+		// 랜덤한 위치값을 동적 배열에 추가
+		lightPositions.push_back(glm::vec3(xPos, yPos, zPos));
+
+		// rand() 함수를 사용하여 일정 범위 내의 랜덤한 색상값 계산
+		float rColor = static_cast<float>(((std::rand() % 100) / 200.0f) + 0.5); // [0.5, 1.0] 사이의 r값 계산
+		float gColor = static_cast<float>(((std::rand() % 100) / 200.0f) + 0.5); // [0.5, 1.0] 사이의 g값 계산
+		float bColor = static_cast<float>(((std::rand() % 100) / 200.0f) + 0.5); // [0.5, 1.0] 사이의 b값 계산
+	
+		// 랜덤한 색상값을 동적 배열에 추가
+		lightColors.push_back(glm::vec3(rColor, gColor, bColor));
+	}
+	
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
