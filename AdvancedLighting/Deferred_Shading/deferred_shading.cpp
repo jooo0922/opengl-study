@@ -2,9 +2,9 @@
 #include <GLFW/glfw3.h> // OpenGL 컨텍스트 생성, 윈도우 생성, 사용자 입력 처리 관련 OpenGL 라이브러리
 #include <algorithm> // std::min(), std::max() 를 사용하기 위해 포함한 라이브러리
 
-// 이미지 파일 로드 라이브러리 include (관련 설명 하단 참고)
-#define STB_IMAGE_IMPLEMENTATION
-#include "MyHeaders/stb_image.h"
+// 이미 model.h 에 include 된 이미지 파일 로드 라이브러리의 중복 include 제거
+//#define STB_IMAGE_IMPLEMENTATION
+//#include "MyHeaders/stb_image.h"
 
 // 행렬 및 벡터 계산에서 사용할 Header Only 라이브러리 include
 #include <glm/glm.hpp>
@@ -13,6 +13,7 @@
 
 #include "MyHeaders/shader_s.h"
 #include "MyHeaders/camera.h"
+#include "MyHeaders/model.h"
 
 #include <iostream>
 
