@@ -258,12 +258,6 @@ int main()
 	}
 
 
-	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
-
-	// 텍스쳐 객체 생성
-	unsigned int woodTexture = loadTexture("resources/textures/wood.png", true);
-	unsigned int containerTexture = loadTexture("resources/textures/container2.png", true);
-
 	/*
 		각 프래그먼트 쉐이더에 선언된 uniform sampler 변수들에
 		texture unit 위치값 전송
@@ -348,12 +342,6 @@ int main()
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
 		shader.setMat4("view", view);
 
-		// diffuseTexture 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
-		glActiveTexture(GL_TEXTURE0);
-
-		// 씬 안의 큐브와 바닥평면에 적용할 woodTexture 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, woodTexture);
-
 		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 광원 데이터 전송
 		for (unsigned int i = 0; i < lightPositions.size(); i++)
 		{
@@ -373,9 +361,6 @@ int main()
 		shader.setMat4("model", model);
 		// 바닥 큐브를 렌더링하는 함수 호출
 		renderCube();
-
-		// 큐브 렌더링에 사용할 텍스쳐 객체 바인딩 교체
-		glBindTexture(GL_TEXTURE_2D, containerTexture);
 
 		// 첫 번째 큐브 렌더링
 		// 첫 번째 큐브에 적용할 모델행렬 계산
