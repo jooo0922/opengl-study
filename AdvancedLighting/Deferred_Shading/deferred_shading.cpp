@@ -126,17 +126,14 @@ int main()
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
 
-	// 큐브 및 바닥 평면에 적용할 쉐이더 객체 생성
-	Shader shader("MyShaders/bloom.vs", "MyShaders/bloom.fs");
+	// MRT 프레임버퍼에 attach 된 G-buffer 생성 시 적용할 쉐이더 객체 생성
+	Shader shaderGeometryPass("MyShaders/g_buffer.vs", "MyShaders/g_buffer.fs");
+
+	// G-buffer 로부터 샘플링된 데이터로 조명 계산을 적용할 쉐이더 객체 생성
+	Shader shaderLightPass("MyShaders/deferred_shading.vs", "MyShaders/deferred_shading.fs");
 
 	// 광원 큐브에 적용할 쉐이더 객체 생성
-	Shader shaderLight("MyShaders/bloom.vs", "MyShaders/light_box.fs");
-
-	// Gaussian blur 를 QuadMesh 에 적용할 쉐이더 객체 생성
-	Shader shaderBlur("MyShaders/blur.vs", "MyShaders/blur.fs");
-
-	// 최종 후처리로 gamma correction 및 tone mapping 을 적용할 쉐이더 객체 생성
-	Shader shaderBloomFinal("MyShaders/bloom_final.vs", "MyShaders/bloom_final.fs");
+	Shader shaderLightBox("MyShaders/deferred_light_box.vs", "MyShaders/deferred_light_box.fs");
 
 
 	/* Assimp 를 사용하여 모델 업로드 */
@@ -228,16 +225,16 @@ int main()
 
 
 	/*
-		각 프래그먼트 쉐이더에 선언된 uniform sampler 변수들에
+		lighting pass(조명 계산 단계)에 적용할 쉐이더에 선언된 
+		각 G-buffer 들의 uniform sampler 변수들에
 		texture unit 위치값 전송
+
+		참고로, Albedo 와 Specular 는 1개의 텍스쳐 버퍼에 한꺼번에 담아서 전달함!
 	*/
-	shader.use();
-	shader.setInt("diffuseTexture", 0);
-	shaderBlur.use();
-	shaderBlur.setInt("image", 0);
-	shaderBloomFinal.use();
-	shaderBloomFinal.setInt("scene", 0);
-	shaderBloomFinal.setInt("bloomBlur", 1);
+	shaderLightPass.use();
+	shaderLightPass.setInt("gPosition", 0);
+	shaderLightPass.setInt("gNormal", 1);
+	shaderLightPass.setInt("gAlbedoSpec", 2);
 
 
 	/* 광원 정보 초기화 */
@@ -303,23 +300,23 @@ int main()
 		glm::mat4 model = glm::mat4(1.0f);
 
 		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
-		shader.use();
+		shaderLightPass.use();
 
 		// 계산된 투영행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("projection", projection);
+		shaderLightPass.setMat4("projection", projection);
 
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("view", view);
+		shaderLightPass.setMat4("view", view);
 
 		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 광원 데이터 전송
 		for (unsigned int i = 0; i < lightPositions.size(); i++)
 		{
-			shader.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
-			shader.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
+			shaderLightPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
+			shaderLightPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
 		}
 
 		// 카메라 위치값을 쉐이더 프로그램에 전송
-		shader.setVec3("viewPos", camera.Position);
+		shaderLightPass.setVec3("viewPos", camera.Position);
 
 		// 바닥 큐브 렌더링
 		// 바닥 큐브에 적용할 모델행렬 계산
@@ -327,7 +324,7 @@ int main()
 		model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
 		model = glm::scale(model, glm::vec3(12.5f, 0.5f, 12.5f));
 		// 계산된 모델행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("model", model);
+		shaderLightPass.setMat4("model", model);
 		// 바닥 큐브를 렌더링하는 함수 호출
 		renderCube();
 
@@ -337,7 +334,7 @@ int main()
 		model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
 		model = glm::scale(model, glm::vec3(0.5f));
 		// 계산된 모델행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("model", model);
+		shaderLightPass.setMat4("model", model);
 		// 첫 번째 큐브를 렌더링하는 함수 호출
 		renderCube();
 
@@ -345,14 +342,14 @@ int main()
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
 		model = glm::scale(model, glm::vec3(0.5f));
-		shader.setMat4("model", model);
+		shaderLightPass.setMat4("model", model);
 		renderCube();
 
 		// 세 번째 큐브 렌더링
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-1.0f, -1.0f, 2.0f));
 		model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-		shader.setMat4("model", model);
+		shaderLightPass.setMat4("model", model);
 		renderCube();
 
 		// 네 번째 큐브 렌더링
@@ -360,27 +357,27 @@ int main()
 		model = glm::translate(model, glm::vec3(0.0f, 2.7f, 4.0f));
 		model = glm::rotate(model, glm::radians(23.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
 		model = glm::scale(model, glm::vec3(1.25f));
-		shader.setMat4("model", model);
+		shaderLightPass.setMat4("model", model);
 		renderCube();
 
 		// 다섯 번째 큐브 렌더링
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-2.0f, 1.0f, -3.0f));
 		model = glm::rotate(model, glm::radians(124.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-		shader.setMat4("model", model);
+		shaderLightPass.setMat4("model", model);
 		renderCube();
 
 		// 여섯 번째 큐브 렌더링
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
 		model = glm::scale(model, glm::vec3(0.5f));
-		shader.setMat4("model", model);
+		shaderLightPass.setMat4("model", model);
 		renderCube();
 
 		// 광원 큐브 렌더링을 위한 쉐이더 프로그램 바인딩 교체
-		shaderLight.use();
-		shaderLight.setMat4("projection", projection);
-		shaderLight.setMat4("view", view);
+		shaderLightBox.use();
+		shaderLightBox.setMat4("projection", projection);
+		shaderLightBox.setMat4("view", view);
 
 		// for loop 를 순회하며 4개의 광원 큐브 렌더링
 		for (unsigned int i = 0; i < lightPositions.size(); i++)
@@ -391,8 +388,8 @@ int main()
 			model = glm::scale(model, glm::vec3(0.25f));
 
 			// 계산된 모델행렬 및 광원 색상을 쉐이더 프로그램에 전송
-			shaderLight.setMat4("model", model);
-			shaderLight.setVec3("lightColor", lightColors[i]);
+			shaderLightBox.setMat4("model", model);
+			shaderLightBox.setVec3("lightColor", lightColors[i]);
 
 			// 광원 큐브 렌더링
 			renderCube();
