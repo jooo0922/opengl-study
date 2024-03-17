@@ -234,48 +234,6 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-	/* two-pass Gaussian blur 를 구현하기 위한 ping-pong 프레임버퍼 생성 및 설정 (하단 필기 참고) */
-
-	// 2개의 FBO(FrameBufferObject)와 각 FBO 객체에 attach 할 2개의 텍스쳐 객체 생성
-	unsigned int pingpongFBO[2];
-	unsigned int pingpongColorBuffers[2];
-	glGenFramebuffers(2, pingpongFBO);
-	glGenTextures(2, pingpongColorBuffers);
-
-	// 각 ping-pong 프레임버퍼 설정 및 텍스쳐 객체(= 색상 버퍼) 바인딩
-	for (unsigned int i = 0; i < 2; i++)
-	{
-		// ping-pong 프레임버퍼 바인딩
-		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
-
-		// attach 할 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, pingpongColorBuffers[i]);
-
-		// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
-		// 또한, 현재 프레임버퍼를 Floating point framebuffer (부동소수점 지원 프레임버퍼)로 만들기 위해 색상 버퍼 내부 포맷을 GL_RGBA16F 로 지정 (하단 필기 참고)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-
-		// Texture Filtering(텍셀 필터링(보간)) 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		// Texture Wrapping 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-		// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
-		// floating point framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함!
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorBuffers[i], 0);
-
-		// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사 (설정 완료 조건은 LearnOpenGL 본문 참고)
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		{
-			// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
-			std::cout << "Framebuffer is not complete!" << std::endl;
-		}
-	}
-
-
 	/*
 		각 프래그먼트 쉐이더에 선언된 uniform sampler 변수들에
 		texture unit 위치값 전송
@@ -450,79 +408,6 @@ int main()
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-		/* Second Pass (ping-pong 프레임버퍼를 사용하여 two-pass Gaussian blur 구현) */
-
-		// 샘플링 방향(수평 or 수직) 상태값 초기화
-		bool horizontal = true;
-
-		// 총 10번의 샘플링 중, 최초 샘플링 여부를 캐싱하는 상태값 초기화
-		bool first_iteration = true;
-
-		// 총 샘플링 횟수 상태값 초기화
-		unsigned int amount = 10;
-
-		// two-pass Gaussian blur 쉐이더 바인딩
-		shaderBlur.use();
-
-		// 수평 <-> 수직 방향을 번걸아가며 각각 5번씩, 총 10번 Gaussian blur 샘플링 수행
-		for (unsigned int i = 0; i < amount; i++)
-		{
-			// horizontal 변수의 암시적 형변환에 의해 ping-pong 프레임버퍼 바인딩 (하단 필기 참고)
-			glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
-
-			// two-pass Gaussian blur 쉐이더 프로그램에 blur 처리 방향값 전달
-			shaderBlur.setInt("horizontal", horizontal);
-
-			// blur 처리를 적용할 텍스쳐 객체(= color attachment)를 찾아 바인딩
-			// 최초 샘플링은 광원 큐브만 추출하여 저장된 텍스쳐 객체(= color attachment) 인 colorBuffers[1] 로부터 가져옴
-			glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorBuffers[!horizontal]);
-
-			// 현재 바인딩된 ping-pong 프레임버퍼에 blur 처리 결과를 시각화할 QuadMesh 렌더링
-			renderQuad();
-
-			// 다음 순회에서 적용할 horizontal 방향 변경
-			horizontal = !horizontal;
-
-			// 만약 최초 샘플링이 끝났다면, 최초 샘플링 여부를 false 로 변경
-			if (first_iteration)
-			{
-				first_iteration = false;
-			}
-		}
-
-		// default framebuffer 로 바인딩 복구
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-		/* Third Pass (HDR 톤매핑 및 bloom 효과를 QuadMesh 에 시각화) */
-
-		// 현재 바인딩된 default framebuffer 의 깊이 버퍼 및 색상 버퍼 초기화
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// QuadMesh 렌더링에 사용할 쉐이더 객체 바인딩
-		shaderBloomFinal.use();
-
-		// HDR 범위로 원본 씬을 렌더링한 텍스쳐 객체를 바인딩할 0번 texture unit 활성화
-		glActiveTexture(GL_TEXTURE0);
-
-		// HDR 범위로 원본 씬을 렌더링한 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
-
-		// two-pass Gaussian blur 를 적용한 텍스쳐 객체를 바인딩할 1번 texture unit 활성화
-		glActiveTexture(GL_TEXTURE1);
-
-		// two-pass Gaussian blur 를 적용한 텍스쳐 객체 바인딩
-		glBindTexture(GL_TEXTURE_2D, pingpongColorBuffers[!horizontal]);
-
-		// bloom 효과 활성화 상태값 전송
-		shaderBloomFinal.setBool("bloom", bloom);
-
-		// tone mapping 알고리즘에 사용할 노출값 전송
-		shaderBloomFinal.setFloat("exposure", exposure);
-
-		// QuadMesh 렌더링
-		renderQuad();
 
 
 		// bloom 활성화 여부 및 노출값 콘솔 출력
