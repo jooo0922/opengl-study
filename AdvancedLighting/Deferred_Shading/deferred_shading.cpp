@@ -158,40 +158,50 @@ int main()
 	objectPositions.push_back(glm::vec3(3.0, -0.5, 3.0));
 
 
-	/* HDR 효과를 적용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
+	/* G-buffer 로 사용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
 	/* 또한, 이 프레임버퍼는 Multiple Render Target(MRT) 로 설정. */
 
 	// FBO(FrameBufferObject) 객체 생성 및 바인딩
-	unsigned int hdrFBO;
-	glGenFramebuffers(1, &hdrFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+	unsigned int gBuffer;
+	glGenFramebuffers(1, &gBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
-	// FBO 객체에 attach 할 텍스쳐 객체 생성
-	unsigned int colorBuffers[2];
-	glGenTextures(2, colorBuffers);
+	// FBO 객체에 attach 할 텍스쳐 객체들의 참조 id 를 반환받을 변수 초기화
+	unsigned int gPosition, gNormal, gAlbedoSpec;
 
-	// MRT 프레임버퍼 생성을 위해, 2개의 텍스쳐 객체(= 색상 버퍼) 생성 및 바인딩 (하단 필기 참고)
-	for (unsigned int i = 0; i < 2; i++)
-	{
-		glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+	// FBO 객체에 attach 할 G-buffer(position) 텍스쳐 객체 생성 및 바인딩
+	glGenTextures(1, &gPosition);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+	
+	// FBO 객체에 attach 할 G-buffer(normal) 텍스쳐 객체 생성 및 바인딩
+	glGenTextures(1, &gNormal);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
 
-		// 텍스쳐 객체 메모리 공간 할당 (loadTexture() 와 달리 할당된 메모리에 이미지 데이터를 덮어쓰지 않음! -> 대신 FBO 에서 렌더링된 데이터를 덮어쓸 거니까!)
-		// 텍스쳐 객체의 해상도는 스크린 해상도와 일치시킴 -> 왜냐? 이 텍스쳐는 '스크린 평면'에 적용할 거니까!
-		// 또한, 현재 프레임버퍼를 Floating point framebuffer (부동소수점 지원 프레임버퍼)로 만들기 위해 색상 버퍼 내부 포맷을 GL_RGBA16F 로 지정 (하단 필기 참고)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	// FBO 객체에 attach 할 G-buffer(albedo, specular) 텍스쳐 객체 생성 및 바인딩
+	/*
+		주목할 점은, albedo 와 specular 버퍼는 
+		하나의 텍스쳐 버퍼를 같이 사용함.
+		
+		albedo 는 .rgb, specular 는 .a 에 저장하려는 것!
+	*/
+	glGenTextures(1, &gAlbedoSpec);
+	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
 
-		// Texture Filtering(텍셀 필터링(보간)) 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		// Texture Wrapping 모드 설정
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-		// FBO 객체에 생성한 텍스쳐 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
-		// floating point framebuffer 에 렌더링 시, 텍스쳐 객체에는 최종 color buffer 만 저장하면 되므로, color attachment 만 적용함!
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
-	}
+	// MRT 프레임버퍼 사용을 위해, OpenGL 에게 하나의 프레임버퍼가 3개의 color attachment 에 각각 렌더링할 수 있도록 명시함
+	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+	glDrawBuffers(3, attachments);
 
 	// FBO 객체에 attach 할 RBO(RenderBufferObject) 객체 생성 및 바인딩
 	unsigned int rboDepth;
@@ -203,16 +213,9 @@ int main()
 	// 또한, 텍스쳐 객체와 마찬가지로 스크린 해상도와 Renderbuffer 해상도를 일치시킴 -> 그래야 SCR_WIDTH * SCR_HEIGHT 개수 만큼의 데이터 저장 공간 확보 가능!
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
 
-	// 생성했던 FBO 객체 바인딩
-	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-
 	// FBO 객체에 생성한 RBO 객체 attach (자세한 매개변수 설명은 LearnOpenGL 본문 참고!)
 	// off-screen framebuffer 에 렌더링 시, RBO 객체에는 depth 값만 저장할 것이므로, GL_DEPTH_STENCIL_ATTACHMENT 를 적용함!
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
-
-	// MRT 프레임버퍼 사용을 위해, OpenGL 에게 하나의 프레임버퍼가 2개의 color attachment 에 각각 렌더링할 수 있도록 명시함
-	unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-	glDrawBuffers(2, attachments);
 
 	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사 (설정 완료 조건은 LearnOpenGL 본문 참고)
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -312,7 +315,7 @@ int main()
 		/* First Pass (Floating point framebuffer(또한, MRT 프레임버퍼) 에 HDR 효과를 적용할 씬 렌더링) */
 
 		// MRT framebuffer 바인딩
-		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
 		// 현재 바인딩된 framebuffer 의 색상 및 깊이 버퍼 초기화
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
