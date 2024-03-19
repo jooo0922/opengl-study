@@ -393,6 +393,17 @@ int main()
 		renderQuad();
 
 
+		/* Blit 기법으로 Forward rendering 과 Deferred rendering 결합하기 (하단 필기 참고) */
+
+		// Blitting source framebuffer(G-buffer) 는 GL_READ_FRAMEBUFFER 상태에 바인딩 
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+
+		// Blitting target framebuffer(default framebuffer) 는 GL_DRAW_FRAMEBUFFER 상태에 바인딩 
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+		// G-buffer 에 작성된 깊이 버퍼를 default framebuffer 로 복사(Blit)
+		glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -529,7 +540,7 @@ void renderCube()
 }
 
 
-/* 이전 버퍼를 시각화할 QuadMesh 를 렌더링하는 함수 구현 */
+/* 버퍼를 시각화할 QuadMesh 를 렌더링하는 함수 구현 */
 
 // QuadMesh VBO, VAO 객체(object) 참조 id 를 저장할 변수 전역 선언 (why? 다른 함수들에서도 참조)
 unsigned int quadVAO = 0;
@@ -772,4 +783,67 @@ void processInput(GLFWwindow* window)
 	이러한 현상을 방지하기 위해, glDrawBuffers() 함수를 사용하여
 	'이 프레임버퍼에서는 여러 개의 color attachment 를 사용할 것'임을
 	명시할 수 있음!
+*/
+
+/*
+	Deferred rendering 과 G-buffer
+
+
+	G-buffer 의 개념을 이해하기 위해서는,
+	Deferred rendering vs Forward rendering 의 차이를 이해해야 함.
+
+	일반적인 Object 단위로 모든 프래그먼트들을 순회하면서
+	조명 연산을 수행하는 방식이 Forward rendering 이라면,
+
+	Deferred rendering 은 실제 화면에 렌더링될 pixel 에 대해서만
+	조명 연산을 수행하는 방식이라고 보면 됨.
+
+	즉, Deferred rendering 에서는 조명 연산이 획기적으로 줄어드는
+	성능 상의 이점이 존재함.
+
+
+	그렇다면, 화면에 최종적으로 렌더링될 pixel 의 조명값을
+	어떻게 계산할 수 있을까?
+
+	이때 필요한 개념이 바로 G-buffer 임!
+
+
+	G-buffer 는 화면에 최종적으로 렌더링되는 프래그먼트에 
+	대한 geometry 정보들(예를 들어, position, normal, albedo, specular 등)을
+	MRT 프레임버퍼에 attach 된 텍스쳐 버퍼에 기록해 둔 것을 의미함!
+
+	이 geometry 정보들이 담긴 텍스쳐 버퍼들을
+	Lighting Pass 에서 샘플링하여 조명 연산을 수행하면,
+	스크린의 각 pixel 에 최종적으로 찍힐 프래그먼트들의 조명 연산만 수행할 수 있음!
+*/
+
+/*
+	Blit 기법으로 Forward rendering 과 Deferred rendering 결합하기
+
+
+	Deferred rendering 으로 그려진 QuadMesh 위에
+	Forward rendering 으로 특정 object(여기서는 광원 큐브)들을 렌더링할 경우,
+
+	해당 QuadMesh 에는 깊이 버퍼가 쓰여지지 않은 상태이므로,
+	Deferred rendering 으로 그려진 씬의 깊이값과 무관하게
+	Forward rendering 으로 그려진 object 들이 무조건 위에 렌더링됨.
+
+	즉, Forward rendering 을 결합할 때 깊이 테스트가 수행되지 못함.
+
+
+	이를 해결하기 위해,
+	G-buffer 를 렌더링할 때 쓰여진 깊이 버퍼를
+	QuadMesh 를 렌더링할 때 바인딩하는 framebuffer 에
+	Blit 기법으로 복사하는 방법을 사용해볼 수 있음!
+
+	이렇게 되면,
+	QuadMesh 가 렌더링되는 framebuffer 에
+	G-buffer 를 렌더링하는 씬의 깊이값들이 쓰여지므로,
+
+	동일한 framebuffer 에
+	forward rendering 으로 object 를 그리더라도,
+	깊이 테스팅이 정상적으로 수행될 수 있음!
+
+	Blit 관련 자세한 사항은 아래 예제 참고
+	https://github.com/jooo0922/opengl-study/blob/cda8d8e0eea629a6954ba506b47ab7be6a1b5468/AdvancedOpenGL/Anti_Aliasing_2/anti_aliasing_2.cpp#L422
 */
