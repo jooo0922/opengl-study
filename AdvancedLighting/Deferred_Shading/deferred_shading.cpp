@@ -357,101 +357,41 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
+		/* Lighting Pass (G-buffer 에서 pixel 단위로 데이터를 샘플링하여 조명 연산하여 QuadMesh 에 렌더링) */
+
+		// 현재 바인딩된 framebuffer 의 색상 및 깊이 버퍼 초기화
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// 조명 연산을 수행하는 쉐이더 프로그램 바인딩
 		shaderLightPass.use();
 
-		// 계산된 투영행렬을 쉐이더 프로그램에 전송
-		shaderLightPass.setMat4("projection", projection);
+		// 미리 생성해 둔 3개의 G-buffer 들을 각 texture unit 에 바인딩
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
 
-		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
-		shaderLightPass.setMat4("view", view);
-
-		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 광원 데이터 전송
+		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 조명 데이터 전송
 		for (unsigned int i = 0; i < lightPositions.size(); i++)
 		{
 			shaderLightPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
 			shaderLightPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
+
+			// attenuation(감쇄) 계산에 필요한 데이터들 추가 전송
+			const float linear = 0.7f;
+			const float quadratic = 1.8f;
+			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Linear", linear);
+			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Quadratic", quadratic);
 		}
 
 		// 카메라 위치값을 쉐이더 프로그램에 전송
 		shaderLightPass.setVec3("viewPos", camera.Position);
 
-		// 바닥 큐브 렌더링
-		// 바닥 큐브에 적용할 모델행렬 계산
-		model = glm::mat4(1.0);
-		model = glm::translate(model, glm::vec3(0.0f, -1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(12.5f, 0.5f, 12.5f));
-		// 계산된 모델행렬을 쉐이더 프로그램에 전송
-		shaderLightPass.setMat4("model", model);
-		// 바닥 큐브를 렌더링하는 함수 호출
-		renderCube();
+		// pixel 단위 조명 연산 결과를 렌더링할 QuadMesh 그리기
+		renderQuad();
 
-		// 첫 번째 큐브 렌더링
-		// 첫 번째 큐브에 적용할 모델행렬 계산
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0f));
-		model = glm::scale(model, glm::vec3(0.5f));
-		// 계산된 모델행렬을 쉐이더 프로그램에 전송
-		shaderLightPass.setMat4("model", model);
-		// 첫 번째 큐브를 렌더링하는 함수 호출
-		renderCube();
-
-		// 두 번째 큐브 렌더링
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0f));
-		model = glm::scale(model, glm::vec3(0.5f));
-		shaderLightPass.setMat4("model", model);
-		renderCube();
-
-		// 세 번째 큐브 렌더링
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-1.0f, -1.0f, 2.0f));
-		model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-		shaderLightPass.setMat4("model", model);
-		renderCube();
-
-		// 네 번째 큐브 렌더링
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(0.0f, 2.7f, 4.0f));
-		model = glm::rotate(model, glm::radians(23.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-		model = glm::scale(model, glm::vec3(1.25f));
-		shaderLightPass.setMat4("model", model);
-		renderCube();
-
-		// 다섯 번째 큐브 렌더링
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-2.0f, 1.0f, -3.0f));
-		model = glm::rotate(model, glm::radians(124.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-		shaderLightPass.setMat4("model", model);
-		renderCube();
-
-		// 여섯 번째 큐브 렌더링
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-3.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(0.5f));
-		shaderLightPass.setMat4("model", model);
-		renderCube();
-
-		// 광원 큐브 렌더링을 위한 쉐이더 프로그램 바인딩 교체
-		shaderLightBox.use();
-		shaderLightBox.setMat4("projection", projection);
-		shaderLightBox.setMat4("view", view);
-
-		// for loop 를 순회하며 4개의 광원 큐브 렌더링
-		for (unsigned int i = 0; i < lightPositions.size(); i++)
-		{
-			// 광원 큐브에 적용할 모델행렬 계산
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(lightPositions[i]));
-			model = glm::scale(model, glm::vec3(0.25f));
-
-			// 계산된 모델행렬 및 광원 색상을 쉐이더 프로그램에 전송
-			shaderLightBox.setMat4("model", model);
-			shaderLightBox.setVec3("lightColor", lightColors[i]);
-
-			// 광원 큐브 렌더링
-			renderCube();
-		}
 
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -589,7 +529,7 @@ void renderCube()
 }
 
 
-/* 깊이 버퍼를 시각화할 QuadMesh 를 렌더링하는 함수 구현 */
+/* 이전 버퍼를 시각화할 QuadMesh 를 렌더링하는 함수 구현 */
 
 // QuadMesh VBO, VAO 객체(object) 참조 id 를 저장할 변수 전역 선언 (why? 다른 함수들에서도 참조)
 unsigned int quadVAO = 0;
