@@ -312,7 +312,7 @@ int main()
 		/* 여기서부터 루프에서 실행시킬 모든 렌더링 명령(rendering commands)을 작성함. */
 
 
-		/* First Pass (Floating point framebuffer(또한, MRT 프레임버퍼) 에 HDR 효과를 적용할 씬 렌더링) */
+		/* Geometry Pass (씬의 geometry data 를 G-buffer 에 렌더링하기) */
 
 		// MRT framebuffer 바인딩
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
@@ -328,6 +328,34 @@ int main()
 
 		// 쉐이더에 전송할 모델 행렬을 단위 행렬로 초기화
 		glm::mat4 model = glm::mat4(1.0f);
+
+		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
+		shaderGeometryPass.use();
+
+		// 계산된 투영행렬을 쉐이더 프로그램에 전송
+		shaderGeometryPass.setMat4("projection", projection);
+
+		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
+		shaderGeometryPass.setMat4("view", view);
+
+		// std::vector 동적 배열 크기만큼 반복문을 순회하며 backpack 모델 렌더링
+		for (unsigned int i = 0; i < objectPositions.size(); i++)
+		{
+			// 각 backpack 모델에 적용할 모델행렬 계산
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, objectPositions[i]);
+			model = glm::scale(model, glm::vec3(0.5f));
+
+			// 계산된 모델행렬을 쉐이더 프로그램에 전송
+			shaderGeometryPass.setMat4("model", model);
+
+			// backpack 모델 그리기 명령 호출
+			backpack.Draw(shaderGeometryPass);
+		}
+
+		// default framebuffer 로 바인딩 복구
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
 		shaderLightPass.use();
