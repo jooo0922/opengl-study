@@ -408,6 +408,36 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+		/* Forward rendering 으로 광원 큐브 그리기 */
+
+		// 광원 큐브 렌더링에 사용할 쉐이더 프로그램 바인딩
+		shaderLightBox.use();
+
+		// 계산된 투영행렬을 쉐이더 프로그램에 전송
+		shaderLightBox.setMat4("projection", projection);
+
+		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
+		shaderLightBox.setMat4("view", view);
+
+		// std::vector 동적 배열을 순회하며 조명 데이터 전송
+		for (unsigned int i = 0; i < lightPositions.size(); i++)
+		{
+			// 각 광원 큐브에 적용할 모델행렬 계산
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, lightPositions[i]);
+			model = glm::scale(model, glm::vec3(0.125f));
+
+			// 계산된 모델행렬을 쉐이더 프로그램에 전송
+			shaderLightBox.setMat4("model", model);
+
+			// 광원 큐브 색상을 쉐이더 프로그램에 전송
+			shaderLightBox.setVec3("lightColor", lightColors[i]);
+
+			// 광원 큐브 그리기
+			renderCube();
+		}
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
