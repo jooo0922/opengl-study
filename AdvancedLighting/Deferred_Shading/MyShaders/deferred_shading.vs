@@ -4,7 +4,7 @@ layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec2 aTexCoords;
 
 // fragment shader 단계로 전송할 텍스쳐 좌표 출력 변수 선언
-vec2 TexCoords;
+out vec2 TexCoords;
 
 void main() {
   // 텍스쳐 좌표 보간 출력
