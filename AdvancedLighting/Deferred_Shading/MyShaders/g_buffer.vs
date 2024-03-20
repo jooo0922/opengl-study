@@ -23,7 +23,7 @@ uniform mat4 model;
 void main() {
   // 월드 공간 정점 좌표로 변환하여 보간 출력
   vec4 worldPos = model * vec4(aPos, 1.0);
-  FragPos = worldPos.rgb;
+  FragPos = worldPos.xyz;
 
   // 텍스쳐 좌표 보간 출력
   TexCoords = aTexCoords;
@@ -33,5 +33,5 @@ void main() {
   Normal = normalMatrix * aNormal;
 
   // 월드 공간 좌표에 뷰 행렬 > 투영 행렬 순으로 곱해서 좌표계를 변환시킴.
-  gl_Position = projection * view * model * worldPos;
+  gl_Position = projection * view * worldPos;
 }
