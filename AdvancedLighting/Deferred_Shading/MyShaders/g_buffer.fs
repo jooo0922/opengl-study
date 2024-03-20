@@ -26,5 +26,5 @@ void main() {
   gAlbedoSpec.rgb = texture2D(texture_diffuse1, TexCoords).rgb;
 
   // gAlbedoSpec 텍스쳐 버퍼의 .a 성분에는 specular texture 에서 샘플링한 specular intensity 값 저장
-  gAlbedoSpec.a = texture2D(texture_specular1, TexCoords).a;
+  gAlbedoSpec.a = texture2D(texture_specular1, TexCoords).r;
 }
