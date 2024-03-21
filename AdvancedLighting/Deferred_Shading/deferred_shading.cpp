@@ -380,10 +380,20 @@ int main()
 			shaderLightPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
 
 			// attenuation(감쇄) 계산에 필요한 데이터들 추가 전송
+			const float constant = 1.0f; // attenuation 계산식의 상수항
 			const float linear = 0.7f;
 			const float quadratic = 1.8f;
 			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Linear", linear);
 			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Quadratic", quadratic);
+
+			// 현재 광원의 조명 색상을 기준으로 최대 밝기값 계산
+			const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
+
+			// 현재 광원을 중심으로 한 light volume 의 반경(Radius)을 계산 (하단 필기 참고)
+			float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
+
+			// 계산된 light volume 의 radius 를 쉐이더 프로그램에 전송
+			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
 		}
 
 		// 카메라 위치값을 쉐이더 프로그램에 전송
@@ -876,4 +886,39 @@ void processInput(GLFWwindow* window)
 
 	Blit 관련 자세한 사항은 아래 예제 참고
 	https://github.com/jooo0922/opengl-study/blob/cda8d8e0eea629a6954ba506b47ab7be6a1b5468/AdvancedOpenGL/Anti_Aliasing_2/anti_aliasing_2.cpp#L422
+*/
+
+/*
+	Attenuation 계산식으로부터 light volume 반경(Radius) 계산하기
+
+
+	보통 deferred rendering 으로 조명을 계산할 경우,
+	조명을 계산할 프래그먼트가 줄어들게 되니 
+	이미 어느 정도 최적화가 되었다고 볼 수 있지만,
+	
+	만약, 조명 갯수가 수십 ~ 수백 개라면?
+	조명을 계산할 프래그먼트가 줄어들더라도, 여전히 조명 계산량이 많음.
+
+	따라서, 조명 갯수에 의한 연산량을 최적화하고자 한다면,
+	각 조명의 light volume 내에 들어오는 프래그먼트로 제한하여
+	조명을 계산함으로써, 조명 갯수에 의한 연산량도 많이 줄어들 수 있음.
+
+
+	light volume 은 수학적으로 해당 light volume 의 반경으로 정의되며,
+	이 반경(Radius) 값은 해당 조명의 감쇄(Attenuation) 계산식으로부터 도출해낼 수 있음.
+
+	LearnOpenGL 본문의 계산식을 참고해보면, 
+	조명 색상의 최대 밝기값 Iₘₐₓ 가 5 / 256 정도의 밝기로 떨어지는 지점,
+	즉, 사용자가 보기에 충분히 어두운 수준의 밝기값까지 떨어지는 지점과
+	광원 사이의 거리를 light volume 의 반경으로 정의할 수 있음.
+
+	왜 하필 0 / 256 도 아니고, 
+	애매한 5 / 256 까지의 밝기를 기준으로 할까?
+
+	조명의 밝기는 거리값에 대해 quadratic 하게 감쇄하기 때문에,
+	밝기값이 0 이 되는 지점까지를 반경으로 정의한다면,
+	light volume 이 한없이 커지는 문제가 있고,
+
+	light volume 이 커지면 그만큼 포함되는 프래그먼트가 많아져서
+	light volume 을 사용하여 조명 연산을 최적화하는 의미가 없게 되기 때문!
 */
