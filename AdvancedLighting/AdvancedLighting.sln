@@ -23,6 +23,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bloom", "Bloom\Bloom.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Deferred_Shading", "Deferred_Shading\Deferred_Shading.vcxproj", "{F4030733-6723-4F1A-988D-8E617BE4601E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SSAO", "SSAO\SSAO.vcxproj", "{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -111,6 +113,14 @@ Global
 		{F4030733-6723-4F1A-988D-8E617BE4601E}.Release|x64.Build.0 = Release|x64
 		{F4030733-6723-4F1A-988D-8E617BE4601E}.Release|x86.ActiveCfg = Release|Win32
 		{F4030733-6723-4F1A-988D-8E617BE4601E}.Release|x86.Build.0 = Release|Win32
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Debug|x64.ActiveCfg = Debug|x64
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Debug|x64.Build.0 = Debug|x64
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Debug|x86.ActiveCfg = Debug|Win32
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Debug|x86.Build.0 = Debug|Win32
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Release|x64.ActiveCfg = Release|x64
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Release|x64.Build.0 = Release|x64
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Release|x86.ActiveCfg = Release|Win32
+		{316CA408-7353-4DFD-93CA-A9C7AE8F3C48}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
