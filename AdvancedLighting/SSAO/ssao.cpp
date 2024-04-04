@@ -148,18 +148,6 @@ int main()
 	// Assimp 의 기능들을 추상화한 Model 클래스를 생성하여 모델 업로드
 	Model backpack("resources/models/backpack/backpack.obj");
 
-	// 씬에 렌더링할 모델들의 위치값을 저장해 둘 std::vector 동적 배열
-	std::vector<glm::vec3> objectPositions;
-	objectPositions.push_back(glm::vec3(-3.0, -0.5, -3.0));
-	objectPositions.push_back(glm::vec3(0.0, -0.5, -3.0));
-	objectPositions.push_back(glm::vec3(3.0, -0.5, -3.0));
-	objectPositions.push_back(glm::vec3(-3.0, -0.5, 0.0));
-	objectPositions.push_back(glm::vec3(0.0, -0.5, 0.0));
-	objectPositions.push_back(glm::vec3(3.0, -0.5, 0.0));
-	objectPositions.push_back(glm::vec3(-3.0, -0.5, 3.0));
-	objectPositions.push_back(glm::vec3(0.0, -0.5, 3.0));
-	objectPositions.push_back(glm::vec3(3.0, -0.5, 3.0));
-
 
 	/* G-buffer 로 사용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
 	/* 또한, 이 프레임버퍼는 Multiple Render Target(MRT) 로 설정. */
@@ -170,7 +158,7 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
 	// FBO 객체에 attach 할 텍스쳐 객체들의 참조 id 를 반환받을 변수 초기화
-	unsigned int gPosition, gNormal, gAlbedoSpec;
+	unsigned int gPosition, gNormal, gAlbedo;
 
 	// FBO 객체에 attach 할 G-buffer(position) 텍스쳐 객체 생성 및 바인딩
 	glGenTextures(1, &gPosition);
@@ -195,12 +183,12 @@ int main()
 
 		albedo 는 .rgb, specular 는 .a 에 저장하려는 것!
 	*/
-	glGenTextures(1, &gAlbedoSpec);
-	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+	glGenTextures(1, &gAlbedo);
+	glBindTexture(GL_TEXTURE_2D, gAlbedo);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
 
 	// MRT 프레임버퍼 사용을 위해, OpenGL 에게 하나의 프레임버퍼가 3개의 color attachment 에 각각 렌더링할 수 있도록 명시함
 	unsigned int attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
@@ -229,6 +217,58 @@ int main()
 
 	// 생성한 FBO 객체 설정 완료 후, 다시 default framebuffer 바인딩하여 원상복구 (참고로, default framebuffer 의 참조 id 가 0임!)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	/* SSAO 효과를 적용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
+
+	// FBO(FrameBufferObject) 객체 생성 및 바인딩
+	unsigned int ssaoFBO;
+	glGenFramebuffers(1, &ssaoFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+
+	// FBO 객체에 attach 할 텍스쳐 버퍼 객체의 참조 id 를 반환받을 변수 초기화
+	unsigned int ssaoColorBuffer;
+
+	// FBO 객체에 attach 할 SSAO 적용 결과를 렌더링할 텍스쳐 버퍼 객체 생성 및 바인딩 (GL_RED 관련 하단 필기 참고)
+	glGenTextures(1, &ssaoColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
+
+	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
+		std::cout << "SSAO Framebuffer is not complete!" << std::endl;
+	}
+
+
+	/* blur 효과를 적용할 프레임버퍼(Floating point framebuffer) 생성 및 설정 */
+
+	// FBO(FrameBufferObject) 객체 생성 및 바인딩
+	unsigned int ssaoBlurFBO;
+	glGenFramebuffers(1, &ssaoBlurFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
+
+	// FBO 객체에 attach 할 텍스쳐 버퍼 객체의 참조 id 를 반환받을 변수 초기화
+	unsigned int ssaoColorBufferBlur;
+
+	// FBO 객체에 attach 할 SSAO 적용 결과를 렌더링할 텍스쳐 버퍼 객체 생성 및 바인딩 (GL_RED 관련 하단 필기 참고)
+	glGenTextures(1, &ssaoColorBufferBlur);
+	glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBufferBlur, 0);
+
+	// 현재 GL_FRAMEBUFFER 상태에 바인딩된 FBO 객체 설정 완료 여부 검사
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
+		std::cout << "SSAO Blur Framebuffer is not complete!" << std::endl;
+	}
 
 
 	/*
@@ -341,21 +381,6 @@ int main()
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
 		shaderGeometryPass.setMat4("view", view);
 
-		// std::vector 동적 배열 크기만큼 반복문을 순회하며 backpack 모델 렌더링
-		for (unsigned int i = 0; i < objectPositions.size(); i++)
-		{
-			// 각 backpack 모델에 적용할 모델행렬 계산
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, objectPositions[i]);
-			model = glm::scale(model, glm::vec3(0.5f));
-
-			// 계산된 모델행렬을 쉐이더 프로그램에 전송
-			shaderGeometryPass.setMat4("model", model);
-
-			// backpack 모델 그리기 명령 호출
-			backpack.Draw(shaderGeometryPass);
-		}
-
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -374,7 +399,7 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, gNormal);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+		glBindTexture(GL_TEXTURE_2D, gAlbedo);
 
 		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 조명 데이터 전송
 		for (unsigned int i = 0; i < lightPositions.size(); i++)
@@ -858,4 +883,16 @@ void processInput(GLFWwindow* window)
 	이 geometry 정보들이 담긴 텍스쳐 버퍼들을
 	Lighting Pass 에서 샘플링하여 조명 연산을 수행하면,
 	스크린의 각 pixel 에 최종적으로 찍힐 프래그먼트들의 조명 연산만 수행할 수 있음!
+*/
+
+/*
+	SSAO 버퍼에 GL_RED 포맷을 사용한 이유
+
+	
+	SSAO 효과가 적용될 버퍼에는
+	환경광 차폐(ambient occlusion)가 발생한 영역의 그림자만 표시하면 되므로,
+	grayscale value 만 버퍼에 저장해주면 됨.
+
+	따라서, 텍스쳐 버퍼의 내부 포맷을
+	1개의 컴포넌트(= GL_RED)만 사용하도록 설정함.
 */
