@@ -128,13 +128,16 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// MRT 프레임버퍼에 attach 된 G-buffer 생성 시 적용할 쉐이더 객체 생성
-	Shader shaderGeometryPass("MyShaders/g_buffer.vs", "MyShaders/g_buffer.fs");
+	Shader shaderGeometryPass("MyShaders/ssao_geometry.vs", "MyShaders/ssao_geometry.fs");
 
 	// G-buffer 로부터 샘플링된 데이터로 조명 계산을 적용할 쉐이더 객체 생성
-	Shader shaderLightPass("MyShaders/deferred_shading.vs", "MyShaders/deferred_shading.fs");
+	Shader shaderLightingPass("MyShaders/ssao.vs", "MyShaders/ssao_lighting.fs");
 
-	// 광원 큐브에 적용할 쉐이더 객체 생성
-	Shader shaderLightBox("MyShaders/deferred_light_box.vs", "MyShaders/deferred_light_box.fs");
+	// G-buffer, sample kernel, random rotation buffer 로부터 샘플링된 데이터로 SSAO 효과를 적용할 쉐이더 객체 생성
+	Shader shaderSSAO("MyShaders/ssao.vs", "MyShaders/ssao.fs");
+
+	// SSAO 가 적용된 텍스쳐 버퍼에 blur 효과를 적용할 쉐이더 객체 생성
+	Shader shaderSSAOBlur("MyShaders/ssao.vs", "MyShaders/ssao_blur.fs");
 
 
 	/* Assimp 를 사용하여 모델 업로드 */
@@ -235,10 +238,10 @@ int main()
 
 		참고로, Albedo 와 Specular 는 1개의 텍스쳐 버퍼에 한꺼번에 담아서 전달함!
 	*/
-	shaderLightPass.use();
-	shaderLightPass.setInt("gPosition", 0);
-	shaderLightPass.setInt("gNormal", 1);
-	shaderLightPass.setInt("gAlbedoSpec", 2);
+	shaderLightingPass.use();
+	shaderLightingPass.setInt("gPosition", 0);
+	shaderLightingPass.setInt("gNormal", 1);
+	shaderLightingPass.setInt("gAlbedoSpec", 2);
 
 
 	/* 광원 정보 초기화 */
@@ -363,7 +366,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// 조명 연산을 수행하는 쉐이더 프로그램 바인딩
-		shaderLightPass.use();
+		shaderLightingPass.use();
 
 		// 미리 생성해 둔 3개의 G-buffer 들을 각 texture unit 에 바인딩
 		glActiveTexture(GL_TEXTURE0);
@@ -376,15 +379,15 @@ int main()
 		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 조명 데이터 전송
 		for (unsigned int i = 0; i < lightPositions.size(); i++)
 		{
-			shaderLightPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
-			shaderLightPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
+			shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
+			shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
 
 			// attenuation(감쇄) 계산에 필요한 데이터들 추가 전송
 			const float constant = 1.0f; // attenuation 계산식의 상수항
 			const float linear = 0.7f;
 			const float quadratic = 1.8f;
-			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Linear", linear);
-			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Quadratic", quadratic);
+			shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Linear", linear);
+			shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Quadratic", quadratic);
 
 			// 현재 광원의 조명 색상을 기준으로 최대 밝기값 계산
 			const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
@@ -393,11 +396,11 @@ int main()
 			float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
 
 			// 계산된 light volume 의 radius 를 쉐이더 프로그램에 전송
-			shaderLightPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
+			shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
 		}
 
 		// 카메라 위치값을 쉐이더 프로그램에 전송
-		shaderLightPass.setVec3("viewPos", camera.Position);
+		shaderLightingPass.setVec3("viewPos", camera.Position);
 
 		// pixel 단위 조명 연산 결과를 렌더링할 QuadMesh 그리기
 		renderQuad();
@@ -421,13 +424,13 @@ int main()
 		/* Forward rendering 으로 광원 큐브 그리기 */
 
 		// 광원 큐브 렌더링에 사용할 쉐이더 프로그램 바인딩
-		shaderLightBox.use();
+		shaderSSAO.use();
 
 		// 계산된 투영행렬을 쉐이더 프로그램에 전송
-		shaderLightBox.setMat4("projection", projection);
+		shaderSSAO.setMat4("projection", projection);
 
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
-		shaderLightBox.setMat4("view", view);
+		shaderSSAO.setMat4("view", view);
 
 		// std::vector 동적 배열을 순회하며 조명 데이터 전송
 		for (unsigned int i = 0; i < lightPositions.size(); i++)
@@ -438,10 +441,10 @@ int main()
 			model = glm::scale(model, glm::vec3(0.125f));
 
 			// 계산된 모델행렬을 쉐이더 프로그램에 전송
-			shaderLightBox.setMat4("model", model);
+			shaderSSAO.setMat4("model", model);
 
 			// 광원 큐브 색상을 쉐이더 프로그램에 전송
-			shaderLightBox.setVec3("lightColor", lightColors[i]);
+			shaderSSAO.setVec3("lightColor", lightColors[i]);
 
 			// 광원 큐브 그리기
 			renderCube();
@@ -855,70 +858,4 @@ void processInput(GLFWwindow* window)
 	이 geometry 정보들이 담긴 텍스쳐 버퍼들을
 	Lighting Pass 에서 샘플링하여 조명 연산을 수행하면,
 	스크린의 각 pixel 에 최종적으로 찍힐 프래그먼트들의 조명 연산만 수행할 수 있음!
-*/
-
-/*
-	Blit 기법으로 Forward rendering 과 Deferred rendering 결합하기
-
-
-	Deferred rendering 으로 그려진 QuadMesh 위에
-	Forward rendering 으로 특정 object(여기서는 광원 큐브)들을 렌더링할 경우,
-
-	해당 QuadMesh 에는 깊이 버퍼가 쓰여지지 않은 상태이므로,
-	Deferred rendering 으로 그려진 씬의 깊이값과 무관하게
-	Forward rendering 으로 그려진 object 들이 무조건 위에 렌더링됨.
-
-	즉, Forward rendering 을 결합할 때 깊이 테스트가 수행되지 못함.
-
-
-	이를 해결하기 위해,
-	G-buffer 를 렌더링할 때 쓰여진 깊이 버퍼를
-	QuadMesh 를 렌더링할 때 바인딩하는 framebuffer 에
-	Blit 기법으로 복사하는 방법을 사용해볼 수 있음!
-
-	이렇게 되면,
-	QuadMesh 가 렌더링되는 framebuffer 에
-	G-buffer 를 렌더링하는 씬의 깊이값들이 쓰여지므로,
-
-	동일한 framebuffer 에
-	forward rendering 으로 object 를 그리더라도,
-	깊이 테스팅이 정상적으로 수행될 수 있음!
-
-	Blit 관련 자세한 사항은 아래 예제 참고
-	https://github.com/jooo0922/opengl-study/blob/cda8d8e0eea629a6954ba506b47ab7be6a1b5468/AdvancedOpenGL/Anti_Aliasing_2/anti_aliasing_2.cpp#L422
-*/
-
-/*
-	Attenuation 계산식으로부터 light volume 반경(Radius) 계산하기
-
-
-	보통 deferred rendering 으로 조명을 계산할 경우,
-	조명을 계산할 프래그먼트가 줄어들게 되니
-	이미 어느 정도 최적화가 되었다고 볼 수 있지만,
-
-	만약, 조명 갯수가 수십 ~ 수백 개라면?
-	조명을 계산할 프래그먼트가 줄어들더라도, 여전히 조명 계산량이 많음.
-
-	따라서, 조명 갯수에 의한 연산량을 최적화하고자 한다면,
-	각 조명의 light volume 내에 들어오는 프래그먼트로 제한하여
-	조명을 계산함으로써, 조명 갯수에 의한 연산량도 많이 줄어들 수 있음.
-
-
-	light volume 은 수학적으로 해당 light volume 의 반경으로 정의되며,
-	이 반경(Radius) 값은 해당 조명의 감쇄(Attenuation) 계산식으로부터 도출해낼 수 있음.
-
-	LearnOpenGL 본문의 계산식을 참고해보면,
-	조명 색상의 최대 밝기값 Iₘₐₓ 가 5 / 256 정도의 밝기로 떨어지는 지점,
-	즉, 사용자가 보기에 충분히 어두운 수준의 밝기값까지 떨어지는 지점과
-	광원 사이의 거리를 light volume 의 반경으로 정의할 수 있음.
-
-	왜 하필 0 / 256 도 아니고,
-	애매한 5 / 256 까지의 밝기를 기준으로 할까?
-
-	조명의 밝기는 거리값에 대해 quadratic 하게 감쇄하기 때문에,
-	밝기값이 0 이 되는 지점까지를 반경으로 정의한다면,
-	light volume 이 한없이 커지는 문제가 있고,
-
-	light volume 이 커지면 그만큼 포함되는 프래그먼트가 많아져서
-	light volume 을 사용하여 조명 연산을 최적화하는 의미가 없게 되기 때문!
 */
