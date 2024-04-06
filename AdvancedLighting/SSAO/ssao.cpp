@@ -366,6 +366,14 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 
+	/* 광원 정보 초기화 */
+
+	// 씬에 배치할 광원 위치값 초기화
+	glm::vec3 lightPos = glm::vec3(2.0, 4.0, -2.0);
+
+	// 씬에 배치할 광원 색상값 초기화
+	glm::vec3 lightColor = glm::vec3(0.2, 0.2, 0.7);
+
 
 	/*
 		lighting pass(조명 계산 단계)에 적용할 쉐이더에 선언된
@@ -378,49 +386,6 @@ int main()
 	shaderLightingPass.setInt("gPosition", 0);
 	shaderLightingPass.setInt("gNormal", 1);
 	shaderLightingPass.setInt("gAlbedoSpec", 2);
-
-
-	/* 광원 정보 초기화 */
-
-	// 씬에 배치할 광원의 전체 갯수 초기화
-	const unsigned int NR_LIGHTS = 32;
-
-	// 씬에 배치할 4개 광원 위치값을 저장할 std::vector 동적 배열 선언
-	std::vector<glm::vec3> lightPositions;
-
-	// 씬에 배치할 4개 광원 색상값을 저장할 std::vector 동적 배열 선언
-	std::vector<glm::vec3> lightColors;
-
-	// 난수 생성 시 사용할 고정 seed 값 설정
-	// https://github.com/jooo0922/cpp-study/blob/76127bd7d126247e34db789883091eb39acb0f73/TBCppStudy/Chapter5_09/Chapter5_09.cpp 참고
-	std::srand(13);
-
-	// 광원 전체 갯수만큼 반복문을 순회하여 랜덤한 광원 색상 및 위치값 계산
-	for (unsigned int i = 0; i < NR_LIGHTS; i++)
-	{
-		// rand() 함수를 사용하여 일정 범위 내의 랜덤한 위치값 계산
-		/*
-			참고로, rand() 는 [0, RAND_MAX] 사이의 난수를 반환함.
-
-			RAND_MAX 는 rand() 가 반환할 수 있는 최대 정수값을
-			매크로 전처리기로 선언해 둔 것이며, 컴파일 및 빌드 환경에 따라 다르지만,
-			일반적으로 최소 32767 이상으로 컴파일 됨.
-		*/
-		float xPos = static_cast<float>(((std::rand() % 100) / 100.0) * 6.0 - 3.0); // [-3, 3] 사이의 x값 계산
-		float yPos = static_cast<float>(((std::rand() % 100) / 100.0) * 6.0 - 4.0); // [-4, 2] 사이의 y값 계산
-		float zPos = static_cast<float>(((std::rand() % 100) / 100.0) * 6.0 - 3.0); // [-3, 3] 사이의 z값 계산
-
-		// 랜덤한 위치값을 동적 배열에 추가
-		lightPositions.push_back(glm::vec3(xPos, yPos, zPos));
-
-		// rand() 함수를 사용하여 일정 범위 내의 랜덤한 색상값 계산
-		float rColor = static_cast<float>(((std::rand() % 100) / 200.0f) + 0.5); // [0.5, 1.0] 사이의 r값 계산
-		float gColor = static_cast<float>(((std::rand() % 100) / 200.0f) + 0.5); // [0.5, 1.0] 사이의 g값 계산
-		float bColor = static_cast<float>(((std::rand() % 100) / 200.0f) + 0.5); // [0.5, 1.0] 사이의 b값 계산
-
-		// 랜덤한 색상값을 동적 배열에 추가
-		lightColors.push_back(glm::vec3(rColor, gColor, bColor));
-	}
 
 
 	// while 문으로 렌더링 루프 구현
@@ -497,29 +462,6 @@ int main()
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, gAlbedo);
 
-		// 반복문을 광원 갯수만큼 순회하며 array uniform 에 조명 데이터 전송
-		for (unsigned int i = 0; i < lightPositions.size(); i++)
-		{
-			shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Position", lightPositions[i]);
-			shaderLightingPass.setVec3("lights[" + std::to_string(i) + "].Color", lightColors[i]);
-
-			// attenuation(감쇄) 계산에 필요한 데이터들 추가 전송
-			const float constant = 1.0f; // attenuation 계산식의 상수항
-			const float linear = 0.7f;
-			const float quadratic = 1.8f;
-			shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Linear", linear);
-			shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Quadratic", quadratic);
-
-			// 현재 광원의 조명 색상을 기준으로 최대 밝기값 계산
-			const float maxBrightness = std::fmaxf(std::fmaxf(lightColors[i].r, lightColors[i].g), lightColors[i].b);
-
-			// 현재 광원을 중심으로 한 light volume 의 반경(Radius)을 계산 (하단 필기 참고)
-			float radius = (-linear + std::sqrt(linear * linear - 4 * quadratic * (constant - (256.0f / 5.0f) * maxBrightness))) / (2.0f * quadratic);
-
-			// 계산된 light volume 의 radius 를 쉐이더 프로그램에 전송
-			shaderLightingPass.setFloat("lights[" + std::to_string(i) + "].Radius", radius);
-		}
-
 		// 카메라 위치값을 쉐이더 프로그램에 전송
 		shaderLightingPass.setVec3("viewPos", camera.Position);
 
@@ -540,36 +482,6 @@ int main()
 
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-		/* Forward rendering 으로 광원 큐브 그리기 */
-
-		// 광원 큐브 렌더링에 사용할 쉐이더 프로그램 바인딩
-		shaderSSAO.use();
-
-		// 계산된 투영행렬을 쉐이더 프로그램에 전송
-		shaderSSAO.setMat4("projection", projection);
-
-		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
-		shaderSSAO.setMat4("view", view);
-
-		// std::vector 동적 배열을 순회하며 조명 데이터 전송
-		for (unsigned int i = 0; i < lightPositions.size(); i++)
-		{
-			// 각 광원 큐브에 적용할 모델행렬 계산
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, lightPositions[i]);
-			model = glm::scale(model, glm::vec3(0.125f));
-
-			// 계산된 모델행렬을 쉐이더 프로그램에 전송
-			shaderSSAO.setMat4("model", model);
-
-			// 광원 큐브 색상을 쉐이더 프로그램에 전송
-			shaderSSAO.setVec3("lightColor", lightColors[i]);
-
-			// 광원 큐브 그리기
-			renderCube();
-		}
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
