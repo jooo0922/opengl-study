@@ -320,6 +320,53 @@ int main()
 	}
 
 
+	/* 반구 영역을 전체적으로 회전시킬 Random rotation vector 계산 (Random rotation 관련 하단 필기 참고) */
+
+	// random rotation vector 들을 보관할 동적 배열 선언
+	std::vector<glm::vec3> ssaoNoise;
+
+	// 4*4 크기의 텍스쳐 버퍼에 각 random rotation vector 들을 저장하기 위해 총 16개의 rotation vector 계산
+	for (unsigned int i = 0; i < 16; i++)
+	{
+		/*
+			반구 영역 내의 각 sample kernel 이동 벡터들이
+			positive z 축을 향하도록 계산되어 있기 때문에,
+
+			반구 영역 내의 전체적인 이동 벡터들을 회전시킬
+			rotation vector 는 xy 평면에 대한 회전, 즉, 
+			z축 회전을 정의해야 하므로, z component 는 0 으로 고정
+		*/
+		glm::vec3 noise(
+			randomFloats(generator) * 2.0 - 1.0,
+			randomFloats(generator) * 2.0 - 1.0,
+			0.0f
+		);
+
+		// 계산된 random rotation vector 를 동적 배열에 추가
+		ssaoNoise.push_back(noise);
+	}
+
+
+	/* 생성된 Random rotation vector 를 저장할 4*4 크기의 텍스쳐 버퍼 생성 (텍스쳐 버퍼에 저장하는 이유 하단 필기 참고) */
+
+	// 텍스쳐 버퍼 객체의 참조 id 를 반환받을 변수 초기화
+	unsigned int noiseTexture;
+
+	// 텍스쳐 버퍼 객체 생성 및 바인딩
+	glGenTextures(1, &noiseTexture);
+	glBindTexture(GL_TEXTURE_2D, noiseTexture);
+
+	// 텍스쳐 버퍼 크기를 4*4 로 지정
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+
+	// 4*4 텍스쳐 버퍼를 전체 screen 영역에서 반복해서 샘플링하도록, wrap mode 를 GL_REPEAT 으로 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+
+
 	/*
 		lighting pass(조명 계산 단계)에 적용할 쉐이더에 선언된
 		각 G-buffer 들의 uniform sampler 변수들에
@@ -1020,4 +1067,67 @@ void processInput(GLFWwindow* window)
 	프래그먼트에 더 가깝게 오밀조밀하게 모이도록 계산함으로써,
 	해당 프래그먼트를 차폐하는 주변 geometry 를 더 정확하게
 	감지할 수 있도록 한 것임!
+*/
+
+/*
+	Random rotation vector 란?
+
+
+	SSAO 에서 사용하는 반구 영역 내의 sample kernel 들은
+	그 수가 많으면 많을수록 occlusion factor 를 더 정확하게 계산할 수 있음.
+
+	그렇지만, sample point 들을 늘리면 늘릴수록
+	그만큼의 성능 저하가 발생하겠지?
+
+
+	그래서 sample point 들의 수를 늘리는 대신,
+	각 프래그먼트마다 sample kernel 의 방향을 랜덤하게 회전시켜서
+	각 프래그먼트마다 마치 '다른 방향의 sample kernel 이동 벡터를 사용하는 것처럼'
+	모의할 수 있음.
+
+	즉, 각 프래그먼트마다
+	sample kernel 이동 벡터가 포함된 반구 영역을
+	전체적으로 회전시킬 Random rotation vector 가 필요한 것임.
+
+
+	이 Random rotation vector 를 사용해서 
+	구체적으로 어떻게 반구 영역을 회전시키냐면, 
+
+	SSAO 효과를 적용할 쉐이더(shaderSSAO) 내에서
+	tangent space 로 계산된 sample kernel 이동 벡터를
+	TBN 행렬을 곱해서 view space 로 변환하는데,
+
+	이때 사용하는 TBN 행렬의 tangent 기저 축을 계산할 때,
+	위에서 계산했던 Random rotation vector 를 기반으로,
+	G-buffer 에서 샘플링한 노멀벡터에 대해 re-orthogonalize(재직교화)시켜서 계산함.
+
+	
+	이렇게 하면, TBN 행렬에 의해 정의되는
+	tangent, normal, bitangent 의 세 기저 축 자체가
+	Random rotation vector 를 기반으로 정의되는 것이나 다름없기 때문에,
+
+	tangent space 의 세 기저축을 회전시키는 셈이 되는 것이지!
+
+
+	이렇게 회전된 tangent space 기저 축을 열 벡터로 꽂아서 정의된 TBN 행렬을 사용하여 
+	tangent space -> view space 로 좌표계를 변환하는 단계에서
+	반구 영역 내의 전체 sample kernel 이동 벡터들이 랜덤한 회전이 적용되는 것임!
+*/
+
+/*
+	Random rotation vector 를 텍스쳐 버퍼로 저장하는 이유
+
+
+	각 프래그먼트마다 Random rotation vector 를 일일이 계산하는 게
+	물론 가장 이상적이겠지만, 그만큼 메모리를 많이 잡아먹겠지.
+
+	이러한 문제점을 해결하기 위해,
+	4*4 정도의 아주 작은 크기의 텍스쳐 버퍼를 만들고,
+	거기에 16개(= 4*4)의 Random rotation vector 를 저장한 다음,
+
+	전체 screen 영역(QuadMesh)에서 4*4 크기의 텍스쳐 버퍼를
+	GL_REPEAT 모드로 샘플링함으로써, 
+
+	한 번 생성해 둔 16개의 Random rotation vector 를
+	전체 QuadMesh 의 프래그먼트들을 돌면서 반복적으로 재사용하려는 것임! 
 */
