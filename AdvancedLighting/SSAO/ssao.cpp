@@ -17,7 +17,7 @@
 
 #include <iostream>
 #include <cstdlib> // srand() 및 rand() 함수 사용을 위해 포함
-
+#include <random> // c++ 11 부터 들어온 랜덤 라이브러리 (난수 생성기, 난수 분포 조작 클래스 (std::uniform_real_distribution<> 등...) 사용을 위해 포함)
 
 /* 콜백함수 전방선언 */
 
@@ -58,6 +58,12 @@ bool firstMouse = true;
 // 카메라 이동속도 보정에 사용되는 deltaTime 변수 선언 및 초기화
 float deltaTime = 0.0f; // 마지막에 그려진 프레임 ~ 현재 프레임 사이의 시간 간격
 float lastFrame = 0.0f; // 마지막에 그려진 프레임의 ElapsedTime(경과시간)
+
+// sample kernel 이동 벡터의 길이를 조정할 때 사용할 선형 보간 함수 구현
+float ourLerp(float a, float b, float f)
+{
+	return a + f * (b - a);
+}
 
 
 int main()
@@ -268,6 +274,49 @@ int main()
 	{
 		// FBO 객체가 제대로 설정되지 않았을 시 에러 메시지 출력
 		std::cout << "SSAO Blur Framebuffer is not complete!" << std::endl;
+	}
+
+
+	/* 반구 영역 내의 랜덤한 sample kernel 계산 (SSAO sample kernel 관련 하단 필기 참고) */
+
+	// [0.0, 1.0] 사이의 실수형 난수 생성 시 따를 균등 분포 생성
+	std::uniform_real_distribution<GLfloat> randomFloats(0.0, 1.0);
+
+	// c++ 표준 라이브러라에서 제공하는 기본 난수 생성 엔진 사용
+	std::default_random_engine generator;
+
+	// 생성된 랜덤한 sample kernel 들을 보관할 동적 배열 선언
+	std::vector<glm::vec3> ssaoKernel;
+
+	// 반복문을 순회하며 64개의 랜덤한 sample kernel 계산
+	for (unsigned int i = 0; i < 64; i++)
+	{
+		// 각 프래그먼트에 적용할 탄젠트 공간 기준 양의 z 축 방향을 향하도록 임의의 sample kernel 이동 벡터 계산
+		// 왜 양의 z 축 방향을 향해야 할까? 각 프래그먼트의 노멀 벡터를 중심으로 한 '반구 영역 내의' 이동 벡터를 계산하고 싶기 때문에!
+		glm::vec3 sample(
+			randomFloats(generator) * 2.0 - 1.0, // 이동 벡터의 x 값은 [-1.0, 1.0] 사이의 범위로 계산
+			randomFloats(generator) * 2.0 - 1.0, // 이동 벡터의 y 값은 [-1.0, 1.0] 사이의 범위로 계산
+			randomFloats(generator) // 이동 벡터의 z 값은 [0.0, 1.0] 사이의 범위로 계산 -> 이동 벡터가 탄젠트 공간 기준 양의 z 축 방향을 향해야 하니까!
+		);
+
+		// sample kernel 이동 벡터 정규화 -> 길이를 모두 1로 맞춤
+		sample = glm::normalize(sample);
+
+		// 길이가 1로 맞춰진 상태에서 [0.0, 1.0] 사이의 랜덤한 스칼라 값을 곱함 -> 이동 벡터의 길이를 [0.0, 1.0] 사이의 랜덤한 길이로 변경
+		sample *= randomFloats(generator);
+
+		// 64개의 각 sample kernel 이동 벡터의 길이를 선형 보간 함수로 조정할 때 사용할 alpha 값 계산 
+		// (sample kernel 길이 조정 관련 하단 필기 참고)
+		float scale = (float)i / 64.0;
+
+		// alpha 값을 quadratic 하게 계산함으로써, scale 값을 선형 보간 -> 가속 보간으로 변형
+		scale = ourLerp(0.1f, 1.0f, scale * scale);
+
+		// 이동 벡터의 길이를 가속 보간된 scale 값으로 조정 -> 64개의 이동 벡터들이 전체적으로 0.1 에 더 가까운 scale 길이값을 갖도록 조정
+		sample *= scale;
+
+		// 길이가 조정된 sample kernel 이동 벡터를 std::vector 동적 배열에 추가
+		ssaoKernel.push_back(sample);
 	}
 
 
@@ -895,4 +944,80 @@ void processInput(GLFWwindow* window)
 
 	따라서, 텍스쳐 버퍼의 내부 포맷을
 	1개의 컴포넌트(= GL_RED)만 사용하도록 설정함.
+*/
+
+/*
+	SSAO sample kernel
+
+
+	LearnOpenGL 의 본문을 보면, 
+	SSAO 효과를 구현하기 위해 가장 중요한 개념으로
+	'반구 영역의 sample kernel' 을 설명하고 있음.
+
+	'반구 영역의 sample kernel' 이란 간단하게 설명하면,
+	각 프래그먼트의 노멀벡터를 중심으로 한 반구(hemisphere) 영역 내에
+	위치하는 랜덤하게 분포하는 sample points 들을 의미함.
+
+	이게 왜 필요하냐면, SSAO 는 결국 'ambient occlusion', 즉,
+	'환경광 차폐' 정도를 표현하는 효과인데,
+
+	해당 프래그먼트가 다른 geometry 들에 의해 더 많이 가려질수록,
+	그 프래그먼트에 들어오는 ambient light 가 더 많이 차폐된다고 가정하고,
+	그 프래그먼트의 occlusion factor (가려짐 지수)를 더 높게 계산하여,
+	ambient light 의 가중치로 사용한다고 보면 됨.
+
+	이때, '다른 geometry 에 의해 가려짐'을 판별하는 방법이
+	해당 프래그먼트의 노멀벡터를 기준으로 한 반구 영역 내의 임의의 sample points 들이 
+	
+	view space 기준으로 다른 geometry 들의 프래그먼트보다 깊이값이 더 멀리 있다면,
+	또 그러한 sample points 들이 많으면 많을수록, 해당 프래그먼트를 차폐시키는
+	주변 장애물들이 더 많다고 판별하는 것임.
+
+	이러한 이유로 SSAO 를 구현하려면,
+	각 프래그먼트를 기준으로 한 반구 영역 내의
+	수십 개의 랜덤한 sample points 들이 필요한 것임!
+
+
+	그러나, 각 프래그먼트들 주변의 sample points 들을
+	프래그먼트마다 일일이 구하는 것을 비현실적임.
+
+	그 대신, 각 프래그먼트의 view space 위치값에서 '더해줄'
+	'offset(이동 벡터)' 를 미리 계산해두면, 실제 sample points 들의
+	위치값을 일일이 계산하지 않아도 되겠지!
+
+
+	이때, 어떤 프래그먼트에서도 더해줄 수 있도록,
+	각 프래그먼트의 위치값을 원점으로 가정하는 tangent space(탄젠트 공간)을
+	기준으로 'offset(이동 벡터)'를 계산해놓는 게 좋겠지!
+*/
+
+/*
+	가속 보간 함수로 sample kernel 길이 조정
+
+
+	sample kernel 이동 벡터를 계산한 뒤,
+
+	for 문을 돌 때마다 0.0 -> 1.0 으로 점진적으로 증가하는
+	scale 값을 계산한 다음, 이를 quadratic 하게 거듭제곱 처리하고,
+
+	선형 보간 함수의 alpha 값으로 넘겨주면,
+	선형 보간의 min 값에 가까운 결과값들을 더 많이 반환하는데,
+	이를 '가속 보간(accelerating interpolation)' 이라고 부름.
+
+
+	위 코드에서는 이렇게 가속 보간으로 얻은 scale 값을
+	스칼라곱하여 각 sample kernel 이동 벡터의 길이를 조정하고 있음.
+
+	이렇게 함으로써, 
+	대부분의 이동 벡터의 길이가 전체적으로 짧아지게 되고,
+	
+	각 프래그먼트의 노멀벡터 중심의 반구 영역 내에서도
+	해당 프래그먼트의 위치에 더 조밀하게 모이는 sample points 들을
+	계산할 수 있게 됨.
+
+
+	즉, 반구 영역 내의 sample points 들을
+	프래그먼트에 더 가깝게 오밀조밀하게 모이도록 계산함으로써,
+	해당 프래그먼트를 차폐하는 주변 geometry 를 더 정확하게
+	감지할 수 있도록 한 것임!
 */
