@@ -376,16 +376,21 @@ int main()
 
 
 	/*
-		lighting pass(조명 계산 단계)에 적용할 쉐이더에 선언된
-		각 G-buffer 들의 uniform sampler 변수들에
+		각 pass 단계마다 적용할 쉐이더에 선언된
+		각 G-buffer 및 텍스쳐 버퍼들의 uniform sampler 변수들에
 		texture unit 위치값 전송
-
-		참고로, Albedo 와 Specular 는 1개의 텍스쳐 버퍼에 한꺼번에 담아서 전달함!
 	*/
 	shaderLightingPass.use();
 	shaderLightingPass.setInt("gPosition", 0);
 	shaderLightingPass.setInt("gNormal", 1);
-	shaderLightingPass.setInt("gAlbedoSpec", 2);
+	shaderLightingPass.setInt("gAlbedo", 2);
+	shaderLightingPass.setInt("ssao", 3);
+	shaderSSAO.use();
+	shaderSSAO.setInt("gPosition", 0);
+	shaderSSAO.setInt("gNormal", 1);
+	shaderSSAO.setInt("texNoise", 2);
+	shaderSSAOBlur.use();
+	shaderSSAOBlur.setInt("ssaoInput", 0);
 
 
 	// while 문으로 렌더링 루프 구현
