@@ -447,6 +447,35 @@ int main()
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
 		shaderGeometryPass.setMat4("view", view);
 
+		// room cube 에 적용할 모델 행렬 계산
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 7.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(7.5f, 7.5f, 7.5f));
+
+		// 계산된 모델 행렬을 쉐이더 프로그램에 전송
+		shaderGeometryPass.setMat4("model", model);
+
+		// room cube 는 BACK_FACE 를 렌더링해줘야 하므로, 바깥으로 향하는 노멀벡터를 뒤집도록 플래그 설정
+		shaderGeometryPass.setInt("invertedNormals", 1);
+
+		// room cube 그리기 명령 호출
+		renderCube();
+
+		// 다른 오브젝트들은 정상적으로 FRONT_FACE 를 렌더링하기 위해, 노멀벡터 뒤집는 플래그를 원복
+		shaderGeometryPass.setInt("invertedNormals", 0);
+
+		// backpack 에 적용할 모델 행렬 계산
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f, 0.5f, 0.0f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0, 0.0, 0.0));
+		model = glm::scale(model, glm::vec3(1.0f));
+
+		// 계산된 모델 행렬을 쉐이더 프로그램에 전송
+		shaderGeometryPass.setMat4("model", model);
+
+		// backpack 그리기 명령 호출
+		backpack.Draw(shaderGeometryPass);
+
 		// default framebuffer 로 바인딩 복구
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
