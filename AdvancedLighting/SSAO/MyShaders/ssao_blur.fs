@@ -1,105 +1,75 @@
 #version 330 core
 
 // 최종 색상을 할당할 출력 변수 선언
-out vec4 FragColor;
+/*
+    SSAO Blur 를 적용하여 렌더링할 텍스쳐 버퍼도 
+    SSAO 텍스쳐 버퍼와 마찬가지로 내부 포맷이 GL_RED 로 설정되어 있으므로,
+
+    float 타입의 값만 출력 변수에 할당해주는 게 맞음.
+*/
+out float FragColor;
 
 // vertex shader 단계에서 전달되면서 보간된 텍스쳐 좌표 입력 변수 선언
 in vec2 TexCoords;
-
-// Geometry pass 에서 저장한 geometry data 가 담긴 각 G-buffer 의 sampler 변수 선언
-uniform sampler2D gPosition;
-uniform sampler2D gNormal;
-uniform sampler2D gAlbedoSpec;
-
-/* 각 조명의 정보를 저장할 구조체 선언 */
-struct Light {
-  vec3 Position; // 조명 위치
-  vec3 Color; // 조명 색상
-
-  float Linear; // 거리에 따른 조명 감쇄 계산식에서 사용할 Linear 항의 계수
-  float Quadratic; // 거리에 따른 조명 감쇄 계산식에서 사용할 Quadratic 항의 계수
-  float Radius; // light volume 의 반경
-};
 
 /* 
   OpenGL 에서 전송해 줄 uniform 변수들 선언 
 */
 
-// 조명 개수를 상수로 선언
-const int NR_LIGHTS = 32;
-
-// NR_LIGHTS 개의 조명 정보를 전송받은 정적 배열 선언
-uniform Light lights[NR_LIGHTS]; 
-
-// 카메라 위치값
-uniform vec3 viewPos;
+// SSAO occlusion factor 를 렌더링한 텍스쳐 버퍼의 sampler 변수 선언
+uniform sampler2D ssaoInput;
 
 void main() {
-  /* G-buffer 로부터 geometry data 가져오기 */
+  // SSAO occlusion factor 가 렌더링된 텍스쳐 버퍼의 단일 texel 크기 계산
+  vec2 texelSize = 1.0 / vec2(textureSize(ssaoInput, 0));
 
-  // G-buffer 로부터 현재 pixel 의 월드 공간 position 값 샘플링
-  vec3 FragPos = texture(gPosition, TexCoords).rgb;
+  // blur 결과를 누산할 변수 초기화
+  float result = 0.0;
 
-  // G-buffer 로부터 현재 pixel 의 월드 공간 normal 값 샘플링
-  vec3 Normal = texture(gNormal, TexCoords).rgb;
+  // 이중 for 문을 순회하며 현재 프래그먼트를 중심으로 주변 texel 샘플링 및 누산
+  for(int x = -2; x < 2; ++x) {
 
-  // G-buffer 로부터 현재 pixel 에 적용할 Diffuse 색상값 샘플링
-  vec3 Diffuse = texture(gAlbedoSpec, TexCoords).rgb;
+    for(int y = -2; y < 2; ++y) {
+      // 주변 texel 을 샘플링할 uv 좌표값 계산을 위해,
+      // 현재 프래그먼트의 uv 좌표값으로부터 더해줄 offset 값 계산
+      vec2 offset = vec2(float(x), float(y)) * texelSize;
 
-  // G-buffer 로부터 현재 pixel 에 적용할 Specular intensity 값 샘플링
-  float Specular = texture(gAlbedoSpec, TexCoords).a;
-
-  /* G-buffer 에서 가져온 데이터로 조명 계산 */
-
-  // 각 조명을 순회하며 계산된 조명값들을 누산할 변수 초기화
-  // ambient(환경광) 성분을 Diffuse 색상으로 계산하여 초기화함.
-  vec3 lighting = Diffuse * 0.1;
-
-  // 뷰 벡터 (프래그먼트 위치 ~ 카메라 위치) 계산
-  vec3 viewDir = normalize(viewPos - FragPos);
-
-  // 각 조명을 순회하며 조명값 계산 및 누산
-  for(int i = 0; i < NR_LIGHTS; i++) {
-    // 광원으로부터의 거리값 계산
-    float distance = length(lights[i].Position - FragPos);
-
-    // light volume 내에 들어오는 프래그먼트에 대해서만 조명 연산 수행 -> light volume 을 활용한 최적화!
-    if(distance < lights[i].Radius) {
-    /* diffuse 성분값 계산 */
-
-    // 조명벡터 (프래그먼트 위치 ~ 광원 위치)
-      vec3 lightDir = normalize(lights[i].Position - FragPos);
-
-    // 노멀벡터와 조명벡터 내적 > diffuse 성분의 세기(조도) 계산 (참고로, 음수인 diffuse 값은 조명값 계산을 부정확하게 만들기 때문에, 0.0 으로 clamping 시킴)
-    // diffuse 성분값 * 모델의 원 색상(Diffuse) * 조명 색상
-      vec3 diffuse = max(dot(Normal, lightDir), 0.0) * Diffuse * lights[i].Color;
-
-    /* specular 성분값 계산 */
-
-    // blinn-phong half vector 계산
-      vec3 halfwayDir = normalize(lightDir + viewDir);
-
-    // spec 성분값 계산 (shininess 16 거듭제곱)
-      float spec = pow(max(dot(Normal, halfwayDir), 0.0), 16.0);
-
-    // 조명 색상 * specular 성분값 * specular intensity
-      vec3 specular = lights[i].Color * spec * Specular;
-
-    /* 거리에 따른 감쇄 계산 */
-
-    // 거리에 따른 감쇄량 계산
-    // 감쇄 계산 공식 관련 https://github.com/jooo0922/opengl-study/blob/main/Lighting/Light_Casters_2/MyShaders/light_casters.fs 참고
-      float attenuation = 1.0 / (1.0 + lights[i].Linear * distance + lights[i].Quadratic * distance * distance);
-
-    // diffuse 성분과 specular 성분 각각에 감쇄 적용
-      diffuse *= attenuation;
-      specular *= attenuation;
-
-    // diffuse 성분값과 specular 성분값을 더해 최종 결과값에 누산
-      lighting += diffuse + specular;
+      // 주변 texel 을 샘플링한 뒤 누산
+      // SSAO 텍스쳐 버퍼는 GL_RED 포맷으로 저장되므로, 샘플링한 texel 의 r 값을 참조하여 누산할 것!
+      result += texture(ssaoInput, TexCoords + offset).r;
     }
+
   }
 
   // FragColor 출력 변수에 누산된 최종 색상값 할당
-  FragColor = vec4(lighting, 1.0);
+  // 이때 최대 누산값인 16(= 4*4) 로 나눠서 [0.0, 1.0] 사이의 값으로 정규화함.
+  FragColor = result / (4.0 * 4.0);
 }
+
+/*
+  SSAO input 텍스쳐 버퍼 blur 처리 기법
+
+
+  SSAO 텍스쳐 버퍼를 blur 처리하는 이유는,
+  4*4 크기의 Random rotation vector 텍스쳐 버퍼를
+  GL_REPEAT 모드로 반복적으로 사용하기 때문에 발생하는
+  noise pattern 을 해소하기 위해 처리하는 것임.
+
+  그렇다면, SSAO 텍스쳐 버퍼 내에서 
+  정확히 이 4*4 크기 만큼의 영역 단위로 blur 처리를 해주면
+  4*4 크기 단위의 격자 패턴을 알아볼 수 없을 정도로 흐려지겠지?
+
+
+  따라서, 
+  위 코드의 이중 for 문을 순회하면서
+  
+  현재 픽셀을 중심으로 4*4 크기의 영역 내의
+  총 16개의 주변 texel 들을 샘플링하여 모두 누산한 뒤,
+  
+  16개의 texel 을 누산하여 얻을 수 있는 최댓값 16으로
+  현재 프래그먼트의 누산값을 정규화해주면 되겠지!
+
+
+  마지막으로 이 정규화된 누산값을
+  최종 출력 변수에 할당해주면 됨.
+*/
