@@ -548,13 +548,26 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-		/* Lighting Pass (G-buffer 에서 pixel 단위로 데이터를 샘플링하여 조명 연산하여 QuadMesh 에 렌더링) */
+		/* Lighting Pass (G-buffer 및 SSAO occlusion factor 가 적용된 텍스쳐 버퍼에서 pixel 단위로 데이터를 샘플링하여 조명 연산하여 QuadMesh 에 렌더링) */
 
 		// 현재 바인딩된 framebuffer 의 색상 및 깊이 버퍼 초기화
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// 조명 연산을 수행하는 쉐이더 프로그램 바인딩
 		shaderLightingPass.use();
+
+		// view space 기준 광원 위치값 계산하여 쉐이더 프로그램에 전송
+		glm::vec3 lightPosView = glm::vec3(camera.GetViewMatrix() * glm::vec4(lightPos, 1.0));
+		shaderLightingPass.setVec3("light.Position", lightPosView);
+
+		// 광원 색상값을 쉐이더 프로그램에 전송
+		shaderLightingPass.setVec3("light.Color", lightColor);
+
+		// attenuation(감쇄) 계산에 필요한 데이터들 추가 전송
+		const float linear = 0.09f;
+		const float quadratic = 0.032f;
+		shaderLightingPass.setFloat("light.Linear", linear);
+		shaderLightingPass.setFloat("light.Quadratic", quadratic);
 
 		// 미리 생성해 둔 3개의 G-buffer 들을 각 texture unit 에 바인딩
 		glActiveTexture(GL_TEXTURE0);
@@ -564,8 +577,9 @@ int main()
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, gAlbedo);
 
-		// 카메라 위치값을 쉐이더 프로그램에 전송
-		shaderLightingPass.setVec3("viewPos", camera.Position);
+		// Blur 처리까지 적용된 SSAO occlusion factor 텍스쳐 버퍼를 texture unit 에 바인딩
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, ssaoColorBufferBlur);
 
 		// pixel 단위 조명 연산 결과를 렌더링할 QuadMesh 그리기
 		renderQuad();
