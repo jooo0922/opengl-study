@@ -521,6 +521,32 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+		/*
+			SSAO Blur Pass
+
+			반복적인 random rotation vector 텍스쳐 버퍼 tiling 으로 인해 발생하는
+			noise pattern 을 blur 처리하여 fix 하는 단계
+		*/
+
+		// SSAO Blur 효과를 적용하여 렌더링할 framebuffer 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
+
+		// 현재 바인딩된 framebuffer 의 색상 버퍼 초기화
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		// SSAO Blur 효과를 적용할 쉐이더 프로그램 바인딩
+		shaderSSAOBlur.use();
+
+		// SSAO occlusion factor 계산 결과가 렌더링된 텍스쳐 버퍼를 texture unit 에 바인딩
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
+
+		// pixel 단위 Blur 효과를 렌더링할 QuadMesh 그리기
+		renderQuad();
+
+		// default framebuffer 로 바인딩 복구
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 		/* Lighting Pass (G-buffer 에서 pixel 단위로 데이터를 샘플링하여 조명 연산하여 QuadMesh 에 렌더링) */
 
