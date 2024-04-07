@@ -480,6 +480,48 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+		/* 
+			SSAO Pass 
+			
+			G-buffer, sample kernel, random rotation buffer 로부터 샘플링된 데이터로 
+			SSAO 효과를 적용하여 계산한 occlusion factor 들을 ssaoFBO 프레임버퍼에 attach 된 
+			ssaoColorBuffer 텍스쳐 버퍼 객체에 렌더링 
+		*/
+
+		// SSAO 효과를 적용하여 렌더링할 framebuffer 바인딩
+		glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+
+		// 현재 바인딩된 framebuffer 의 색상 버퍼 초기화
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		// SSAO 효과를 적용하여 occlusion factor 계산을 수행하는 쉐이더 프로그램 바인딩
+		shaderSSAO.use();
+
+		// 미리 계산해 둔 64개의 sample kernel 이동 벡터를 쉐이더 프로그램에 전송
+		for (unsigned int i = 0; i < 64; i++)
+		{
+			shaderSSAO.setVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
+		}
+
+		// view space 기준 sample points 위치값을 NDC 좌표계로 변환하는 과정에서 사용할 투영 행렬을 쉐이더 프로그램에 전송
+		shaderSSAO.setMat4("projection", projection);
+
+		// 미리 생성해 둔 2개의 G-buffer 들과 random rotation vector 텍스쳐 버퍼를 각 texture unit 에 바인딩
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gNormal);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, noiseTexture);
+
+		// pixel 단위 SSAO occlusion factor 계산 결과를 렌더링할 QuadMesh 그리기
+		renderQuad();
+
+		// default framebuffer 로 바인딩 복구
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
 		/* Lighting Pass (G-buffer 에서 pixel 단위로 데이터를 샘플링하여 조명 연산하여 QuadMesh 에 렌더링) */
 
 		// 현재 바인딩된 framebuffer 의 색상 및 깊이 버퍼 초기화
