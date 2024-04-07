@@ -37,7 +37,7 @@ void main() {
   mat3 normalMatrix = transpose(inverse(mat3(view * model)));
 
   // 노멀벡터 뒤집기 여부에 따라 노멀벡터를 뒤집어 줌. (room cube 는 BACK_FACE 를 렌더링하므로, 바깥 쪽으로 향하는 노멀벡터를 뒤집어줘야 함!)
-  Normal = normalMatrix * (invertedNormals ? aNormal : -aNormal);
+  Normal = normalMatrix * (invertedNormals ? -aNormal : aNormal);
 
   // view space 좌표에 투영 행렬을 마저 곱해서 좌표계를 변환시킴.
   gl_Position = projection * viewPos;
