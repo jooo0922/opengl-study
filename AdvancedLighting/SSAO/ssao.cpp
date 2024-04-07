@@ -571,21 +571,6 @@ int main()
 		renderQuad();
 
 
-		/* Blit 기법으로 Forward rendering 과 Deferred rendering 결합하기 (하단 필기 참고) */
-
-		// Blitting source framebuffer(G-buffer) 는 GL_READ_FRAMEBUFFER 상태에 바인딩 
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
-
-		// Blitting target framebuffer(default framebuffer) 는 GL_DRAW_FRAMEBUFFER 상태에 바인딩 
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-		// G-buffer 에 작성된 깊이 버퍼를 default framebuffer 로 복사(Blit)
-		glBlitFramebuffer(0, 0, SCR_WIDTH, SCR_HEIGHT, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-
-		// default framebuffer 로 바인딩 복구
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
