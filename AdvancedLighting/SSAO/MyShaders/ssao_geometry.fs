@@ -4,27 +4,25 @@
 // ex> location = 0 으로 지정 시, 해당 출력 변수에 입력되는 색상은 GL_COLOR_ATTACHMENT0 버퍼에 저장됨.
 layout(location = 0) out vec3 gPosition;
 layout(location = 1) out vec3 gNormal;
-layout(location = 2) out vec4 gAlbedoSpec;
+layout(location = 2) out vec4 gAlbedo;
 
 /* vertex shader 단계에서 전달받는 입력 변수 선언 */
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 
-// Assimp 를 추상화한 Model 클래스에서 전송한 텍스쳐 객체의 sampler 변수 선언
-uniform sampler2D texture_diffuse1;
-uniform sampler2D texture_specular1;
-
 void main() {
-  // gPosition 텍스쳐 버퍼에는 프래그먼트의 월드 공간 위치값 저장 
+  // gPosition 텍스쳐 버퍼에는 프래그먼트의 view space 위치값 저장 
   gPosition = FragPos;
 
-  // gNormal 텍스쳐 버퍼에는 프래그먼트의 월드 공간 노멀벡터 저장
+  // gNormal 텍스쳐 버퍼에는 프래그먼트의 view space 노멀벡터 저장
   gNormal = normalize(Normal);
 
-  // gAlbedoSpec 텍스쳐 버퍼의 .rgb 성분에는 diffuse texture 에서 샘플링한 색상값 저장
-  gAlbedoSpec.rgb = texture2D(texture_diffuse1, TexCoords).rgb;
-
-  // gAlbedoSpec 텍스쳐 버퍼의 .a 성분에는 specular texture 에서 샘플링한 specular intensity 값 저장
-  gAlbedoSpec.a = texture2D(texture_specular1, TexCoords).r;
+  // gAlbedo 텍스쳐 버퍼의 .rgb 성분에는 임의의 white color (vec3(0.95)) 저장
+  /*
+    어차피 이번 예제에서 사용하는 G-Buffer 는 
+    SSAO occlusion factor 계산에 사용될 뿐이므로,
+    굳이 Albedo 정보를 G-Buffer 에 담아둘 필요가 없음.
+  */
+  gAlbedo.rgb = vec3(0.95);
 }
