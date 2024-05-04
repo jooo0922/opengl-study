@@ -164,6 +164,22 @@ int main()
 	int nrColumns = 7;
 	float spacing = 2.5;
 
+
+	/* 
+		투영행렬을 렌더링 루프 이전에 미리 계산 
+		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요! 
+	*/
+	
+	// 카메라의 zoom 값으로부터 투영 행렬 계산
+	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+	// 변환행렬을 전송할 쉐이더 프로그램 바인딩
+	shader.use();
+
+	// 계산된 투영행렬을 쉐이더 프로그램에 전송
+	shader.setMat4("projection", projection);
+
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
@@ -197,28 +213,17 @@ int main()
 		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
 		shader.use();
 
-		// 카메라의 zoom 값으로부터 투영 행렬 계산
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
 
-		// 계산된 투영행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("projection", projection);
-
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
 		shader.setMat4("view", view);
-
-		// 모델행렬 전송 생략 -> 큐브를 변환하지 않음!
 
 
 		/* 기타 uniform 변수들 쉐이더 객체에 전송 */
 
 		// 카메라 위치값 쉐이더 프로그램에 전송
-		shader.setVec3("viewPos", camera.Position);
-
-		// 광원 위치값 쉐이더 프로그램에 전송
-		shader.setVec3("lightPos", lightPos);
+		shader.setVec3("camPos", camera.Position);
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
