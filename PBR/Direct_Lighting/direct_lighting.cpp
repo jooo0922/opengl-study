@@ -132,7 +132,7 @@ int main()
 
 	// PBR 머티리얼을 구성하는 텍스쳐 객체 생성
 	unsigned int albedo = loadTexture("resources/textures/albedo.png");
-	unsigned int nornal = loadTexture("resources/textures/normal.png");
+	unsigned int normal = loadTexture("resources/textures/normal.png");
 	unsigned int metallic = loadTexture("resources/textures/metallic.png");
 	unsigned int roughness = loadTexture("resources/textures/roughness.png");
 	unsigned int ao = loadTexture("resources/textures/ao.png");
@@ -224,6 +224,29 @@ int main()
 
 		// 카메라 위치값 쉐이더 프로그램에 전송
 		shader.setVec3("camPos", camera.Position);
+
+
+		/* 각각의 PBR Texture Unit(바인딩할 텍스쳐 위치) 활성화 및 텍스쳐 바인딩 */
+
+		// 0번 Texture Unit 위치값 활성화 후, albedo 텍스쳐 객체 바인딩
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, albedo);
+
+		// 1번 Texture Unit 위치값 활성화 후, normal 텍스쳐 객체 바인딩
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, normal);
+
+		// 2번 Texture Unit 위치값 활성화 후, metallic 텍스쳐 객체 바인딩
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, metallic);
+
+		// 3번 Texture Unit 위치값 활성화 후, roughness 텍스쳐 객체 바인딩
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, roughness);
+
+		// 4번 Texture Unit 위치값 활성화 후, ao 텍스쳐 객체 바인딩
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, ao);
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
