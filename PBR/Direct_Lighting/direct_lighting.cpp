@@ -159,6 +159,11 @@ int main()
 	};
 
 
+	// 각 구체의 모델 행렬 계산 시 사용할 구체의 행 수, 열 수, 간격값 초기화
+	int nrRows = 7;
+	int nrColumns = 7;
+	float spacing = 2.5;
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
