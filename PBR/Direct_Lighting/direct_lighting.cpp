@@ -249,6 +249,43 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, ao);
 
 
+		/* 각 Sphere 에 적용할 모델행렬 계산 및 Sphere 렌더링 */
+
+		// 모델행렬을 단위행렬로 초기화
+		glm::mat4 model = glm::mat4(1.0f);
+
+		// 각 행과 열을 이중 for-loop 로 순회하며 각 구체의 모델행렬 계산
+		for (int row = 0; row < nrRows; ++row)
+		{
+			for (int col = 0; col < nrColumns; ++col)
+			{
+				/*
+					원점을 기준으로 현재 순회중인 행과 열을 계산하고, 
+					spacing 간격 만큼 떨어트려 x, y 위치값을 구해 모델행렬 계산 
+				*/
+				model = glm::mat4(1.0f);
+				model = glm::translate(model, glm::vec3(
+					(float)(col - (nrColumns / 2)) * spacing,
+					(float)(row - (nrRows / 2)) * spacing,
+					0.0f
+				));
+
+				// 계산된 모델행렬을 쉐이더 프로그램에 전송
+				shader.setMat4("model", model);
+
+				/*
+					쉐이더 코드에서 노멀벡터를 World Space 로 변환할 때 
+					사용할 노멀행렬을 각 구체의 계산된 모델행렬로부터 계산 후,
+					쉐이더 코드에 전송
+				*/
+				shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+
+				// 구체 렌더링
+				renderSphere();
+			}
+		}
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
