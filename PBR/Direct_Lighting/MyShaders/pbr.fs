@@ -20,6 +20,12 @@ uniform sampler2D aoMap;
 uniform vec3 lightPositions[1];
 uniform vec3 lightColors[1];
 
+// 카메라 위치값을 전송받는 uniform 변수 선언
+uniform vec3 camPos;
+
+// Pi 상수 선언
+const float PI = 3.14159265359;
+
 void main() {
 
 }
