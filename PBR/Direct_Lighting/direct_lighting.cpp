@@ -286,6 +286,31 @@ int main()
 		}
 
 
+		/* 광원 정보 쉐이더 전송 및 광원 위치 시각화를 위한 구체 렌더링 */
+
+		// 광원 데이터 개수만큼 for-loop 순회
+		for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
+		{
+			// 시간에 따라 각 광원을 x 축 방향으로 [-5, 5] 범위 내에서 이동시키기 위한 위치값 재계산
+			glm::vec3 newPos = lightPositions[i] + glm::vec3(std::sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+
+			// 광원 위치를 이동시키고 싶다면 아래의 기존 위치 재할당 코드 주석 처리
+			newPos = lightPositions[i];
+
+			// 광원 위치 및 색상 데이터를 쉐이더 프로그램에 전송
+			shader.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
+			shader.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+
+			// 광원 위치 시각화를 위해 해당 위치에 구체 렌더링
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, newPos);
+			model = glm::scale(model, glm::vec3(0.5f));
+			shader.setMat4("model", model);
+			shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+			renderSphere();
+		}
+
+
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
 
