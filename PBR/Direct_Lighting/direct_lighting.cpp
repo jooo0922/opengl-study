@@ -150,7 +150,12 @@ int main()
 
 	// 광원 위치값이 담긴 정적 배열 초기화
 	glm::vec3 lightPositions[] = {
-		glm::vec3(0.0f, 0.0f, 10.0f)
+		glm::vec3(0.0f, 0.0f, 10.0f),
+	};
+
+	// 광원 색상값이 담긴 정적 배열 초기화
+	glm::vec3 lightColors[] = {
+		glm::vec3(150.0f, 150.0f, 150.0f),
 	};
 
 
