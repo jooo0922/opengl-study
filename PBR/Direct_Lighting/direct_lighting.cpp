@@ -40,8 +40,8 @@ void renderSphere();
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
-const unsigned int SCR_WIDTH = 800; // 윈도우 창 너비
-const unsigned int SCR_HEIGHT = 600; // 윈도우 창 높이
+const unsigned int SCR_WIDTH = 1280; // 윈도우 창 너비
+const unsigned int SCR_HEIGHT = 720; // 윈도우 창 높이
 
 // blinn-phong 조명모델 전환 상태값을 false 로 초기화
 bool blinn = false;
