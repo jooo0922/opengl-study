@@ -43,10 +43,6 @@ void renderSphere();
 const unsigned int SCR_WIDTH = 1280; // 윈도우 창 너비
 const unsigned int SCR_HEIGHT = 720; // 윈도우 창 높이
 
-// blinn-phong 조명모델 전환 상태값을 false 로 초기화
-bool blinn = false;
-bool blinnKeyPressed = false;
-
 // 카메라 클래스 생성 (카메라 위치값만 매개변수로 전달함.)
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
@@ -201,13 +197,6 @@ int main()
 		// 광원 위치값 쉐이더 프로그램에 전송
 		shader.setVec3("lightPos", lightPos);
 
-		// blinn-phong 조명모델 적용 여부 쉐이더 프로그램에 전송
-		shader.setInt("blinn", blinn);
-
-
-		// 현재 Blinn-Phong 조명 모델 적용 상태를 콘솔에 출력
-		std::cout << (blinn ? "Blinn-Phong" : "Phong") << std::endl;
-
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
@@ -292,19 +281,6 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		camera.ProcessKeyboard(RIGHT, deltaTime); // 키 입력에 따른 카메라 이동 처리 (GLFW 키 입력 메서드에 독립적인 enum 사용)
-	}
-
-	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
-	{
-		// B 키 입력 및 현재 blinnKey(== B 키)가 눌리지 않은 상태일 때 처리
-		blinn = !blinn;
-		blinnKeyPressed = true;
-	}
-
-	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
-	{
-		// B 키를 눌렀다가 떼었을 때의 처리
-		blinnKeyPressed = false;
 	}
 }
 
