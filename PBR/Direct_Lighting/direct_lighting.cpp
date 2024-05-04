@@ -34,6 +34,9 @@ void processInput(GLFWwindow* window);
 // 텍스쳐 이미지 로드 및 객체 생성 함수 선언 (텍스쳐 객체 참조 id 반환)
 unsigned int loadTexture(const char* path);
 
+// 구체 렌더링 함수 선언
+void renderSphere();
+
 
 // 윈도우 창 생성 옵션
 // 너비와 높이는 음수가 없으므로, 부호가 없는 정수형 타입으로 심볼릭 상수 지정 (가급적 전역변수 사용 자제...)
@@ -191,7 +194,7 @@ int main()
 	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
 
 	// 텍스쳐 객체 생성
-	unsigned int floorTexture = loadTexture("resources/textures/wood.png");
+	unsigned int albedo = loadTexture("resources/textures/albedo.png");
 
 	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 0번 texture unit 위치값 전송
 	shader.use();
@@ -268,7 +271,7 @@ int main()
 
 		// 이 예제에서는 모든 텍스쳐 객체가 0번 texture unit 을 공유할 것이므로, 0번 위치에 텍스쳐 객체가 바인딩되도록 활성화
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		glBindTexture(GL_TEXTURE_2D, albedo);
 
 		// 바닥 평면 그리기 명령
 		glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -380,6 +383,179 @@ void processInput(GLFWwindow* window)
 		blinnKeyPressed = false;
 	}
 }
+
+
+/* 구체 렌더링 함수 구현 */
+
+// 'Sphere VAO 객체(object) 참조 id 를 저장할 변수' 및 '구체의 정점 인덱스 버퍼 갯수 저장할 변수' 전역 선언 
+// (-> why? renderSphere() 중복 호출 시, 초기에 생성된 값을 참조하기 위해 전역 변수에 캐싱해 둔 것!)
+unsigned int sphereVAO = 0;
+unsigned int indexCount;
+
+// 구체 렌더링 함수 구현부
+void renderSphere()
+{
+	/*
+		VAO 참조 ID 가 아직 할당되지 않았을 경우,
+		Sphere 의 VAO(Vertex Array Object), VBO(Vertex Buffer Object), EBO(Element Buffer Object) 생성 및 바인딩(하단 VAO 관련 필기 참고)
+	*/
+	if (sphereVAO == 0)
+	{
+		// VAO(Vertex Array Object) 객체 생성
+		glGenVertexArrays(1, &sphereVAO);
+
+		// VBO(Vertex Buffer Object) 및 EBO(Element Buffer Object) 객체 생성 -> Indexed Drawing 으로 그리겠군!
+		unsigned int vbo, ebo;
+		glGenBuffers(1, &vbo);
+		glGenBuffers(1, &ebo);
+
+		// 구체의 정점 position, uv, normal, index 를 각각 계산하여 저장할 동적 배열 생성
+		std::vector<glm::vec3> positions;
+		std::vector<glm::vec2> uv;
+		std::vector<glm::vec3> normals;
+		std::vector<unsigned int> indices;
+
+		// 구체의 가로 및 세로 방향 분할 수, Pi 값 초기화
+		const unsigned int X_SEGMENTS = 64;
+		const unsigned int Y_SEGMENTS = 64;
+		const float PI = 3.14159265359f;
+
+		// 구체의 가로 및 세로 방향 분할 수 만큼 이중 for 문으로 반복 순회하며 position, normal, uv 값 계산
+		for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+		{
+			for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
+			{
+				/*
+					구면 좌표계 -> 데카르트 좌표계 변환 공식을 사용하여 구체의 정점 position, normal, uv 계산
+					https://ko.wikipedia.org/wiki/%EA%B5%AC%EB%A9%B4%EC%A2%8C%ED%91%9C%EA%B3%84 참고
+				*/ 
+				// 구체의 가로 및 세로 방향의 현재 세그먼트를 정규화([0, 1] 범위로 맞춤)
+				float xSegment = (float)x / (float)X_SEGMENTS;
+				float ySegment = (float)y / (float)Y_SEGMENTS;
+
+				// 구면 좌표계 -> 데카르트 좌표계(직교 좌표계) 변환
+				/*
+					참고로, 
+					xSegment * 2.0f * PI 는 구면 좌표계의 theta 각, 
+					ySegment * PI 는 구면 좌표계의 phi 각에 해당하고,
+					반지름은 1로 보면 되겠지?
+				*/
+				float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+				float yPos = std::cos(ySegment * PI);
+				float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+
+				// 구체 정점의 position, normal, uv 동적 배열에 계산된 결과값을 추가
+				positions.push_back(glm::vec3(xPos, yPos, zPos));
+				uv.push_back(glm::vec2(xSegment, ySegment));
+				normals.push_back(glm::vec3(xPos, yPos, zPos));
+			}
+		}
+
+		/*
+			가로 방향 세그먼트들에서 짝수 또는 홀수 줄에 따라 정점의 index 값을 다른 방식으로 계산
+		*/
+		// 현재 순회 중인 세그먼트가 홀수 줄 인지 여부를 나타내는 플래그 초기화
+		bool oddRow = false;
+		for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
+		{
+			if (!oddRow)
+			{
+				// 현재 세그먼트가 짝수 줄일 때 각 정점의 index 계산
+				for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+				{
+					indices.push_back(y * (X_SEGMENTS + 1) + x);
+					indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+				}
+			}
+			else
+			{
+				// 현재 세그먼트가 홀수 줄일 때 각 정점의 index 계산
+				for (int x = X_SEGMENTS; x >= 0; --x)
+				{
+					indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+					indices.push_back(y * (X_SEGMENTS + 1) + x);
+				}
+			}
+
+			// 다음 순회의 세그먼트의 짝수 / 홀수 줄 여부를 계산
+			oddRow = !oddRow;
+		}
+
+		// 구체의 정점 인덱스가 담긴 std::vector 동적 배열의 개수 (= Indexed Drawing 에 사용할 정점 개수) 를 전역 변수에 저장
+		indexCount = static_cast<unsigned int>(indices.size());
+
+		// 구체의 정점 position, normal, uv 데이터를 하나의 동적 배열 안에 모아서 저장
+		std::vector<float> data;
+		for (unsigned int i = 0; i < positions.size(); ++i)
+		{
+			// 구체의 정점 position 데이터 먼저 저장
+			data.push_back(positions[i].x);
+			data.push_back(positions[i].y);
+			data.push_back(positions[i].z);
+
+			// 두 번째로 정점 normal 데이터 저장
+			if (normals.size() > 0)
+			{
+				data.push_back(normals[i].x);
+				data.push_back(normals[i].y);
+				data.push_back(normals[i].z);
+			}
+
+			// 세 번째로 정점 uv 데이터 저장
+			if (uv.size() > 0)
+			{
+				data.push_back(uv[i].x);
+				data.push_back(uv[i].y);
+			}
+		}
+
+		// VAO 객체 먼저 컨텍스트에 바인딩(연결)함. 
+		// -> 그래야 재사용할 여러 개의 VBO 객체들 및 설정 상태를 바인딩된 VAO 에 저장할 수 있음.
+		glBindVertexArray(sphereVAO);
+
+		// VBO 객체를 GL_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩.
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+		// 실제 정점 데이터를 OpenGL 컨텍스트에 바인딩된 VBO 객체에 덮어씀.
+		glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(float), &data[0], GL_STATIC_DRAW);
+
+		// EBO 객체를 GL_ELEMENT_ARRAY_BUFFER 타입의 버퍼 유형 상태에 바인딩.
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+
+		// 실제 정점의 인덱스 배열을 OpenGL 컨텍스트에 바인딩된 EBO 객체에 덮어씀.
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+
+		// 구체 정점의 각 데이터 해석 방식을 정의할 때 사용할 '정점 간 메모리 블록 간격(stride)' 계산
+		unsigned int stride = (3 + 2 + 3) * sizeof(float);
+
+		// 원래 버텍스 쉐이더의 모든 location 의 attribute 변수들은 사용 못하도록 디폴트 설정이 되어있음. 
+		// -> 그 중에서 0번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(0);
+
+		// 정점 위치 데이터(0번 location 입력변수 in vec3 aPos 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+
+		// 1번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(1);
+
+		// 정점 노멀 데이터(1번 location 입력변수 in vec3 aNormal 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+
+		// 2번 location 변수를 사용하도록 활성화
+		glEnableVertexAttribArray(2);
+
+		// 정점 UV 데이터(2번 location 입력변수 in vec2 aTexCoords 에 전달할 데이터) 해석 방식 정의
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+	}
+
+	// 구체에 적용할 VAO 객체를 바인딩하여, 해당 객체에 저장된 VBO, EBO 객체와 설정대로 그리도록 명령
+	glBindVertexArray(sphereVAO);
+
+	// 바인딩된 VAO 객체에 저장된 EBO 객체로부터 Indexed Drawing
+	// 각 파라미터는 (삼각형 모드, 그리고 싶은 정점 개수, 인덱스들의 타입, EBO 버퍼 offset)
+	glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
+}
+
 
 // 텍스쳐 이미지 로드 및 객체 생성 함수 구현부 (텍스쳐 객체 참조 id 반환)
 unsigned int loadTexture(const char* path)
