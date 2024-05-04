@@ -130,16 +130,29 @@ int main()
 
 	/* 텍스쳐 객체 생성 및 쉐이더 프로그램 전송 */
 
-	// 텍스쳐 객체 생성
+	// PBR 머티리얼을 구성하는 텍스쳐 객체 생성
 	unsigned int albedo = loadTexture("resources/textures/albedo.png");
+	unsigned int nornal = loadTexture("resources/textures/normal.png");
+	unsigned int metallic = loadTexture("resources/textures/metallic.png");
+	unsigned int roughness = loadTexture("resources/textures/roughness.png");
+	unsigned int ao = loadTexture("resources/textures/ao.png");
 
-	// 프래그먼트 쉐이더에 선언된 uniform sampler 변수에 0번 texture unit 위치값 전송
+	// 프래그먼트 쉐이더에 선언된 각 PBR uniform sampler 변수에 각 texture unit 위치값 전송
 	shader.use();
-	shader.setInt("texture1", 0);
+	shader.setInt("albedoMap", 0);
+	shader.setInt("normalMap", 1);
+	shader.setInt("metallicMap", 2);
+	shader.setInt("roughnessMap", 3);
+	shader.setInt("aoMap", 4);
 
 
-	// 광원 위치값 초기화
-	glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+	/* 광원 데이터 초기화 */
+
+	// 광원 위치값이 담긴 정적 배열 초기화
+	glm::vec3 lightPositions[] = {
+		glm::vec3(0.0f, 0.0f, 10.0f)
+	};
+
 
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
