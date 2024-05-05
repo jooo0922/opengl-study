@@ -102,6 +102,39 @@ float DistributionGGX(vec3 N, vec3 H, float roughness) {
   return nom / denom;
 }
 
+/*
+  Geometry Function
+
+  전체 미세면(microfacets)들 중에서, 
+  다른 미세면을 가림으로써, 특정 방향으로 진행하는 빛이 차페(occluded)되는 면적의 비율,
+  한마디로 미세면의 거칠기에 의해 생성되는 그림자의 면적 비율을 통계적으로 근사함.
+
+  roughness 가 클수록 미세면이 울퉁불퉁 해지므로,
+  특정 미세면이 다른 미세면을 더 많이 가리게 됨.
+
+  따라서, Geometry Function 의 비율값이 작아지므로, 더 많은 빛이 차폐되어 보이도록, 
+  즉, 그림자가 더 많아 보이도록 렌더링됨.
+*/
+
+/*
+  이 예제에서는 특정 방향(첫 번째 매개변수 NdotV 의 V)으로 진행되는 빛이
+  미세면에 의해 차폐되는 비율을 근사하는 Schlick-GGX 모델을 Geometry Function 으로 사용함.
+*/
+float GeometrySchlickGGX(float NdotV, float roughness) {
+  // direct lighting(직접광) 계산 시, 아래와 같이 roughness(α) 을 remapping 한 k 항을 사용함. (하단 필기 참고)
+  float r = (roughness + 1.0);
+  float k = (r * r) / 8.0;
+
+  // Geometry Function 모델의 분자 항 계산
+  float nom = NdotV;
+
+  // Geometry Function 모델의 분모 항 계산
+  float denom = NdotV * (1.0 - k) + k;
+
+  // Geometry Function 모델의 결과값 반환
+  return nom / denom;
+}
+
 void main() {
   /* PBR Material 파라미터 값을 각 텍스쳐들로부터 샘플링 */
 
@@ -271,4 +304,18 @@ void main() {
   Disney 및 Epic Games 연구 논문에 따르면,
   squared roughness 를 사용할수록, 미세면의 NDF 를 더 정확하게
   표현할 수 있다고 함.
+*/
+
+/*
+  Geometry Function 에서의 roughness 거듭제곱 방식
+
+
+  NDF 함수에서와 마찬가지로, Geometry Function 에서도
+  roughness 값을 거듭제곱해야 더 정확한 미세면을 렌더링할 수 있는데,
+
+  해당 모델을 direct lighting 에서 사용하느냐,
+  IBL(Image Based Lighting) 같은 간접광에서 사용하느냐에 따라
+  roughness 를 거듭제곱하여 remapping 하는 방식이 달라짐.
+
+  자세한 공식은 LearnOpenGL PBR > Theory 참고
 */
