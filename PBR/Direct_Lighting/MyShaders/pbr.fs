@@ -275,6 +275,17 @@ void main() {
 
     // metallic 값에 따라 빛의 굴절률을 조정함 (관련 필기 하단 참고)
     kD *= 1.0 - metallic;
+
+    /* 
+      surface point(p)와 direct lighting 이 방출하는 빛(Wi)의 각도에 따른 
+      radiance 조절하기 위한 cosTheta 계산 
+
+      -> 렌더링 방정식에서 n⋅ωi 에 해당
+    */
+    float NdotL = max(dot(N, L), 0.0);
+
+    // 현재 순회중인 direct lighting 에 대한 surface radiance 를 렌더링 방정식으로 계산하고, 결과값을 누산
+    Lo += (kD * albedo / PI + specular) * radiance * NdotL;
   }
 
 }
