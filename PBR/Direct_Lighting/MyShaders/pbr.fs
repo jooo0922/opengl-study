@@ -101,6 +101,33 @@ void main() {
   // [0.0, 1.0] 사이의 metalness 값에 따라, 비금속 이물질의 반사율(F0)과 금속 표면의 반사율(surfaceColor)을 선형보간하여 섞음. -> Metallic workflow
   F0 = mix(F0, albedo, metallic);
 
+  // 반사율 방정식(혹은 rendering equation)의 결과값을 누산할 변수 초기화
+  vec3 Lo = vec3(0.0);
+
+  /*
+    광원 개수만큼 반복문을 순회하며 반사율 방정식을 계산하여 
+    현재 프래그먼트 지점(p) 에서 Wo 방향(뷰 벡터)으로 반사되는 surface radiance 의 총량(Lo) 누산
+    -> direct lighting(직접광) 에서는 적분으로 계산하지 않는 이유 관련 하단 필기 참고
+  */
+  for(int i = 0; i < 4; i++) {
+    /* 각 direct lighting(직접광)이 방출하는 radiance(즉, 렌더링 방정식의 Li) 근사 */
+
+    // 각 광원으로부터 들어오는 조명 벡터(Wi) 계산
+    vec3 L = normalize(lightPositions[i] - WorldPos);
+
+    // 조명 벡터(Wi)와 뷰 벡터(Wo) 사이의 하프 벡터 계산
+    vec3 H = normalize(V + L);
+
+    // 각 직접광과 surface point(p) 사이의 거리 계산
+    float distance = length(lightPositions[i] - WorldPos);
+
+    // 각 직접광과의 거리의 제곱에 반비례하는 감쇄 성분 계산
+    float attenuation = 1.0 / (distance * distance);
+
+    // 각 직접광에서 방사되는 radiance 계산
+    vec3 radiance = lightColors[i] * attenuation;
+  }
+
 }
 
 /*
@@ -159,4 +186,32 @@ void main() {
   - https://learnopengl.com/Advanced-Lighting/Normal-Mapping 
   - https://github.com/jooo0922/opengl-study/blob/main/AdvancedLighting/Normal_Mapping/normal_mapping.cpp
   참고
+*/
+
+/*
+  direct lighting 에서는 렌더링 방정식의 결과값을 적분하지 않는 이유
+
+
+  direct lighting(또는 analytic lighting) 으로 렌더링 방정식을 계산할 때에는,
+  적분을 사용하지 않고, 유한한 개수의 광원을 순회하며 계산된 방정식의 결과값을
+  누산하는 식으로 코드를 구현하도록 되어있음.
+
+  왜냐하면, direct lighting 은 말 그대로 '직접광'이기 때문에,
+  반구 영역 전체에 걸쳐서 radiance(Li) 가 입사되는 것이 아님!
+
+  point light, spot light, directional light 이런 애들은
+  빛이 들어오는 방향이 한정되어 있으니까!
+
+  즉, 빛이 들어오는 방향 벡터 Wi 가 유한하기(또는 '이산적이기') 때문에,
+  애초에 '반구 영역'같은 넓은 영역으로 radiance 를 
+  정의할 필요가 없음.
+
+  그래서 이런 직접광들은 수학적인 방정식으로 결과값이 정확하게 표현되기 때문에,
+  즉, 해석적 해(analytical solution)가 존재하기 때문에,
+  '해석적 광원(analytic ligthing)' 이라고도 부름.
+
+  따라서, 이러한 해석적 광원들은
+  광원의 개수만큼 반복문을 순회하여 렌더링 방정식을 풀고,
+  그 결과값을 특정 변수에 누산하는 방법을 통해
+  특정 surface point 의 radiance(Lo)를 구할 수 있음!
 */
