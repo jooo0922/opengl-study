@@ -293,6 +293,20 @@ void main() {
 
   // 현재 surface point 지점에서 최종적으로 반사되는 조명값 계산
   vec3 color = ambient + Lo;
+
+  // Reinhard Tone mapping 알고리즘을 사용하여 HDR -> LDR 변환
+  /*
+    [0, 1] 범위를 벗어난 HDR 색상값을
+    [0, 1] 범위 내로 존재하는 LDR 색상값으로 변환하기
+
+    -> 즉, Tone mapping 알고리즘 적용!
+    https://github.com/jooo0922/opengl-study/blob/main/AdvancedLighting/HDR/MyShaders/hdr.fs 참고
+  */
+  color = color / (color + vec3(1.0));
+
+  // linear space 색 공간 유지를 위해 gamma correction 적용하여 최종 색상 출력
+  color = pow(color, vec3(1.0 / 2.2));
+  FragColor = vec4(color, 1.0);
 }
 
 /*
