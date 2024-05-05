@@ -259,7 +259,11 @@ void main() {
     // Specular term 의 분자 항 계산
     vec3 numerator = NDF * G * F;
 
-    // Specular term 의 분모 항 계산
+    // Specular term 의 분모 항 계산 -> 내적값이 0 이 되면 분모가 0이 되므로, 이를 방지하기 위해 0.0001 을 더함
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+
+    // Specular term 계산
+    vec3 specular = numerator / denominator;
   }
 
 }
