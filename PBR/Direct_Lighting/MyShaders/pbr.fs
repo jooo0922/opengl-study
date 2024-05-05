@@ -288,6 +288,11 @@ void main() {
     Lo += (kD * albedo / PI + specular) * radiance * NdotL;
   }
 
+  // 환경광(ambient lighting) 계산 -> IBL 챕터에서 이 환경광이 environment lighting 으로 대체될 것임. -> 하단 필기 참고
+  vec3 ambient = vec3(0.03) * albedo * ao;
+
+  // 현재 surface point 지점에서 최종적으로 반사되는 조명값 계산
+  vec3 color = ambient + Lo;
 }
 
 /*
@@ -416,4 +421,18 @@ void main() {
   
   이렇게 하면, 완전 금속이라면, metallic 이 1.0 일테니,
   0.0(= 1.0 - 1.0) 을 곱하게 되어 굴절률 kD 가 0.0 이 되어버리겠지!
+*/
+
+/*
+  ambient lighting (환경광) 계산 시, albedo 색상값을 곱해주는 이유
+
+
+  환경광도 다른 직접광(point light, spot light, rect light)들 처럼, 
+  반사되는 부분과 굴절되는 부분이 존재하고, 
+  굴절되었다가 입자에 흡수되는 부분이 있고, 
+  다시 표면 밖으로 빠져나오는 빛(== diffuse light)이 있겠지?
+
+  따라서, 환경광이 굴절되어서 표면 밖으로 빠져나오는 라이팅을 계산하려면, 
+  reflectance equation 의 diffuse term 에서 Kd * albedo 로 곱해줬던 것과 마찬가지로, 
+  환경광의 조명값 vec3(0.03) 에 albedo 를 곱해줘야겠지!
 */
