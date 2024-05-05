@@ -161,6 +161,25 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
   return ggx1 * ggx2;
 }
 
+/*
+  Fresnel Equation
+
+  들어오는 빛(Wi)이 surface point(p) 에 도달했을 때,
+  반사되는 빛(reflection)과 굴절되는 빛(refraction)으로 나뉘게 되는데,
+  이 중에서 반사되는 빛의 비율(the ratio of light that gets reflected)을 근사함.
+
+  -> 참고로, Fresnel 값은 에너지 보존 법칙에서 빛이 반사되는 비율을 뜻하는 kS 항을 대체할 수 있음.
+
+  실제 Fresnel 을 계산하는 공식은 아주 복잡하지만,
+  이 예제에서는 각 재질의 기본 반사율(base reflectivity) F0 을 가지고서
+  Fresnel 값을 근사하는 Schlick's approximation 모델을 사용함.
+
+  자세한 내용은 노션 계획표의 Fresnel Equation 관련 필기 참고
+*/
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+  return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 void main() {
   /* PBR Material 파라미터 값을 각 텍스쳐들로부터 샘플링 */
 
@@ -233,6 +252,14 @@ void main() {
 
     // Geometry Function 비율값 계산
     float G = GeometrySmith(N, V, L, roughness);
+
+    // Fresnel(빛의 파장별(r, g, b 채널) 반사되는 비율값) 계산
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+    // Specular term 의 분자 항 계산
+    vec3 numerator = NDF * G * F;
+
+    // Specular term 의 분모 항 계산
   }
 
 }
