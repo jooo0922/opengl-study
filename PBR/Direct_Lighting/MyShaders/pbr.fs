@@ -17,8 +17,8 @@ uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
 
 // 광원 정보를 전송받는 uniform 변수 선언
-uniform vec3 lightPositions[1];
-uniform vec3 lightColors[1];
+uniform vec3 lightPositions[4];
+uniform vec3 lightColors[4];
 
 // 카메라 위치값을 전송받는 uniform 변수 선언
 uniform vec3 camPos;
@@ -84,6 +84,23 @@ void main() {
     다만, 직접 attach 된 텍스쳐 버퍼에 렌더링된 것을 사용하느냐, 기존 이미지 텍스쳐를 사용하느냐의 차이!
   */
   float ao = texture(aoMap, TexCoords).r;
+
+  /* 일반적인 조명 알고리즘에 필수적인 방향 벡터들 계산 */
+
+  // 노멀맵에서 샘플링하여 world space 노멀벡터로 변환
+  vec3 N = getNormalFromMap();
+
+  // world space 뷰 벡터 계산
+  vec3 V = normalize(camPos - WorldPos);
+
+  /* Schlick's approximation 에 필요한 기본 반사율(base reflectivity) F0 계산 (자세한 내용은 노션 계획표의 Fresnel Equation 관련 필기 참고) */
+
+  // 대부분의 비전도체(dielectric) 또는 비금속 이물질들의 기본 반사율의 평균을 낸 값인 0.04 사용
+  vec3 F0 = vec3(0.04);
+
+  // [0.0, 1.0] 사이의 metalness 값에 따라, 비금속 이물질의 반사율(F0)과 금속 표면의 반사율(surfaceColor)을 선형보간하여 섞음. -> Metallic workflow
+  F0 = mix(F0, albedo, metallic);
+
 }
 
 /*
