@@ -264,6 +264,17 @@ void main() {
 
     // Specular term 계산
     vec3 specular = numerator / denominator;
+
+    /* Diffuse term 계산 */
+
+    // 빛이 반사되는 비율(kS)는 Fresnel 값과 일치함.
+    vec3 kS = F;
+
+    // 에너지 보존 법칙에 따라, 빛이 굴절되는 비율은 전체 비율 1 에서 반사되는 비율을 빼서 계산.
+    vec3 kD = vec3(1.0) - kS;
+
+    // metallic 값에 따라 빛의 굴절률을 조정함 (관련 필기 하단 참고)
+    kD *= 1.0 - metallic;
   }
 
 }
@@ -379,4 +390,19 @@ void main() {
   roughness 를 거듭제곱하여 remapping 하는 방식이 달라짐.
 
   자세한 공식은 LearnOpenGL PBR > Theory 참고
+*/
+
+/*
+  metallic 값에 따른 빛의 굴절률 조정
+  
+  금속은 굴절된 빛을 모두 흡수해서 난반사(diffuse reflection)가 존재하지 않음.
+  반면, 비전도체(dielectric)는 난반사가 존재하고, 비금속 이물질이 금속 표면 위에 쌓인 경우라면,
+  '일부분만' 난반사가 될 것임.
+
+  따라서, Metallic workflow 를 따라
+  선형적으로 굴절률을 조정하기 위해,
+  굴절률에 linear metallic 값을 1.0 에서 뒤집은 값만큼 곱해줌.
+  
+  이렇게 하면, 완전 금속이라면, metallic 이 1.0 일테니,
+  0.0(= 1.0 - 1.0) 을 곱하게 되어 굴절률 kD 가 0.0 이 되어버리겠지!
 */
