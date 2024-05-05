@@ -64,6 +64,44 @@ vec3 getNormalFromMap() {
   return normalize(TBN * tangentNormal);
 }
 
+/* Cook-Torrance BRDF 의 Specular term 계산에 필요한 함수들 구현 */
+
+/*
+  Normal Distribution Function
+
+  전체 미세면(microfacets)들 중에서, 
+  미세면의 노멀벡터가 half vector(조명 벡터(Wi)와 뷰 벡터(Wo) 사이의 벡터) 방향으로
+  정렬되어 있는 미세면의 면적 비율을 통계적으로 근사함.
+
+  roughness 가 클수록 미세면이 중구난방으로 정렬되고,
+  NDF 의 비율값이 작아져서 표면이 더욱 거칠어보이게 렌더링됨.
+
+  이 예제에서는 NDF 모델들 중에서 'Trowbridge-Reitz GGX' 라는 모델을 사용함.
+*/
+float DistributionGGX(vec3 N, vec3 H, float roughness) {
+  // roughness 를 거듭제곱하여 α 에 remapping 함. -> 관련 내용 하단 필기 참고
+  float a = roughness * roughness;
+
+  // NDF 모델의 α² 항 계산
+  float a2 = a * a;
+
+  // NDF 모델의 n⋅h 계산
+  float NdotH = max(dot(N, H), 0.0);
+
+  // 내적값 제곱 계산
+  float NdotH2 = NdotH * NdotH;
+
+  // NDF 모델의 분자 항 계산
+  float nom = a2;
+
+  // NDF 모델의 분모 항 계산
+  float denom = (NdotH * (a2 - 1.0) + 1.0);
+  denom = PI * denom * denom;
+
+  // NDF 모델의 결과값 반환
+  return nom / denom;
+}
+
 void main() {
   /* PBR Material 파라미터 값을 각 텍스쳐들로부터 샘플링 */
 
@@ -126,6 +164,12 @@ void main() {
 
     // 각 직접광에서 방사되는 radiance 계산
     vec3 radiance = lightColors[i] * attenuation;
+
+    /* Cook-Torrance BRDF 계산 */
+
+    /* Specular term 계산 */
+
+    //
   }
 
 }
@@ -214,4 +258,17 @@ void main() {
   광원의 개수만큼 반복문을 순회하여 렌더링 방정식을 풀고,
   그 결과값을 특정 변수에 누산하는 방법을 통해
   특정 surface point 의 radiance(Lo)를 구할 수 있음!
+*/
+
+/*
+  roughness 를 거듭제곱하여 사용하는 이유
+
+
+  LearnOpenGL PBR > Theory 편에서는 
+  Trowbridge-Reitz GGX 모델에서 roughness(α) 값 자체를
+  거듭제곱하여 사용하지는 않지만, 
+
+  Disney 및 Epic Games 연구 논문에 따르면,
+  squared roughness 를 사용할수록, 미세면의 NDF 를 더 정확하게
+  표현할 수 있다고 함.
 */
