@@ -95,7 +95,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness) {
   float nom = a2;
 
   // NDF 모델의 분모 항 계산
-  float denom = (NdotH * (a2 - 1.0) + 1.0);
+  float denom = (NdotH2 * (a2 - 1.0) + 1.0);
   denom = PI * denom * denom;
 
   // NDF 모델의 결과값 반환
