@@ -135,6 +135,32 @@ float GeometrySchlickGGX(float NdotV, float roughness) {
   return nom / denom;
 }
 
+/*
+  Smith's method
+
+  Geometry Function 을 효과적으로 근사하기 위해서는
+  빛이 들어오는 방향(= 조명벡터. Wi)에서 미세면에 의해 차폐되는 면적의 비율과
+  빛이 반사되어 나가는 방향(= 뷰 벡터. Wo)에서 미세면에 의해 차폐되는 면적의 비율을
+  모두 고려해야 함.
+
+  이를 효과적으로 수행하는 방법은,
+  Schlick-GGX 함수로 두 빛의 진행 방향에 대한 
+  차페되어 그림자 지는 면적의 비율을 각각 계산하고,
+  두 비율값을 곱하는 방법을 사용하는데, 이를 'Smith's method' 라고 함.
+*/
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+  float NdotV = max(dot(N, V), 0.0);
+  float NdotL = max(dot(N, L), 0.0);
+
+  // 빛이 반사되어 나가는 방향에서 차폐되는 면적의 비율 계산
+  float ggx1 = GeometrySchlickGGX(NdotV, roughness);
+
+  // 빛이 들어오는 방향에서 차폐되는 면적의 비율 계산
+  float ggx2 = GeometrySchlickGGX(NdotL, roughness);
+
+  return ggx1 * ggx2;
+}
+
 void main() {
   /* PBR Material 파라미터 값을 각 텍스쳐들로부터 샘플링 */
 
@@ -202,7 +228,11 @@ void main() {
 
     /* Specular term 계산 */
 
-    //
+    // NDF 비율값 계산
+    float NDF = DistributionGGX(N, H, roughness);
+
+    // Geometry Function 비율값 계산
+    float G = GeometrySmith(N, V, L, roughness);
   }
 
 }
