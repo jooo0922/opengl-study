@@ -142,30 +142,10 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 }
 
 void main() {
-  /* PBR Material 파라미터 값을 각 텍스쳐들로부터 샘플링 */
-
-  // albedo (물체의 diffuse 반사 색상값을 rgb 채널로 저장한 값) 샘플링 -> 샘플링된 texel 값 2.2 제곱 이유 하단 필기 
-  vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
-
-  // metallic 샘플링
-  float metallic = texture(metallicMap, TexCoords).r;
-
-  // roughness 샘플링
-  float roughness = texture(roughnessMap, TexCoords).r;
-
-  // ambient occlusion factor 샘플링
-  /*
-    https://github.com/jooo0922/opengl-study/blob/main/AdvancedLighting/SSAO/MyShaders/ssao_blur.fs
-    
-    위 SSAO 쉐이더 예제 코드에서 사용했던 SSAO occlusion factor 가 렌더링된 텍스쳐 버퍼와 동일한 역할.
-    다만, 직접 attach 된 텍스쳐 버퍼에 렌더링된 것을 사용하느냐, 기존 이미지 텍스쳐를 사용하느냐의 차이!
-  */
-  float ao = texture(aoMap, TexCoords).r;
-
   /* 일반적인 조명 알고리즘에 필수적인 방향 벡터들 계산 */
 
-  // 노멀맵에서 샘플링하여 world space 노멀벡터로 변환
-  vec3 N = getNormalFromMap();
+  // 버텍스 쉐이더에서 보간된 world space 노멀벡터를 정규화하여 계산해 둠.
+  vec3 N = normalize(Normal);
 
   // world space 뷰 벡터 계산
   vec3 V = normalize(camPos - WorldPos);
