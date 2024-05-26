@@ -128,16 +128,34 @@ int main()
 	Shader shader("MyShaders/pbr.vs", "MyShaders/pbr.fs");
 
 
+	/* 각 구체에 공통으로 적용할 PBR Parameter 들을 쉐이더 프로그램에 전송 */
+
+	// PBR 쉐이더 프로그램 바인딩
+	shader.use();
+
+	// 표면 밖으로 빠져나온 diffuse light 색상값을 쉐이더 프로그램에 전송
+	shader.setVec3("albedo", 0.5f, 0.0f, 0.0f);
+
+	// 각 프래그먼트의 ambient occlusion(환경광 차폐) factor 를 1로 지정 -> 즉, 환경광이 차폐되는 영역이 없음!
+	shader.setFloat("ao", 1.0f);
+
+
 	/* 광원 데이터 초기화 */
 
 	// 광원 위치값이 담긴 정적 배열 초기화
 	glm::vec3 lightPositions[] = {
-		glm::vec3(0.0f, 0.0f, 10.0f),
+		glm::vec3(-10.0f, 10.0f, 10.0f),
+		glm::vec3(10.0f, 10.0f, 10.0f),
+		glm::vec3(-10.0f, -10.0f, 10.0f),
+		glm::vec3(10.0f, -10.0f, 10.0f),
 	};
 
 	// 광원 색상값이 담긴 정적 배열 초기화
 	glm::vec3 lightColors[] = {
-		glm::vec3(150.0f, 150.0f, 150.0f),
+		glm::vec3(300.0f, 300.0f, 300.0f),
+		glm::vec3(300.0f, 300.0f, 300.0f),
+		glm::vec3(300.0f, 300.0f, 300.0f),
+		glm::vec3(300.0f, 300.0f, 300.0f),
 	};
 
 
