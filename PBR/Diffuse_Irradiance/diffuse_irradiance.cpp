@@ -125,19 +125,19 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// 구체 렌더링 시 적용할 PBR 쉐이더 객체 생성
-	Shader shader("MyShaders/pbr.vs", "MyShaders/pbr.fs");
+	Shader pbrShader("MyShaders/pbr.vs", "MyShaders/pbr.fs");
 
 
 	/* 각 구체에 공통으로 적용할 PBR Parameter 들을 쉐이더 프로그램에 전송 */
 
 	// PBR 쉐이더 프로그램 바인딩
-	shader.use();
+	pbrShader.use();
 
 	// 표면 밖으로 빠져나온 diffuse light 색상값을 쉐이더 프로그램에 전송
-	shader.setVec3("albedo", 0.5f, 0.0f, 0.0f);
+	pbrShader.setVec3("albedo", 0.5f, 0.0f, 0.0f);
 
 	// 각 프래그먼트의 ambient occlusion(환경광 차폐) factor 를 1로 지정 -> 즉, 환경광이 차폐되는 영역이 없음!
-	shader.setFloat("ao", 1.0f);
+	pbrShader.setFloat("ao", 1.0f);
 
 
 	/* 광원 데이터 초기화 */
@@ -174,10 +174,10 @@ int main()
 	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
 	// 변환행렬을 전송할 쉐이더 프로그램 바인딩
-	shader.use();
+	pbrShader.use();
 
 	// 계산된 투영행렬을 쉐이더 프로그램에 전송
-	shader.setMat4("projection", projection);
+	pbrShader.setMat4("projection", projection);
 
 
 	// while 문으로 렌더링 루프 구현
@@ -211,19 +211,19 @@ int main()
 		/* 변환행렬 계산 및 쉐이더 객체에 전송 */
 
 		// 변환행렬을 전송할 쉐이더 프로그램 바인딩
-		shader.use();
+		pbrShader.use();
 
 		// 카메라 클래스로부터 뷰 행렬(= LookAt 행렬) 가져오기
 		glm::mat4 view = camera.GetViewMatrix();
 
 		// 계산된 뷰 행렬을 쉐이더 프로그램에 전송
-		shader.setMat4("view", view);
+		pbrShader.setMat4("view", view);
 
 
 		/* 기타 uniform 변수들 쉐이더 객체에 전송 */
 
 		// 카메라 위치값 쉐이더 프로그램에 전송
-		shader.setVec3("camPos", camera.Position);
+		pbrShader.setVec3("camPos", camera.Position);
 
 
 		/* 각 Sphere 에 적용할 모델행렬 계산 및 Sphere 렌더링 */
@@ -235,13 +235,13 @@ int main()
 		for (int row = 0; row < nrRows; ++row)
 		{
 			// 각 행의 구체끼리 동일한 metallic 값([0, 1] 범위 사이)을 계산하여 전송
-			shader.setFloat("metallic", (float)row / (float)nrRows);
+			pbrShader.setFloat("metallic", (float)row / (float)nrRows);
 
 			for (int col = 0; col < nrColumns; ++col)
 			{
 				// 각 열의 구체끼리 동일한 roughness 값([0.05, 1] 범위 사이)을 계산하여 전송
 				// roughness 값이 0.0 이면 약간 이상해보여서 최소값을 0.05 로 clamping 했다고 함!
-				shader.setFloat("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
+				pbrShader.setFloat("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
 
 				/*
 					원점을 기준으로 현재 순회중인 행과 열을 계산하고,
@@ -255,14 +255,14 @@ int main()
 				));
 
 				// 계산된 모델행렬을 쉐이더 프로그램에 전송
-				shader.setMat4("model", model);
+				pbrShader.setMat4("model", model);
 
 				/*
 					쉐이더 코드에서 노멀벡터를 World Space 로 변환할 때
 					사용할 노멀행렬을 각 구체의 계산된 모델행렬로부터 계산 후,
 					쉐이더 코드에 전송
 				*/
-				shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+				pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
 
 				// 구체 렌더링
 				renderSphere();
@@ -282,15 +282,15 @@ int main()
 			newPos = lightPositions[i];
 
 			// 광원 위치 및 색상 데이터를 쉐이더 프로그램에 전송
-			shader.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
-			shader.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+			pbrShader.setVec3("lightPositions[" + std::to_string(i) + "]", newPos);
+			pbrShader.setVec3("lightColors[" + std::to_string(i) + "]", lightColors[i]);
 
 			// 광원 위치 시각화를 위해 해당 위치에 구체 렌더링
 			model = glm::mat4(1.0f);
 			model = glm::translate(model, newPos);
 			model = glm::scale(model, glm::vec3(0.5f));
-			shader.setMat4("model", model);
-			shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
+			pbrShader.setMat4("model", model);
+			pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
 			renderSphere();
 		}
 
