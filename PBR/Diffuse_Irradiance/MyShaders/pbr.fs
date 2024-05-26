@@ -9,12 +9,11 @@ in vec3 Normal;
 
 /* OpenGL 에서 전송해 줄 uniform 변수들 선언 */
 
-// PBR Material 파라미터 값이 텍셀 단위로 저장된 텍스쳐 객체들의 sampler 변수 선언
-uniform sampler2D albedoMap;
-uniform sampler2D normalMap;
-uniform sampler2D metallicMap;
-uniform sampler2D roughnessMap;
-uniform sampler2D aoMap;
+// PBR Material 파라미터 값을 전송받는 uniform 변수 선언
+uniform vec3 albedo;
+uniform float metallic;
+uniform float roughness;
+uniform float ao;
 
 // 광원 정보를 전송받는 uniform 변수 선언
 uniform vec3 lightPositions[4];
@@ -25,44 +24,6 @@ uniform vec3 camPos;
 
 // Pi 상수 선언
 const float PI = 3.14159265359;
-
-// 노멀맵으로부터 노멀벡터를 추출하여 반환하는 함수 (하단 필기 참고)
-vec3 getNormalFromMap() {
-  // 노멀맵에서 tangent space 노멀벡터를 샘플링한 뒤, 해당 값의 범위를 [0.0, 1.0] -> [-1.0, 1.0] 으로 맵핑함
-  vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;
-
-  // 현재 프래그먼트와 이웃한 프래그먼트와의 WorldPos.x 의 변화량에 대한 WorldPos(world space 위치값) 의 변화량을 편미분하여 계산 -> Normal Mapping 챕터에서 Edge 벡터 E₁ 에 해당
-  vec3 Q1 = dFdx(WorldPos);
-
-  // 현재 프래그먼트와 이웃한 프래그먼트와의 WorldPos.y 의 변화량에 대한 WorldPos(world space 위치값) 의 변화량을 편미분하여 계산 -> Normal Mapping 챕터에서 Edge 벡터 E₂ 에 해당
-  vec3 Q2 = dFdy(WorldPos);
-
-  // 현재 프래그먼트와 이웃한 프래그먼트와의 TexCoords.x 의 변화량에 대한 TexCoords(uv 좌표값) 의 변화량을 편미분하여 계산 -> Normal Mapping 챕터에서 uv 좌표 변화량 (ΔU₁, ΔV₁) 에 해당
-  vec2 st1 = dFdx(TexCoords);
-
-  // 현재 프래그먼트와 이웃한 프래그먼트와의 TexCoords.y 의 변화량에 대한 TexCoords(uv 좌표값) 의 변화량을 편미분하여 계산 -> Normal Mapping 챕터에서 uv 좌표 변화량 (ΔU₂, ΔV₂) 에 해당
-  vec2 st2 = dFdy(TexCoords);
-
-  // world space 로 변환하여 보간된 노멀벡터 정규화
-  vec3 N = normalize(Normal);
-
-  // Normal Mapping 챕터에서 탄젠트 공간의 탄젠트 벡터 계산 공식과 거의 유사한 방식으로 계산
-  // (참고로, 여기서는 Q1, Q2 를 'world space 위치값'으로 계산했으니, '월드 공간의 탄젠트 벡터' 라고 봐야겠지?)
-  vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
-
-  // 노멀벡터와 탄젠트 벡터를 외적하여 비탄젠트 벡터 계산
-  vec3 B = -normalize(cross(N, T));
-
-  /*
-    world space 기준으로 정의된 3개의 직교 축인 
-    tangent, bitangent, normal 벡터들을 열 벡터로 꽂아넣어
-    3개의 world space 직교 벡터를 기저 벡터로 삼는 3*3 TBN 행렬 생성
-  */
-  mat3 TBN = mat3(T, B, N);
-
-  // tangent space 노멀벡터에 TBN 행렬을 곱해 world space 노멀벡터로 변환하여 반환
-  return normalize(TBN * tangentNormal);
-}
 
 /* Cook-Torrance BRDF 의 Specular term 계산에 필요한 함수들 구현 */
 
@@ -345,26 +306,6 @@ void main() {
 
   그래서, 이미 gamma correction 이 적용된 albedo 텍스쳐로부터 샘플링된 텍셀값에
   직접 2.2 제곱하여 linear space 색 공간으로 직접 변환하는 거라고 보면 됨. 
-*/
-
-/*
-  getNormalFromMap()
-
-  
-  노멀맵에서 샘플링한 tangent space 기준 노멀벡터를
-  world space 노멀벡터로 변환해 줌.
-
-  이 함수는 LearnOpenGL Normal Mapping 챕터에서 QuadMesh 의
-  tangent, bitangent 벡터를 직접 수동으로 계산하는 공식과 거의 유사함.
-
-  다만, 이 예제에서는 프래그먼트 쉐이더에서 실행하고 있는 만큼,
-  프래그먼트와 이웃한 프래그먼트 간의 변화량을 
-  dFdx(), dFdy() 내장함수로 편미분하여 계산한다는 차이가 있을 뿐..
-
-  자세한 내용은
-  - https://learnopengl.com/Advanced-Lighting/Normal-Mapping 
-  - https://github.com/jooo0922/opengl-study/blob/main/AdvancedLighting/Normal_Mapping/normal_mapping.cpp
-  참고
 */
 
 /*
