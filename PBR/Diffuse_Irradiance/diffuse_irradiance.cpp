@@ -234,8 +234,15 @@ int main()
 		// 각 행과 열을 이중 for-loop 로 순회하며 각 구체의 모델행렬 계산
 		for (int row = 0; row < nrRows; ++row)
 		{
+			// 각 행의 구체끼리 동일한 metallic 값([0, 1] 범위 사이)을 계산하여 전송
+			shader.setFloat("metallic", (float)row / (float)nrRows);
+
 			for (int col = 0; col < nrColumns; ++col)
 			{
+				// 각 열의 구체끼리 동일한 roughness 값([0.05, 1] 범위 사이)을 계산하여 전송
+				// roughness 값이 0.0 이면 약간 이상해보여서 최소값을 0.05 로 clamping 했다고 함!
+				shader.setFloat("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
+
 				/*
 					원점을 기준으로 현재 순회중인 행과 열을 계산하고,
 					spacing 간격 만큼 떨어트려 x, y 위치값을 구해 모델행렬 계산
