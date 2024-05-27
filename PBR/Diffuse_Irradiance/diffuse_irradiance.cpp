@@ -168,6 +168,26 @@ int main()
 	float spacing = 2.5;
 
 
+	/* Equirectangular HDR 파일 > Cubemap 변환 시 필요한 버퍼 생성 및 바인딩 */
+
+	// Equirectangular HDR 파일을 샘플링하여 렌더링할 FBO(FrameBufferObject) 객체 및 RBO(RenderBufferObject) 생성
+	unsigned int captureFBO;
+	unsigned int captureRBO;
+	glGenFramebuffers(1, &captureFBO);
+	glGenRenderbuffers(1, &captureRBO);
+
+	// 생성한 FBO 객체 및 RBO 객체 바인딩
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+
+	// RBO 객체 메모리 공간 할당 -> 단일 Renderbuffer 에 depth 값만 저장하는 데이터 포맷 지정(GL_DEPTH_COMPONENT24)
+	// Renderbuffer 해상도를 Cubemap 각 면의 해상도인 512 * 512 로 맞춤.
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+
+	// FBO 객체에 생성한 RBO 객체 attach
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+
+
 	/*
 		투영행렬을 렌더링 루프 이전에 미리 계산
 		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요!
