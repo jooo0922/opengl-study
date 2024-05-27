@@ -235,6 +235,37 @@ int main()
 	}
 
 
+	/* HDR 이미지 텍스쳐를 렌더링할 color buffer 로써 Cubemap 텍스쳐 객체 생성 */
+
+	// Cubemap 텍스쳐 생성 및 바인딩
+	unsigned int envCubemap;
+	glGenTextures(1, &envCubemap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+
+	// 반복문을 순회하며 Cubemap 각 6면에 이미지 데이터를 저장할 메모리 할당
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		/*
+			HDR 이미지 텍스쳐 생성할 때와 마찬가지로, Cubemap 텍스쳐 또한
+			[0, 1] 범위를 넘어선 HDR 이미지 데이터(data)들을 온전히 저장하기 위해,
+			
+			GL_RGB16F floating point(부동 소수점) 포맷으로 프레임버퍼의 내부 색상 포맷 지정
+			(하단 Floating point framebuffer 관련 필기 참고)
+		*/
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+	}
+
+	// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
+	// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
 	/*
 		투영행렬을 렌더링 루프 이전에 미리 계산
 		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요!
