@@ -130,6 +130,9 @@ int main()
 	// 구체 렌더링 시 적용할 PBR 쉐이더 객체 생성
 	Shader pbrShader("MyShaders/pbr.vs", "MyShaders/pbr.fs");
 
+	// 단위 큐브에 적용한 HDR 이미지를 Cubemap 버퍼에 렌더링하는 쉐이더 객체 생성
+	Shader equirectangularToCubemapShader("MyShaders/cubemap.vs", "MyShaders/equirectangular_to_cubemap.fs");
+
 
 	/* 각 구체에 공통으로 적용할 PBR Parameter 들을 쉐이더 프로그램에 전송 */
 
@@ -264,6 +267,42 @@ int main()
 	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+	/* Cubemap 텍스쳐의 각 면에 HDR 이미지 데이터를 렌더링할 때 적용할 행렬값 초기화 */
+
+	// 투영행렬 초기화 -> 투영행렬의 fov(시야각)은 반드시 90도로 설정 (관련 기법 하단 필기 참고)
+	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+
+	// HDR 이미지가 입혀진 단위 큐브의 각 면을 바라보도록 계산되는 6개의 LookAt 행렬(= 뷰 행렬) 초기화
+	// 유사한 기법을 이미 Point Shadow 챕터에서 사용했었음. https://github.com/jooo0922/opengl-study/blob/main/AdvancedLighting/Point_Shadows/point_shadows.cpp 참고
+	glm::mat4 captureViews[] =
+	{
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f))
+	};
+
+
+	/* equirectangularToCubemapShader 에 텍스쳐 및 행렬 전달 */
+
+	// equirectangularToCubemapShader 쉐이더 바인딩
+	equirectangularToCubemapShader.use();
+
+	// HDR 이미지 텍스쳐를 바인딩할 0번 texture unit 위치값 전송
+	equirectangularToCubemapShader.setInt("equirectangularMap", 0);
+
+	// fov(시야각)이 90로 고정된 투영행렬 전송
+	equirectangularToCubemapShader.setMat4("projection", captureProjection);
+
+	// HDR 이미지 텍스쳐를 바인딩할 0번 texture unit 활성화
+	glActiveTexture(GL_TEXTURE0);
+
+	// 0번 texture unit 에 HDR 이미지 텍스쳐 바인딩
+	glBindTexture(GL_TEXTURE_2D, hdrTexture);
 
 
 	/*
@@ -943,4 +982,30 @@ unsigned int loadTexture(const char* path)
 	따라서, GL_RGB16F, GL_RGBA16F 같이
 	한 컴포넌트 당 16 bits 정도의 메모리를 예약해서 사용하는
 	적당한 크기의 색상 포맷으로 사용하는 게 좋겠지!
+*/
+
+/*
+	Cubemap 의 fov(시야각)은 왜 90도여야 할까?
+
+
+	즉, 큐브맵으로 HDR 이미지를 변환하려면,
+
+	큐브맵의 각 6면의 방향으로 바라본 시점에서
+	각각의 HDR 이미지 데이터를 샘플링하여 cubemap 텍스쳐 객체 버퍼에 기록해야겠지?
+
+	이때, shadow map 큐브맵의 각 6면이 서로 만나는
+	모서리 지점에서 소위 '아다리가 딱딱 맞아 떨어지려면',
+
+	조명 원점에서 각 6면을 바라보는 시점에서의 원근 투영이
+	90도의 fov(== 시야각)로 설정되어야 함.
+
+	그래야 '><' 요런 모양으로 '앞면/뒷면/오른쪽 면/왼쪽 면'
+	(또는 '윗면/아랫면/오른쪽 면/왼쪽 면' 또는 '앞면/뒷면/윗면/아랫면') 을
+	투영변환할 때의 frustum 의 시야각이 '90 + 90 + 90 + 90 = 360' 으로 딱 떨어져서
+
+	각 면을 바라보면서 투영변환된 shadow map 을
+	큐브맵 버퍼에 기록해서 나중에 맞춰보면
+
+	각 면이 만나는 모서리 지점이
+	퍼즐처럼 딱 맞아 떨어져서 이어지는 걸 볼 수 있음!
 */
