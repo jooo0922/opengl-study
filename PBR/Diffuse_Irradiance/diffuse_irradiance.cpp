@@ -160,7 +160,7 @@ int main()
 	// skybox 쉐이더 프로그램 바인딩
 	backgroundShader.use();
 
-	// HDR 이미지 데이터가 렌더링된 Cubemap 텍스쳐 전송
+	// HDR 이미지 데이터가 렌더링된 큐브맵 텍스쳐를 바인딩할 0번 texture unit 위치값 전송
 	backgroundShader.setInt("environmentMap", 0);
 
 
@@ -497,6 +497,22 @@ int main()
 			pbrShader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(model))));
 			renderSphere();
 		}
+
+
+		/* skybox 렌더링 */
+
+		// skybox 쉐이더 프로그램 바인딩 및 현재 카메라의 view 행렬 전송
+		backgroundShader.use();
+		backgroundShader.setMat4("view", view);
+
+		// HDR 이미지 데이터가 렌더링된 큐브맵 텍스쳐를 바인딩할 0번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// skybox 에 적용할 큐브맵 텍스쳐 바인딩
+		glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+
+		// skybox 렌더링
+		renderCube();
 
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
