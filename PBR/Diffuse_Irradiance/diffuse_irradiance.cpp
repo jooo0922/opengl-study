@@ -139,6 +139,9 @@ int main()
 	// 단위 큐브에 적용한 HDR 이미지를 Cubemap 버퍼에 렌더링하는 쉐이더 객체 생성
 	Shader equirectangularToCubemapShader("MyShaders/cubemap.vs", "MyShaders/equirectangular_to_cubemap.fs");
 
+	// 배경에 적용할 skybox 를 렌더링하는 쉐이더 객체 생성
+	Shader backgroundShader("MyShaders/background.vs", "MyShaders/background.fs");
+
 
 	/* 각 구체에 공통으로 적용할 PBR Parameter 들을 쉐이더 프로그램에 전송 */
 
@@ -150,6 +153,15 @@ int main()
 
 	// 각 프래그먼트의 ambient occlusion(환경광 차폐) factor 를 1로 지정 -> 즉, 환경광이 차폐되는 영역이 없음!
 	pbrShader.setFloat("ao", 1.0f);
+
+
+	/* skybox 에 적용할 uniform 변수들을 쉐이더 프로그램에 전송 */
+
+	// skybox 쉐이더 프로그램 바인딩
+	backgroundShader.use();
+
+	// HDR 이미지 데이터가 렌더링된 Cubemap 텍스쳐 전송
+	backgroundShader.setInt("environmentMap", 0);
 
 
 	/* 광원 데이터 초기화 */
@@ -347,11 +359,17 @@ int main()
 	// 카메라의 zoom 값으로부터 투영 행렬 계산
 	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-	// 변환행렬을 전송할 쉐이더 프로그램 바인딩
+	// 변환행렬을 전송할 PBR 쉐이더 프로그램 바인딩
 	pbrShader.use();
 
 	// 계산된 투영행렬을 쉐이더 프로그램에 전송
 	pbrShader.setMat4("projection", projection);
+
+	// 변환행렬을 전송할 skybox 쉐이더 프로그램 바인딩
+	backgroundShader.use();
+
+	// 계산된 투영행렬을 쉐이더 프로그램에 전송
+	backgroundShader.setMat4("projection", projection);
 
 
 	// while 문으로 렌더링 루프 구현
