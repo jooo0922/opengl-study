@@ -124,8 +124,14 @@ int main()
 		return -1;
 	}
 
+	/* OpenGL 전역 상태값 설정 */
+
 	// Depth Test(깊이 테스팅) 상태를 활성화함
 	glEnable(GL_DEPTH_TEST);
+
+	// 깊이 테스트 함수 변경 (skybox 렌더링 목적)
+	glDepthFunc(GL_LEQUAL);
+
 
 	// 구체 렌더링 시 적용할 PBR 쉐이더 객체 생성
 	Shader pbrShader("MyShaders/pbr.vs", "MyShaders/pbr.fs");
@@ -1036,4 +1042,23 @@ unsigned int loadTexture(const char* path)
 
 	각 면이 만나는 모서리 지점이
 	퍼즐처럼 딱 맞아 떨어져서 이어지는 걸 볼 수 있음!
+*/
+
+/*
+	skybox 렌더링 시, 깊이 테스트 함수를 GL_LEQUAL 로 설정하는 이유?
+
+
+	skybox.vs 파일에서 관련 필기를 참고해보면,
+	skybox 는 렌더링 최적화를 위해 깊이값이 모두 1 로 계산될 것임.
+
+	그런데, depth buffer 의 초기값 또한 항상 1 로 설정되기 때문에,
+	깊이테스트 기본 모드인 GL_LESS 로 수행하면,
+
+	skybox 의 깊이값과 depth buffer 의 초기값이 동일하여
+	skybox 의 모든 프래그먼트들이 discard 되어버리는 문제가 발생함.
+
+	이를 방지하기 위해,
+	깊이 테스트 모드를 GL_LEQUAL 로 설정함으로써,
+	현재 depth buffer 의 값보다 '작거나 같으면'
+	깊이 테스트를 통과할 수 있도록 변경한 것임!
 */
