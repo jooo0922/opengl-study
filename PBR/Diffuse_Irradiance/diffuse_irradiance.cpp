@@ -372,6 +372,18 @@ int main()
 	backgroundShader.setMat4("projection", projection);
 
 
+	/* 기본 프레임버퍼 렌더링 루프 진입 이전에 해상도 복구 */
+
+	// 해상도 값을 담을 변수 선언 (원래는 포인터 변수로 선언해야 함.)
+	int scrWidth, scrHeight;
+
+	// 현재 GLFWwindow 객체의 프레임버퍼 해상도를 두 int 타입 포인터 변수에 저장 -> 함수 외부 변수의 주소값을 넘겨줬으니, 포인터와 마찬가지!
+	glfwGetFramebufferSize(window, &scrWidth, &scrHeight);
+
+	// 기본 프레임버퍼 해상도 복구
+	glViewport(0, 0, scrWidth, scrHeight);
+
+
 	// while 문으로 렌더링 루프 구현
 	while (!glfwWindowShouldClose(window))
 	{
