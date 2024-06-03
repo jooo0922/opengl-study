@@ -542,7 +542,7 @@ int main()
 				model = glm::translate(model, glm::vec3(
 					(float)(col - (nrColumns / 2)) * spacing,
 					(float)(row - (nrRows / 2)) * spacing,
-					0.0f
+					-2.0f
 				));
 
 				// 계산된 모델행렬을 쉐이더 프로그램에 전송
