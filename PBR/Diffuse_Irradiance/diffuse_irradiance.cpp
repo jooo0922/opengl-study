@@ -151,6 +151,9 @@ int main()
 	// PBR 쉐이더 프로그램 바인딩
 	pbrShader.use();
 
+	// irradiance map 큐브맵 텍스쳐를 바인딩할 0번 texture unit 위치값 전송
+	pbrShader.setInt("irradianceMap", 0);
+
 	// 표면 밖으로 빠져나온 diffuse light 색상값을 쉐이더 프로그램에 전송
 	pbrShader.setVec3("albedo", 0.5f, 0.0f, 0.0f);
 
@@ -503,6 +506,15 @@ int main()
 
 		// 카메라 위치값 쉐이더 프로그램에 전송
 		pbrShader.setVec3("camPos", camera.Position);
+
+
+		/* 미리 계산된 irradiance 가 저장되어 있는 irradianceMap 을 바인딩 */
+
+		// irradianceMap 이 렌더링된 큐브맵 텍스쳐를 바인딩할 0번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE0);
+
+		// irradianceMap 큐브맵 텍스쳐 바인딩
+		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
 
 
 		/* 각 Sphere 에 적용할 모델행렬 계산 및 Sphere 렌더링 */
