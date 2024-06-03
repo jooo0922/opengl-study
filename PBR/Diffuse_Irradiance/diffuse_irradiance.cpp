@@ -354,6 +354,50 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+	/* diffuse term 적분식의 결과값(= irradiance)를 렌더링할 color buffer 로써 Cubemap 텍스쳐 객체 생성 */
+
+	// Cubemap 텍스쳐 생성 및 바인딩
+	unsigned int irradianceMap;
+	glGenTextures(1, &irradianceMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+
+	// 반복문을 순회하며 Cubemap 각 6면에 이미지 데이터를 저장할 메모리 할당
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		/*
+			[0, 1] 범위를 넘어선 HDR 이미지 데이터(data)들을 온전히 저장하기 위해,
+			GL_RGB16F floating point(부동 소수점) 포맷으로 프레임버퍼의 내부 색상 포맷 지정.
+
+			또한, irradiance map 은 HDR 큐브맵을 convolution 하여 만든 결과물이 저장되므로,
+			HDR 큐브맵을 흐릿하게 blur 처리한 것처럼 보임.
+
+			-> 그렇다면, 어차피 흐릿해지는 irradiance cubemap 을 만들기 위해
+			굳이 고해상도 큐브맵은 필요하지 않겠지.
+
+			그래서, irradiance Cubemap 버퍼의 각 면의 해상도를 32 * 32 정도로 낮게 설정함.
+		*/
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+	}
+
+	// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
+	// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// irradiance map 을 렌더링할 때 사용할 FBO 객체 및 RBO 객체 바인딩
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+
+	// RBO 객체 메모리 공간 할당 -> 단일 Renderbuffer 에 depth 값만 저장하는 데이터 포맷 지정(GL_DEPTH_COMPONENT24)
+	// Renderbuffer 해상도를 Cubemap 각 면의 해상도인 32 * 32 로 맞춤.
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+
+
 	/*
 		투영행렬을 렌더링 루프 이전에 미리 계산
 		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요!
