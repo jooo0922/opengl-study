@@ -481,7 +481,7 @@ int main()
 		processInput(window);
 
 		// 현재까지 저장되어 있는 프레임 버퍼(그 중에서도 색상 버퍼) 초기화하기
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
 		// 색상 버퍼 및 깊이 버퍼 초기화 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
