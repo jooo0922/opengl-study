@@ -398,6 +398,34 @@ int main()
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
 
 
+	/* 렌더링 루프 진입 이전에 Cubemap 버퍼에 irradiance map 렌더링 */
+
+	// Cubemap 버퍼의 각 면의 해상도 32 * 32 에 맞춰 viewport 해상도 설정
+	glViewport(0, 0, 32, 32);
+
+	// Cubemap 버퍼의 각 면을 attach 할 FBO 객체 바인딩
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+
+	// irradiance map 을 렌더링할 단위 큐브의 각 면을 바라보도록 카메라를 회전시키며 6번 렌더링
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		// 쉐이더 객체에 단위 큐브의 각 면을 바라보도록 계산하는 뷰 행렬 전송
+		irradianceShader.setMat4("view", captureViews[i]);
+
+		// Cubemap 버퍼의 각 면을 현재 바인딩된 FBO 객체에 돌아가며 attach
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap, 0);
+
+		// 단위 큐브를 attach 된 Cubemap 버퍼에 렌더링하기 전, 색상 버퍼와 깊이 버퍼를 깨끗하게 비워줌
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// 단위 큐브 렌더링 -> irradianceShader 에서 적분식을 풀면서 각 프래그먼트 지점의 irradiance 를 Cubemap 버퍼에 저장함.
+		renderCube();
+	}
+
+	// Cubemap 버퍼에 렌더링 완료 후, 기본 프레임버퍼로 바인딩 초기화
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 	/*
 		투영행렬을 렌더링 루프 이전에 미리 계산
 		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요!
