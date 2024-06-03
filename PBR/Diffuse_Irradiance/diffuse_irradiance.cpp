@@ -139,6 +139,9 @@ int main()
 	// 단위 큐브에 적용한 HDR 이미지를 Cubemap 버퍼에 렌더링하는 쉐이더 객체 생성
 	Shader equirectangularToCubemapShader("MyShaders/cubemap.vs", "MyShaders/equirectangular_to_cubemap.fs");
 
+	// HDR 큐브맵을 샘플링하여 계산한 diffuse term 적분식의 결과값(= irradiance)을 새로운 Cubemap 버퍼에 렌더링하는 쉐이더 객체 생성
+	Shader irradianceShader("MyShaders/cubemap.vs", "MyShaders/irradiance_convolution.fs");
+
 	// 배경에 적용할 skybox 를 렌더링하는 쉐이더 객체 생성
 	Shader backgroundShader("MyShaders/background.vs", "MyShaders/background.fs");
 
