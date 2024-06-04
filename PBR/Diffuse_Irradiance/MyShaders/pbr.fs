@@ -233,7 +233,49 @@ void main() {
   }
 
   // 환경광(ambient lighting) 계산 -> IBL 챕터에서 이 환경광이 environment lighting 으로 대체될 것임. -> 하단 필기 참고
-  vec3 ambient = vec3(0.03) * albedo * ao;
+  // vec3 ambient = vec3(0.03) * albedo * ao;
+
+  /* 상수값을 사용하던 환경광(ambient lighting) 을 IBL 로 대체하여 계산 (하단 필기 참고) */
+
+  /*
+    indirect lighting(간접광 또는 IBL)은 노멀벡터 N 을 중심으로 한 반구 영역 전체에 걸쳐서 
+    무수히 많은 incoming lights 가 들어오므로,
+
+    direct lighting(직접광)과 달리 fresnelSchlick() 함수로 반사율을 계산할 때,
+    조명 벡터(Wi)와 뷰 벡터(Wo) 사이의 하프 벡터(H) 를 사용할 수 없음.
+
+    Wi 가 무수히 많기 때문에, 단일한 하프 벡터 하나를 딱 정해서 내적 계산에 사용하기가 어려움.
+
+    이를 위해, 현재 surface point P 에 대한 노멀 벡터(N)과 뷰 벡터(Wo 또는 V) 간의
+    내적 계산으로 대체하여 사용하기로 함.
+  */
+  vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+
+  // 에너지 보존 법칙에 따라, 빛이 굴절되는 비율은 전체 비율 1 에서 반사되는 비율을 빼서 계산.
+  vec3 kD = 1.0 - kS;
+
+  // metallic 값에 따라 빛의 굴절률을 조정함 (관련 필기 하단 참고)
+  kD *= 1.0 - metallic;
+
+  // 현재 surface point P 지점의 방향벡터 N 을 사용하여 P 지점에 도달하는 모든 indirect lighting 의 총량인 irradiance 를 읽어옴
+  vec3 irradiance = texture(irradianceMap, N).rgb;
+
+  /*
+    반사율 방정식의 diffuse term 을 계산한 irradiance 에다가 
+    LearnOpenGL 본문의 이중시그마 식에서 c 에 해당하는 난반사 색상 albedo 를 곱함.
+
+    이 c 값은 이론적으로 보자면,
+    Environment map 에 존재하는 주변 물체들에서 한번 굴절되었다가 빠져나온 '난반사(diffuse term)'의
+    색상값만을 별도의 계산 없이 단순한 상수값으로 정의한 것이라고 보면 될 것임!
+  */
+  vec3 diffuse = irradiance * albedo;
+
+  /*
+    LearnOpenGL 본문의 이중시그마 식에서 kD 에 해당하는 굴절율을 마저 곱해주고,
+    ambient occlusion factor 를 곱해서 환경광이 차폐되는 영역까지 고려하여
+    IBL 을 사용한 최종 ambient lighting 계산 완료! 
+  */
+  vec3 ambient = (kD * diffuse) * ao;
 
   // 현재 surface point 지점에서 최종적으로 반사되는 조명값 계산
   vec3 color = ambient + Lo;
@@ -373,4 +415,16 @@ void main() {
   따라서, 환경광이 굴절되어서 표면 밖으로 빠져나오는 라이팅을 계산하려면, 
   reflectance equation 의 diffuse term 에서 Kd * albedo 로 곱해줬던 것과 마찬가지로, 
   환경광의 조명값 vec3(0.03) 에 albedo 를 곱해줘야겠지!
+*/
+
+/*
+  ambient lighting (환경광) 을 IBL 로 교체하는 이유
+
+
+  IBL 에서는 Environment map 내의 각 texel 들을
+  주변 물체들로부터 반사된 간접광(indirect lighting)으로 가정하기 때문에,
+
+  이러한 Environment map 을 convolution 하여 만들어 낸
+  각 surface point P 에 대한 irradiance 의 총량을 계산하여 저장한
+  큐브맵 버퍼인 irradiance map 로부터 샘플링한 값 자체가 곧 환경광(ambient lighting)이라고 볼 수 있겠지!
 */
