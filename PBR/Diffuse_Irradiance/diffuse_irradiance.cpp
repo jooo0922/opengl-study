@@ -401,6 +401,24 @@ int main()
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
 
 
+	/* irradianceShader 에 텍스쳐 및 행렬 전달 */
+
+	// irradianceShader 쉐이더 바인딩
+	irradianceShader.use();
+
+	// HDR 큐브맵 텍스쳐를 바인딩할 0번 texture unit 위치값 전송
+	irradianceShader.setInt("environmentMap", 0);
+
+	// fov(시야각)이 90로 고정된 투영행렬 전송
+	irradianceShader.setMat4("projection", captureProjection);
+
+	// HDR 큐브맵 텍스쳐를 바인딩할 0번 texture unit 활성화
+	glActiveTexture(GL_TEXTURE0);
+
+	// 0번 texture unit 에 HDR 큐브맵 텍스쳐 바인딩
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+
+
 	/* 렌더링 루프 진입 이전에 Cubemap 버퍼에 irradiance map 렌더링 */
 
 	// Cubemap 버퍼의 각 면의 해상도 32 * 32 에 맞춰 viewport 해상도 설정
