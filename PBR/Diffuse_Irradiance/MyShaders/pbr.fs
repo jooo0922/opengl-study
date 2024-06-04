@@ -15,6 +15,9 @@ uniform float metallic;
 uniform float roughness;
 uniform float ao;
 
+// diffuse term 에 대한 irradiance 계산 결과가 저장된 큐브맵 텍스쳐(= irradiance map) 선언
+uniform samplerCube irradianceMap;
+
 // 광원 정보를 전송받는 uniform 변수 선언
 uniform vec3 lightPositions[4];
 uniform vec3 lightColors[4];
