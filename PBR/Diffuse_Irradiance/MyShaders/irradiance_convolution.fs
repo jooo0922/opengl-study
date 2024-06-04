@@ -54,10 +54,10 @@ void main() {
   float nrSamples = 0.0;
 
   // 반구 영역의 방위각(zenith angle) 을 sampleDelta 간격으로 2PI(360도)까지 순회
-  for(float phi = 0; phi < 2.0 * PI; phi += sampleDelta) {
+  for(float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta) {
 
     // 반구 영역의 고도각(polar azimuth) 을 sampleDelta 간격으로 PI / 2(90도)까지 순회
-    for(float theta = 0; theta < 0.5 * PI; theta += sampleDelta) {
+    for(float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta) {
       // 현재 순회 중인 구면좌표계 -> surface point P 지점을 원점으로 하는 tangent space 기준의 방향벡터로 변환 (자세한 설명 하단 참고)
       vec3 tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
 
