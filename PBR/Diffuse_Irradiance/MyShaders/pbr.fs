@@ -144,6 +144,35 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+/*
+  roughness 파라미터가 주입된 Fresnel Equation
+
+  이론적으로 보자면, 프레넬 반사율은 표면의 거칠기(roughness)에 간접적으로 영향을 받게 됨.
+  왜냐하면, 표면이 거칠수록 빛이 반사되는 분포가 더 넓어지기 때문에, 
+  즉, 빛이 더 다양한 방향으로 반사되기 때문에, 
+  Wo 방향(카메라 방향)으로 반사되어 들어오는 비율이 줄어들겠지!
+
+  direct lighting(직접광) 에서 specular term 계산 시에는
+  NDF, G 항에 의해 표면의 roughness 가 어느 정도 반영되었지만,
+
+  IBL(indirect lighting(간접광)) 의 diffuse term 만 계산 시에는
+  roughness 파라미터와 무관하게 프레넬 반사율을 계산하므로,
+  표면의 거칠기와 무관하게 상대적으로 높은 반사율이 적용되어 버림.
+
+  특히, non-metallic surface 에서 roughness 파라미터가 높을 때,
+  표면의 가장자리(surface edges) 부분이 티가 날 정도로 희게 빛이 남. (-> LearnOpenGL 본문 이미지 참고)
+  
+  -> 그러나, 물리적으로 더 정확하게 렌더링하려면,
+  roughness 가 클수록, 즉, 표면이 더 거칠수록 프레넬 반사율은 줄어들어야 함!
+
+  이를 해결하기 위해, 기존 fresnelSchlick() 함수에
+  roughness 파라미터를 매개변수를 통해 주입하고,
+  표면의 거칠기에 의해 프레넬 반사율이 보정될 수 있도록 기존 함수를 약간 수정한 것!
+*/
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+  return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 void main() {
   /* 일반적인 조명 알고리즘에 필수적인 방향 벡터들 계산 */
 
@@ -248,8 +277,11 @@ void main() {
 
     이를 위해, 현재 surface point P 에 대한 노멀 벡터(N)과 뷰 벡터(Wo 또는 V) 간의
     내적 계산으로 대체하여 사용하기로 함.
+
+    + 표면의 거칠기에 따른 프레넬 반사율 보정을 위해, 
+    roughness 값을 주입한 버전의 Fresnel Equation 함수를 사용함
   */
-  vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+  vec3 kS = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
   // 에너지 보존 법칙에 따라, 빛이 굴절되는 비율은 전체 비율 1 에서 반사되는 비율을 빼서 계산.
   vec3 kD = 1.0 - kS;
