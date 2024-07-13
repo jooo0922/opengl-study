@@ -17,7 +17,67 @@ const float PI = 3.14159265359;
 
 float RadicalInverse_VdC(uint bits);
 vec2 Hammersley(uint i, uint N);
-vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness);
+
+/*
+  반구 영역 내에 존재하는 모든 sample vector 중에서
+  specular lobe 영역 내에 들어오는 반사 벡터들만 선별적으로 골라 sample vector 를 생성하고,
+  그것들만 가지고서 기댓값을 계산하는 Importance Sampling 함수 구현
+
+  (노션 IBL 필기 참고)
+*/
+vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {
+  // 시각적으로 더 나은 결과물을 반영하기 위해 Epic Games 엔진에서 사용 중인 Squared roughness 값을 사용함
+  float a = roughness * roughness;
+
+  // remapping 된 roughness 값 a 와 균일한 랜덤 분포로부터 생성된 random sample 벡터인 Xi 를 가지고서 구면좌표계 phi, theta 계산
+  /*
+    참고로, roughness 값에 따른 speucular lobe 영역 내에 존재하는 sample vector 의 
+    구면좌표계를 계산하기 위해, BRDF 함수에서 NDF 항의 계산 공식을 일부 차용했다고 함.
+    
+    -> 변환 공식의 원리 자체가 NDF 함수에 기반하므로, NDF 함수를 깊이 팔 게 아닌 이상
+    굳이 자세히 이해하려고 들 필요는 없을 듯...
+
+    대신, sinTheta 구하는 공식은 간단함.
+
+    cos^2 + sin^2 = 1 이라는 삼각함수 기본 성질로부터 유도하여 (게임수학 p.118 참고)
+
+    sin^2 = 1 - cos^2,
+    sqrt(sin^2) = sqrt(1 - cos^2),
+    sin = sqrt(1 - cos^2) 로 도출된 공식을 코드화한 것임!
+  */
+  float phi = 2.0 * PI * Xi.x;
+  float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+  float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+  /*
+    Xi 및 roughness 로부터 계산된 구면좌표계 -> surface point P 지점을 원점으로 하는 tangent space 기준의 방향벡터로 변환 
+    irradiance_convolution.fs 에서 동일한 방식의 변환을 사용하고 있음. 해당 코드 참고할 것!
+  */
+  vec3 H;
+  H.x = cos(phi) * sinTheta;
+  H.y = sin(phi) * sinTheta;
+  H.z = cosTheta;
+
+  /*
+    tangent space 기준으로 정의된
+    specular lobe 영역 내의 하프벡터 H 를 world space 로 변환하기 위해,
+    
+    현재 tangent space 의 기저 축(Tangent, Bitangent, Normal)을
+    world space 로 변환하여 계산해 둠.
+
+    이때, 이미 N 자체가 world space 기준으로 계산되어 있으므로,
+    world space 업 벡터인 up 과 외적하여 나머지 기저 축 또한 
+    world space 기준으로 계산할 수 있음!
+  */
+  vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  vec3 tangent = normalize(cross(up, N));
+  vec3 bitangent = cross(N, tangent);
+
+  // tangent space 기준 하프벡터 H 를 world space 로 변환 (자세한 설명 하단 참고)
+  vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+
+  return normalize(sampleVec);
+}
 
 void main() {
   /*
