@@ -502,6 +502,24 @@ int main()
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 
+	/* prefilterShader 에 텍스쳐 및 행렬 전달 */
+
+	// prefilterShader 쉐이더 바인딩
+	prefilterShader.use();
+
+	// HDR 큐브맵 텍스쳐를 바인딩할 0번 texture unit 위치값 전송
+	prefilterShader.setInt("environmentMap", 0);
+
+	// fov(시야각)이 90로 고정된 투영행렬 전송
+	prefilterShader.setMat4("projection", captureProjection);
+
+	// HDR 큐브맵 텍스쳐를 바인딩할 0번 texture unit 활성화
+	glActiveTexture(GL_TEXTURE0);
+
+	// 0번 texture unit 에 HDR 큐브맵 텍스쳐 바인딩
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+
+
 	/*
 		투영행렬을 렌더링 루프 이전에 미리 계산
 		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요!
@@ -1236,14 +1254,14 @@ unsigned int loadTexture(const char* path)
 	이때, shadow map 큐브맵의 각 6면이 서로 만나는
 	모서리 지점에서 소위 '아다리가 딱딱 맞아 떨어지려면',
 
-	조명 원점에서 각 6면을 바라보는 시점에서의 원근 투영이
+	카메라 위치에서 각 6면을 바라보는 시점에서의 원근 투영이
 	90도의 fov(== 시야각)로 설정되어야 함.
 
 	그래야 '><' 요런 모양으로 '앞면/뒷면/오른쪽 면/왼쪽 면'
 	(또는 '윗면/아랫면/오른쪽 면/왼쪽 면' 또는 '앞면/뒷면/윗면/아랫면') 을
 	투영변환할 때의 frustum 의 시야각이 '90 + 90 + 90 + 90 = 360' 으로 딱 떨어져서
 
-	각 면을 바라보면서 투영변환된 shadow map 을
+	각 면을 바라보면서 투영변환된 Cubemap 을
 	큐브맵 버퍼에 기록해서 나중에 맞춰보면
 
 	각 면이 만나는 모서리 지점이
