@@ -133,6 +133,8 @@ int main()
 	glDepthFunc(GL_LEQUAL);
 
 
+	/* PBR 구현에 필요한 쉐이더 객체 생성 및 컴파일 */
+
 	// 구체 렌더링 시 적용할 PBR 쉐이더 객체 생성
 	Shader pbrShader("MyShaders/pbr.vs", "MyShaders/pbr.fs");
 
@@ -141,6 +143,12 @@ int main()
 
 	// HDR 큐브맵을 샘플링하여 계산한 diffuse term 적분식의 결과값(= irradiance)을 새로운 Cubemap 버퍼에 렌더링하는 쉐이더 객체 생성
 	Shader irradianceShader("MyShaders/cubemap.vs", "MyShaders/irradiance_convolution.fs");
+
+	/*
+		HDR 큐브맵을 샘플링하여 계산한 split sum approximation 의 첫 번째 적분식의 결과값(= pre-filtered env map)을
+		roughness level 에 따라 5단계의 mipmap 메모리 공간이 할당된 Cubemap 버퍼에 렌더링하는 쉐이더 객체 생성
+	*/
+	Shader prefilterShader("MyShaders/cubemap.vs", "MyShaders/prefilter.fs");
 
 	// 배경에 적용할 skybox 를 렌더링하는 쉐이더 객체 생성
 	Shader backgroundShader("MyShaders/background.vs", "MyShaders/background.fs");
