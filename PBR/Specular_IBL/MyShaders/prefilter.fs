@@ -9,100 +9,118 @@ in vec3 WorldPos;
 // 큐브맵으로 변환된 HDR 이미지 텍스쳐 선언
 uniform samplerCube environmentMap;
 
+// mip level 에 따라 5단계로 나누어져 전송될 roughness 값
+uniform float roughness;
+
 // PI 상수값 정의
 const float PI = 3.14159265359;
+
+float RadicalInverse_VdC(uint bits);
+vec2 Hammersley(uint i, uint N);
+vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness);
 
 void main() {
   /*
     정규화한 각 프래그먼트의 world space 방향벡터를
     surface point P 의 방향벡터 N (= 반구 영역의 방향벡터) 로 사용함.
 
-    -> 나중에 pbrShader 에서 irradiance map 로부터 irradiance 값을 샘플링할 때,
+    -> 나중에 pbrShader 에서 pre-filtered env map 로부터  
+    split sum approximation 의 첫 번째 적분식의 결과값을 샘플링할 때,
     각 프래그먼트(surface point)에 대해 이 방향벡터를 사용할 것임!
   */
   vec3 N = normalize(WorldPos);
 
-  /* surface point P 지점으로 들어오는 irradiance 총량을 diffuse term 적분식으로 계산 */
+  /*
+    카메라 view vector 를 현재 surface point P 의 방향벡터 N 과 같다고 가정함.
 
-  // diffuse term 적분식을 이산적인(discrete) 리만 합(Riemann sum)으로 계산할 때, irradiance 결과값을 누산할 변수 초기화 (노션 IBL 관련 필기 참고)
-  vec3 irradiance = vec3(0.0);
+    -> 즉, 카메라가 surface point P 바로 위에서 수직 방향으로 바라보고 있다고 가정하고,
+    specular lobe 영역 내에 존재하는 Half vector 를 기준으로 이 view vector 의 
+    반사벡터를 역추적한 입사광 벡터 L 을 계산함.
+    
+    TODO : 이 부분은 확실하지 않으므로, 나중에 다시 문서를 읽어보거나 구글링해서 정확한 내용을 찾아볼 것.
+  */
+  vec3 V = N;
+
+  /* surface point P 지점에서 specular lobe 영역으로 반사되는 빛들의 총합을 Monte Carlo 적분으로 계산 */
+
+  // Monte Carlo 적분의 샘플링 개수를 uint 상수값으로 정의
+  const uint SAMPLE_COUNT = 1024u;
+
+  // split sum approximation 의 첫 번째 적분식을 계산할 때, 결과값을 누산할 변수 초기화 (노션 IBL 관련 필기 참고)
+  vec3 prefilteredColor = vec3(0.0);
 
   /*
-    surface point P 를 원점으로 하는 tangent space 기준으로 정의된
-    tangentSample 방향벡터를 world space 로 변환하기 위해,
-    
-    현재 tangent space 의 기저 축(Tangent, Bitangent, Normal)을
-    world space 로 변환하여 계산해 둠.
-
-    right -> world space 기준 Tangent 기저 축
-    up -> world space 기준 Bitangent 기저 축
-    N -> world space 기준 Normal 기저 축
-
-    이때, 이미 N 자체가 world space 기준으로 계산되어 있으므로,
-    world space 업 벡터인 up 과 외적하여 나머지 기저 축 또한 
-    world space 기준으로 계산할 수 있음!
+    specular lobe 영역 내의 반사된 빛의 총합을 Monte Carlo 적분으로 계산할 때,
+    기댓값 E 를 계산하는 시그마 계산식에서 샘플링 개수 N 에 대하여 평균을 구하는 
+    1/N 에 해당하는 역할을 수행할 가중치 값 초기화 (노션 IBL 관련 필기 참고)
   */
-  vec3 up = vec3(0.0, 1.0, 0.0);
-  vec3 right = normalize(cross(up, N));
-  up = normalize(cross(N, right));
+  float totalWeight = 0.0;
 
-  // 반구 영역의 고도각(polar azimuth)과 방위각(zenith angle)을 이산적으로(discretely) 순회할 각도 간격 정의 (노션 IBL 관련 필기 참고)
-  // -> 이 간격이 작을수록 더 정확한 적분(리만 합(Riemann sum))을 계산할 수 있음. 즉, 더 정확한 irradiance 계산 가능
-  float sampleDelta = 0.025;
+  // Monte Carlo 적분의 샘플링 개수만큼 for-loop 를 순회하며 기댓값 E 에 대한 시그마 식을 이산적(discretely)으로 계산
+  for(uint i = 0u; i < SAMPLE_COUNT; i++) {
 
-  // LearnOpenGL 본문의 반구 영역의 고도각과 방위각에 대한 이중 시그마 식의 전체 항 개수를 누산해나갈 변수 초기화 -> 즉, 시그마 식의 n1n2 에 해당
-  float nrSamples = 0.0;
+    // low-discrepancy sequence 를 생성하는 알고리즘 중 하나인 Hammersley sequence 함수를 사용하여 uniformly random 한 sample 추출 (노션 IBL 관련 필기 참고)
+    // 이처럼 저불일치 시퀀스 분포로부터 샘플링하여 푸는 MC 적분을 Quasi-Monte Carlo 라고 부름!
+    vec2 Xi = Hammersley(i, SAMPLE_COUNT);
 
-  // 반구 영역의 방위각(zenith angle) 을 sampleDelta 간격으로 2PI(360도)까지 순회
-  for(float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta) {
+    // low-discrepancy sequence 로부터 얻은 랜덤한 vec2 값으로 표면의 roughness 값에 따라 정의되는 specular lobe 범위 내에 존재하는 하프벡터 H 계산 
+    vec3 H = ImportanceSampleGGX(Xi, N, roughness);
 
-    // 반구 영역의 고도각(polar azimuth) 을 sampleDelta 간격으로 PI / 2(90도)까지 순회
-    for(float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta) {
-      // 현재 순회 중인 구면좌표계 -> surface point P 지점을 원점으로 하는 tangent space 기준의 방향벡터로 변환 (자세한 설명 하단 참고)
-      vec3 tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+    // 현재 surface point P 에 대한 하프벡터 H (specular lobe 범위 내에 존재) 를 기준으로, 카메라 view vector V 에 대한 반사벡터 (즉, 반사벡터의 반사벡터) 역추적
+    // 이 공식은 자세히 들여다보면, 결국 반사벡터를 계산하는 GLSL 내장함수 reflect() 함수의 내부 구현부와 동일함을 알 수 있음!
+    vec3 L = normalize(2.0 * dot(V, H) * H - V);
 
-      // tangent space 기준 샘플링 방향벡터를 world space 로 변환 (자세한 설명 하단 참고)
-      vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
+    // 입사광 벡터와 surface point P 의 노멀벡터 각도에 따른 [0.0, 1.0] 사이로 clamping 시킨 반사벡터의 세기(= 가중치) 계산
+    float NdotL = max(dot(N, L), 0.0);
 
-      // LearnOpenGL 본문에 정리된 이중시그마의 각 항을 계산하여 irradiance 변수에 누산 -> 즉, Li(p, phi, theta) * cos(theta) * sin(theta) 를 계산! 
-      // 이때, 고도각(theta)이 높은 영역의 contribution 을 보정하기 위해 sin(theta) 만큼 가중치를 곱해줌(노션 IBL 관련 필기 참고)
-      irradiance += texture(environmentMap, sampleVec).rgb * cos(theta) * sin(theta);
+    /*
+      가중치가 0 으로 곱해지면 어차피 적분의 누산값에 반영할 수 없으므로,
+      가중치가 0 보다 큰 경우에만 한하여 누산값 prefilteredColor 에 반영함.
+    */
+    if(NdotL > 0.0) {
+      /*
+        원본 HDR 큐브맵으로부터 샘플링해온 값,
+        즉, 역추적한 입사광 벡터(= 반사벡터의 반사벡터)를 사용하여 fetch 한 texel 을 누산함.
 
-      // 이중시그마 외부로 추출된 항의 분모인 n1n2 를 누산함. -> 이중시그마 식의 전체 항 개수
-      nrSamples++;
+        이는 split sum approximation 의 첫 번째 적분식에서 Li(p, wi) 에 해당하며,
+        거기에 가중치 NdotL 을 곱하는 것은 미소량 dwi 로 각 샘플의 가중치를 조절해주는 것에 해당.
+        (노션 IBL 관련 필기 참고)
+
+        -> 이것은 specular lobe 영역 내에 존재하는 각각의 반사되는 빛의 총량을 합산하는 행위에 해당!
+      */
+      prefilteredColor += texture(environmentMap, L).rgb * NdotL;
+
+      /*
+        Monte Carlo 적분의 기댓값 E 를 계산할 때,
+        시그마 합의 평균을 구하기 위해 곱해주는 1 / N 값 계산.
+
+        사실, 1 / SAMPLE_COUNT 로 곱해주면 되는데,
+        왜 각 샘플의 가중치인 NdotL 을 누산해서 1 / N 값을 계산하는 걸까?
+
+        그 이유는, specular lobe 영역 내의 각 반사되는 빛의 가중치인 NdotL 이
+        각 샘플의 확률 밀도 함수 pdf(x) 의 역할을 하기 때문임.
+
+        노션 필기에서 보면 우리는 결국
+        E[f(x) / pdf(x)] 에 대한 기댓값을 계산하는 것이기 때문에,
+        원래대로 라면, ( texture(environmentMap, L).rgb * NdotL ) / NdotL 값을 누산해줘야 함.
+        
+        하지만 위 식을 보면 알겠지만, NdotL 끼리 서로 상쇄되어 버리기 때문에,
+        pdf(x) 역할을 해야 할 NdotL 을 기댓값 E 를 계산할 때 곱해주는 1 / N 을 계산하는 과정에 반영해버려서
+        나중에 최종 시그마 합 prefilteredColor 에 한꺼번에 적용하려는 것임.
+
+        -> 즉, Monte Carlo 적분을 코드로 구현하는 과정에서
+        구현 상의 편의를 위해 일부 간소화된 부분이라고 보면 됨.
+      */
+      totalWeight += NdotL;
     }
+
+    // MC 적분의 기댓값 E 계산 과정에서 시그마 합의 평균을 구하기 위해 1 / N 을 곱해줌.
+    prefilteredColor = prefilteredColor / totalWeight;
   }
 
-  // 이중시그마 외부로 추출된 항(kD * c * PI / n1n2)의 일부분을 이중시그마 수열의 합(irradiance) 에 곱해줌 (노션 IBL 관련 필기 참고)
-  irradiance = PI * irradiance * (1.0 / float(nrSamples));
-
   // 계산된 surface point P 지점의 diffuse term 의 irradiance 를 큐브맵 버퍼에 저장
-  FragColor = vec4(irradiance, 1.0);
+  FragColor = vec4(prefilteredColor, 1.0);
 }
-
-/*
-  현재 순회 중인 방위각(phi)과 고도각(theta) 기준의 구면좌표계를
-  surface point P 지점을 원점으로 하는 tangent space 기준의 3D 데카르트 방향벡터로 변환
-
-  -> 이럴거면 왜 기존 적분식을 방위각(phi)과 고도각(theta)에 대한 이중 적분식으로 바꾼거야?
-
-  방위각(phi)과 고도각(theta)을 기준으로 이중 적분식을 계산하면, 
-  무수히 많은 입체각 wi 를 좀 더 이산적으로(discretely) 계산할 수 있다는 장점이 있음.
-
-  그러나, 리만 합을 계산하는 과정에서 우리가 샘플링해야 할 environmentMap 은
-  여전히 큐브맵 형태이므로, 별 수 없이 3차원 방향벡터가 있어야 샘플링이 가능함.
-
-  참고로, 현재 구면좌표계는 surface point P 지점을 중심으로 한
-  구체에 대한 구면좌표계이므로, 이를 3차원 데카르트 좌표계로 변환하면,
-  당연히 surface point P 를 원점으로 하는 tangent space 기준의 데카르트 좌표계가 계산될 것임.
-
-  또한, 위 코드에서 사용된 변환식은
-  equirectangular_to_cubemap.fs 에서 사용된
-  pbrt 4판의 변환 공식과는 다름.
-
-  위 변환식은 아래 링크에서 확인 가능!
-  https://ko.wikipedia.org/wiki/구면좌표계 
-*/
 
 /*
   tangent space 기준 방향벡터에 right, up, N 벡터를 곱하는 이유
