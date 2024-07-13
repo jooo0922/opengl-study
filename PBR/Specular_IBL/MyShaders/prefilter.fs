@@ -113,10 +113,10 @@ void main() {
       */
       totalWeight += NdotL;
     }
-
-    // MC 적분의 기댓값 E 계산 과정에서 시그마 합의 평균을 구하기 위해 1 / N 을 곱해줌.
-    prefilteredColor = prefilteredColor / totalWeight;
   }
+
+  // MC 적분의 기댓값 E 계산 과정에서 시그마 합의 평균을 구하기 위해 1 / N 을 곱해줌.
+  prefilteredColor = prefilteredColor / totalWeight;
 
   // 계산된 surface point P 지점의 diffuse term 의 irradiance 를 큐브맵 버퍼에 저장
   FragColor = vec4(prefilteredColor, 1.0);
