@@ -447,6 +447,53 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+	/* 
+		split-sum approximation(= specular term 적분식)에서 
+		첫 번째 적분식의 결과값(= pre-filtered environment map)를 렌더링할 color buffer 로써 
+		Cubemap 텍스쳐 객체 생성
+	*/
+
+	// Cubemap 텍스쳐 생성 및 바인딩
+	unsigned int prefilterMap;
+	glGenTextures(1, &prefilterMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+
+	// 반복문을 순회하며 Cubemap 각 6면에 이미지 데이터를 저장할 메모리 할당
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		/*
+			[0, 1] 범위를 넘어선 HDR 이미지 데이터(data)들을 온전히 저장하기 위해,
+			GL_RGB16F floating point(부동 소수점) 포맷으로 프레임버퍼의 내부 색상 포맷 지정.
+
+			또한, pre-filtered enviroment map 또한 irradiance map 과 유사하게
+			HDR 큐브맵을 convolution 하여 만든 결과물이 저장되므로,
+			HDR 큐브맵을 흐릿하게 blur 처리한 것처럼 보임.
+
+			그래서 굳이 고해상도의 큐브맵은 필요하지 않지만, 
+			roughness level 에 따라 5단계의 mipmap 에 저장할 것이므로,
+			가장 해상도가 낮은 mip level 이 irradiance map 의 해상도와 동일한 32 * 32 로 생성되도록
+			base mip level 의 해상도는 그것의 4배 정도가 적당할 것임.
+
+			그래서, pre-filtered enviroment map 버퍼의 각 면의 해상도를 128 * 128 정도로 낮게 설정함.
+		*/
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
+	}
+
+	// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
+	// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
+	// 텍스쳐 축소 시, trilinear filtering 기법 적용을 위해 GL_LINEAR_MIPMAP_LINEAR 모드로 설정 (노션 필기 참고)
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// 현재 바인딩된 Cubemap 에 대해서 roughness level 에 따른 pre-filtered envmap 을 저장할 mipmap 메모리 공간 할당
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+
 	/*
 		투영행렬을 렌더링 루프 이전에 미리 계산
 		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요!
