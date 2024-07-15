@@ -15,8 +15,31 @@ uniform float roughness;
 // PI 상수값 정의
 const float PI = 3.14159265359;
 
-float RadicalInverse_VdC(uint bits);
-vec2 Hammersley(uint i, uint N);
+/*
+  Hammersley 알고리즘에서 두 번째 이후 차원부터의 좌표값 계산에 사용되는
+  Van Der Corput 시퀀스 알고리즘을 구현한 함수 (노션 IBL 필기 참고)
+
+  -> 효율적인 연산을 위해 비트 연산자를 사용했다고 함.
+  http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html 참고!
+*/
+float RadicalInverse_VdC(uint bits) {
+  bits = (bits << 16u) | (bits >> 16u);
+  bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+  bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+  bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+  bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+  return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+/*
+  Quasi-Monte Carlo 적분에서 사용하는
+  low-discrepancy sequence(저불일치 시퀀스)를 생성하는 알고리즘으로써 Hammersley 알고리즘 사용
+
+  (노션 IBL 필기 참고)
+*/
+vec2 Hammersley(uint i, uint N) {
+  return vec2(float(i) / float(N), RadicalInverse_VdC(i));
+}
 
 /*
   반구 영역 내에 존재하는 모든 sample vector 중에서
