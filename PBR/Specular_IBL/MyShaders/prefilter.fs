@@ -15,6 +15,20 @@ uniform float roughness;
 // PI 상수값 정의
 const float PI = 3.14159265359;
 
+// specular lobe 영역 내에서 하프 벡터 H 를 뽑을 pdf(확률 밀도 함수)를 계산 시 사용할 NDF 함수
+float DistributionGGX(vec3 N, vec3 H, float roughness) {
+  float a = roughness * roughness;
+  float a2 = a * a;
+  float NdotH = max(dot(N, H), 0.0);
+  float NdotH2 = NdotH * NdotH;
+
+  float nom = a2;
+  float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+  denom = PI * denom * denom;
+
+  return nom / denom;
+}
+
 /*
   Hammersley 알고리즘에서 두 번째 이후 차원부터의 좌표값 계산에 사용되는
   Van Der Corput 시퀀스 알고리즘을 구현한 함수 (노션 IBL 필기 참고)
@@ -161,6 +175,32 @@ void main() {
       가중치가 0 보다 큰 경우에만 한하여 누산값 prefilteredColor 에 반영함.
     */
     if(NdotL > 0.0) {
+      /* Bright dots artifact 를 해결하기 위해 원본 HDR 큐브맵을 fetch 해올 mip level 계산 */
+
+      /*
+        specular lobe 영역 내의 전체 sample vector 중에서 
+        하프 벡터 H 부근에 존재하는 sample vector 를 뽑을 확률을 계산하는 확률 밀도 함수(pdf) 계산
+        (노션 IBL 필기 참고)
+      */
+      float D = DistributionGGX(N, H, roughness);
+      float NdotH = max(dot(N, H), 0.0);
+      float HdotV = max(dot(H, V), 0.0);
+      float pdf = D * NdotH / (4.0 * HdotV) + 0.0001;
+
+      // 구체의 전체 표면적 상에서 원본 HDR 큐브맵의 각 단위 texel 들의 입체각(= 구체 상의 표면적) 계산 (노션 IBL 필기 참고)
+      float resolution = 512.0; // 원본 HDR 큐브맵의 각 면의 해상도
+      float saTexel = 4.0 * PI / (6.0 * resolution * resolution);
+
+      // 구체의 전체 표면적 상에서 현재 하프벡터 H 부근 sample vector 의 입체각(= 구체 상의 표면적) 계산 (노션 IBL 필기 참고)
+      float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
+
+      /*
+        (saSample / saTexel) 비율값을 mip level 삼아서
+        원본 HDR 큐브맵으로부터 어느 정도의 해상도를 갖는 mipmap 을 샘플링할 것인지 결정
+        (노션 IBL 필기 참고)
+      */
+      float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
+
       /*
         원본 HDR 큐브맵으로부터 샘플링해온 값,
         즉, 역추적한 입사광 벡터(= 반사벡터의 반사벡터)를 사용하여 fetch 한 texel 을 누산함.
@@ -171,7 +211,7 @@ void main() {
 
         -> 이것은 specular lobe 영역 내에 존재하는 각각의 반사되는 빛의 총량을 합산하는 행위에 해당!
       */
-      prefilteredColor += texture(environmentMap, L).rgb * NdotL;
+      prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;
 
       /*
         Monte Carlo 적분의 기댓값 E 를 계산할 때,
