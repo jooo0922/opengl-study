@@ -132,6 +132,9 @@ int main()
 	// 깊이 테스트 함수 변경 (skybox 렌더링 목적)
 	glDepthFunc(GL_LEQUAL);
 
+	// Cubemap 의 각 face 사이의 seam line 방지 활성화 (하단 필기 참고)
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
 
 	/* PBR 구현에 필요한 쉐이더 객체 생성 및 컴파일 */
 
@@ -1343,4 +1346,24 @@ unsigned int loadTexture(const char* path)
 	깊이 테스트 모드를 GL_LEQUAL 로 설정함으로써,
 	현재 depth buffer 의 값보다 '작거나 같으면'
 	깊이 테스트를 통과할 수 있도록 변경한 것임!
+*/
+
+/*
+	GL_TEXTURE_CUBE_MAP_SEAMLESS
+
+
+	pre-filtered env map 의 mip level 이 점점 올라가면서 roughness 값이 커지면,
+	convolution 할 때 샘플링하는 영역인 specular lobe 가 더 커지게 되는데,
+
+	이로 인해 convolution 결과물이 원본 HDR 큐브맵과 점점 달라지게 됨.
+
+	문제는, 이럴수록 Cubemap 의 각 face 사이의 경계선 부분에서 seam line 이 도드라져 보임.
+	이는 OpenGL 이 기본적으로 Cubemap face 사이에서의 linear interpolation 처리를 해주지 않기 때문임.
+
+	이때, GL_TEXTURE_CUBE_MAP_SEAMLESS 기능을 활성화해주면,
+	OpenGL 에서 Cubemap 의 각 face 가 접하는 경계선 부근에서 샘플링을 처리할 때,
+	각 면 사이의 texel 들을 linear interpolation 처리하여
+	각 면의 경계에서 매끄러운 보간을 수행함.
+
+	이를 통해 Cubemap face 경계 부근에서의 부자연스러운 seam line 을 방지할 수 있음.
 */
