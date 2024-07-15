@@ -300,7 +300,12 @@ int main()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	/*
+		Bright dot artifact 해결을 위해 원본 HDR Cubemap 버퍼에서 mipmap 을 생성하므로, 
+		MIN_FILTER 모드를 GL_LINEAR_MIPMAP_LINEAR 로 지정해서
+		LOD 에 따라 mipmap 사이의 trilinear interpolation 을 적용함. (노션 IBL 필기 참고)
+	*/
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 
@@ -366,6 +371,15 @@ int main()
 
 	// Cubemap 버퍼에 렌더링 완료 후, 기본 프레임버퍼로 바인딩 초기화
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	/* Bright dot artifact 해결을 위해 원본 HDR Cubemap 의 mipmap 생성 */
+
+	// mipmap 을 생성할 원본 HDR Cubemap 바인딩
+	glBindTexture(GL_TEXTURE_CUBE_MAP, envCubemap);
+	
+	// 현재 바인딩된 원본 HDR Cubemap 에 대해서 mipmap 메모리 공간 할당
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
 
 	/* diffuse term 적분식의 결과값(= irradiance)를 렌더링할 color buffer 로써 Cubemap 텍스쳐 객체 생성 */
