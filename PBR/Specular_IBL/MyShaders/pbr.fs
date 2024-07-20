@@ -18,6 +18,12 @@ uniform float ao;
 // diffuse term 에 대한 irradiance 계산 결과가 저장된 큐브맵 텍스쳐(= irradiance map) 선언
 uniform samplerCube irradianceMap;
 
+// specular term 에 대한 split-sum approximation 의 첫 번째 적분식 계산 결과가 저장된 큐브맵 텍스쳐(= pre-filtered env map) 선언
+uniform samplerCube prefilterMap;
+
+// specular term 에 대한 split-sum approximation 의 두 번째 적분식 계산 결과가 저장된 2D LUT 텍스쳐(= BRDF Integration map) 선언
+uniform sampler2D brdfLUT;
+
 // 광원 정보를 전송받는 uniform 변수 선언
 uniform vec3 lightPositions[4];
 uniform vec3 lightColors[4];
