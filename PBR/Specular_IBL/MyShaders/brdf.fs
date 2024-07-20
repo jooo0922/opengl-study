@@ -1,7 +1,7 @@
 #version 330 core
 
 // 프래그먼트 쉐이더 출력 변수 선언
-out vec4 FragColor;
+out vec2 FragColor;
 
 // vertex shader 단계에서 전달받는 입력 변수 선언
 in vec2 TexCoords;
@@ -242,7 +242,14 @@ vec2 IntegrateBRDF(float NdotV, float roughness) {
 }
 
 void main() {
+  /*
+    MC 적분을 통해 계산된 BRDF Integration map 에 저장할 두 번째 적분식의 결과값을 반환받음.
+    이때, 보간된 uv 좌표값을 BRDF Integration map 의 두 매개변수 NdotV 와 roughness 로 가정하고 입력 
+  */
+  vec2 integrateBRDF = IntegrateBRDF(TexCoords.x, TexCoords.y);
 
+  // 현재 프레임버퍼에 attach 된 2D 텍스쳐 버퍼에 선형결합으로 분리된 두 적분식의 결과값(= scale, bias)을 저장
+  FragColor = integrateBRDF;
 }
 
 /*
