@@ -171,6 +171,12 @@ int main()
 	// irradiance map 큐브맵 텍스쳐를 바인딩할 0번 texture unit 위치값 전송
 	pbrShader.setInt("irradianceMap", 0);
 
+	// pre-filtered env map 큐브맵 텍스쳐를 바인딩할 1번 texture unit 위치값 전송
+	pbrShader.setInt("prefilterMap", 1);
+
+	// BRDF Integration map 텍스쳐를 바인딩할 2번 texture unit 위치값 전송
+	pbrShader.setInt("brdfLUT", 2);
+
 	// 표면 밖으로 빠져나온 diffuse light 색상값을 쉐이더 프로그램에 전송
 	pbrShader.setVec3("albedo", 0.5f, 0.0f, 0.0f);
 
@@ -834,6 +840,9 @@ int main()
 		// skybox 렌더링
 		renderCube();
 
+		// BRDF Integration map 을 실제로 화면에 렌더링해서 제대로 생성되었는지 확인
+		//brdfShader.use();
+		//renderQuad();
 
 		// Double Buffer 상에서 Back Buffer 에 픽셀들이 모두 그려지면, Front Buffer 와 교체(swap)해버림.
 		glfwSwapBuffers(window);
