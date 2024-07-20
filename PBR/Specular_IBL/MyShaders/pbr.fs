@@ -287,10 +287,11 @@ void main() {
     + 표면의 거칠기에 따른 프레넬 반사율 보정을 위해, 
     roughness 값을 주입한 버전의 Fresnel Equation 함수를 사용함
   */
-  vec3 kS = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+  vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
   // 에너지 보존 법칙에 따라, 빛이 굴절되는 비율은 전체 비율 1 에서 반사되는 비율을 빼서 계산.
-  vec3 kD = 1.0 - kS;
+  vec3 kS = F;
+  vec3 kD = 1.0 - F;
 
   // metallic 값에 따라 빛의 굴절률을 조정함 (관련 필기 하단 참고)
   kD *= 1.0 - metallic;
