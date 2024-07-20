@@ -1,23 +1,15 @@
 #version 330 core
 
 layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec2 aTexCoord;
 
 /* fragment shader 단계로 출력할 출력 변수 선언 */
-out vec3 WorldPos;
-
-/* 변환 행렬을 전송받는 uniform 변수 선언 */ 
-
-// 투영 행렬
-uniform mat4 projection;
-
-// 뷰 행렬
-uniform mat4 view;
+out vec2 TexCoords;
 
 void main() {
-  // 프래그먼트 쉐이더 단계로 보간하여 출력할 world space 위치값 할당
-  // -> HDR 이미지를 적용할 단위 큐브의 position attribute 는 이미 world space 기준으로 초기화되어 전송받음!
-  WorldPos = aPos;
+  // 프래그먼트 쉐이더 단계로 보간하여 출력할 uv 좌표값 할당
+  TexCoords = aTexCoord;
 
-  // World Space 좌표에 뷰 행렬 > 투영 행렬 순으로 곱해서 좌표계를 변환시킴.
-  gl_Position = projection * view * vec4(WorldPos, 1.0);
+  // 이미 NDC 좌표계 기준으로 정의된 QuadMesh 의 position attribute 를 그대로 출력변수에 할당
+  gl_Position = vec4(aPos, 1.0);
 }
