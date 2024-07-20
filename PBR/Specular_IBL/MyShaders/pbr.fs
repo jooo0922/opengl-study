@@ -188,6 +188,16 @@ void main() {
   // world space 뷰 벡터 계산
   vec3 V = normalize(camPos - WorldPos);
 
+  /*
+    카메라 view vector 방향으로 들어오는 빛 Wo 에 대한 
+    반사벡터를 역추적하여 입사각 벡터 Wi 계산
+
+    -> 현재 순회중인 surface point P 지점으로 들어와서
+    specular lobe 영역으로 반사되는 빛들에 대한 적분값을 pre-filtered env map 으로부터 
+    fetch 하기 위한 방향벡터 R 를 구하려는 것!
+  */
+  vec3 R = reflect(-V, N);
+
   /* Schlick's approximation 에 필요한 기본 반사율(base reflectivity) F0 계산 (자세한 내용은 노션 계획표의 Fresnel Equation 관련 필기 참고) */
 
   // 대부분의 비전도체(dielectric) 또는 비금속 이물질들의 기본 반사율의 평균을 낸 값인 0.04 사용
@@ -291,7 +301,7 @@ void main() {
 
   // 에너지 보존 법칙에 따라, 빛이 굴절되는 비율은 전체 비율 1 에서 반사되는 비율을 빼서 계산.
   vec3 kS = F;
-  vec3 kD = 1.0 - F;
+  vec3 kD = 1.0 - kS;
 
   // metallic 값에 따라 빛의 굴절률을 조정함 (관련 필기 하단 참고)
   kD *= 1.0 - metallic;
@@ -309,12 +319,31 @@ void main() {
   */
   vec3 diffuse = irradiance * albedo;
 
+  /* 반사율 방정식의 specular term 계산 */
+
+  // roughness level 에 따라 5단계로 저장된 pre-filtered env map 의 최대 mip level 을 상수로 초기화
+  const float MAX_REFLECTION_LOD = 4.0;
+
   /*
-    LearnOpenGL 본문의 이중시그마 식에서 kD 에 해당하는 굴절율을 마저 곱해주고,
+    uniform 변수로 입력받는 [0.0, 1.0] 사이의 roughness 값에 따라 LOD 를 계산하여 
+    그에 맞는 mip level 의 pre-fitered env map 으로부터 specular lobe 영역 내로 반사되는 빛들의 총합을 적분한
+    split-sum approximation 의 첫 번째 적분식의 결과값을 fetch 해옴. 
+  */ 
+  vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
+
+  // BRDF Integration map 에 저장된 Scale 과 Bias 값 샘플링 (-> NdotV 내적값과 roughness 값을 uv좌표값 삼아 샘플링함.)
+  vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+
+  // 기본 반사율 F0 이 아닌, 실제 반사율 F 에 대한 선형결합인 F * Scale + Bias 형태로 specular term 적분식을 최종 계산 (노션 IBL 필기 참고)
+  vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+
+  /*
+    LearnOpenGL 본문의 이중시그마 식에서 kD 에 해당하는 굴절율을 diffuse term 에 곱해주고,
+    pre-filtered env map 과 BRDF Integration map 으로부터 샘플링해와서 계산한 specular term 적분식의 결과값을 더하고,
     ambient occlusion factor 를 곱해서 환경광이 차폐되는 영역까지 고려하여
     IBL 을 사용한 최종 ambient lighting 계산 완료! 
   */
-  vec3 ambient = (kD * diffuse) * ao;
+  vec3 ambient = (kD * diffuse + specular) * ao;
 
   // 현재 surface point 지점에서 최종적으로 반사되는 조명값 계산
   vec3 color = ambient + Lo;
