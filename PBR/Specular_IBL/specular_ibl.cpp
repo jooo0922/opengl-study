@@ -755,6 +755,24 @@ int main()
 		// irradianceMap 큐브맵 텍스쳐 바인딩
 		glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
 
+		
+		/* 미리 계산된 split-sum approximation 의 첫 번째 적분식 결과값이 저장되어 있는 pre-filtered env map 을 바인딩 */
+
+		// pre-filtered env map 이 렌더링된 큐브맵 텍스쳐를 바인딩할 1번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE1);
+
+		// prefilterMap 큐브맵 텍스쳐 바인딩
+		glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+
+
+		/* 미리 계산된 split-sum approximation 의 두 번째 적분식 결과값이 저장되어 있는 BRDF Integration map 을 바인딩 */
+
+		// BRDF Integration map 이 렌더링된 2D 텍스쳐를 바인딩할 2번 texture unit 활성화
+		glActiveTexture(GL_TEXTURE2);
+
+		// brdfLUTTexture 큐브맵 텍스쳐 바인딩
+		glBindTexture(GL_TEXTURE_CUBE_MAP, brdfLUTTexture);
+
 
 		/* 각 Sphere 에 적용할 모델행렬 계산 및 Sphere 렌더링 */
 
