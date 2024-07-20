@@ -599,6 +599,36 @@ int main()
 
 
 	/*
+		split-sum approximation(= specular term 적분식)에서
+		두 번째 적분식의 결과값(= BRDF Integration map)를 렌더링할 color buffer 로써 2D 텍스쳐 객체 생성
+	*/
+
+	// 텍스쳐 객체(object) 참조 id 를 저장할 변수 선언
+	unsigned int brdfLUTTexture;
+
+	// 텍스쳐 객체 생성 및 바인딩
+	glGenTextures(1, &brdfLUTTexture);
+	glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+
+	/*
+		[0, 1] 범위를 넘어선 HDR 이미지 데이터(data)들을 온전히 저장하고,
+		split-sum approximation 의 두 번째 적분식의 scale, bias 값만 r, g 채널에 각각 저장하기 위해
+		GL_RG16F floating point(부동 소수점) 포맷으로 프레임버퍼의 내부 색상 포맷 지정
+		(하단 Floating point framebuffer 관련 필기 참고)
+	*/
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, 512, 512, 0, GL_RG, GL_FLOAT, 0);
+
+	// 현재 GL_TEXTURE_2D 상태에 바인딩된 텍스쳐 객체 설정하기
+	// Texture Wrapping 모드를 반복 모드로 설정 ([(0, 0), (1, 1)] 범위를 벗어나는 텍스쳐 좌표에 대한 처리)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// 텍스쳐 축소/확대 및 Mipmap 교체 시 Texture Filtering (텍셀 필터링(보간)) 모드 설정
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+	/*
 		투영행렬을 렌더링 루프 이전에 미리 계산
 		-> why? camera zoom-in/out 미적용 시, 투영행렬 재계산 불필요!
 	*/
