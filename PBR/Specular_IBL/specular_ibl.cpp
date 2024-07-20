@@ -153,6 +153,9 @@ int main()
 	*/
 	Shader prefilterShader("MyShaders/cubemap.vs", "MyShaders/prefilter.fs");
 
+	// split sum approximation 의 두 번째 적분식의 결과값(= BRDF Integration map)을 LUTTexture 버퍼에 렌더링하는 쉐이더 객체 생성
+	Shader brdfShader("MyShaders/brdf.vs", "MyShaders/brdf.fs");
+
 	// 배경에 적용할 skybox 를 렌더링하는 쉐이더 객체 생성
 	Shader backgroundShader("MyShaders/background.vs", "MyShaders/background.fs");
 
