@@ -771,7 +771,7 @@ int main()
 		glActiveTexture(GL_TEXTURE2);
 
 		// brdfLUTTexture 큐브맵 텍스쳐 바인딩
-		glBindTexture(GL_TEXTURE_CUBE_MAP, brdfLUTTexture);
+		glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
 
 
 		/* 각 Sphere 에 적용할 모델행렬 계산 및 Sphere 렌더링 */
